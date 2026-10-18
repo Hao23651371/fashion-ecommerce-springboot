@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký tài khoản | Fashion Shop Studio & Atelier</title>
+
+    <!-- Google Fonts & Bootstrap 5 & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link th:href="@{/css/auth.css}" rel="stylesheet">
+</head>
+<body class="auth-body">
+
+    <!-- 1. Header riêng của auth (Ảnh 3) -->
+    <div th:replace="~{auth/auth-header :: auth-header('register')}"></div>
+
+    <!-- 2. Main Register Frame -->
+    <main class="auth-wrapper">
+        <div class="auth-panel-container">
+            <div class="row g-0">
+
+                <!-- CỘT TRÁI: ĐẶC QUYỀN HỘI VIÊN (Ảnh 3) -->
+                <div class="col-lg-6 d-none d-lg-flex auth-editorial-col">
+                    <div class="auth-editorial-content">
+                        <!-- Top Badges -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="pill-badge"><i class="bi bi-circle-fill text-danger me-1" style="font-size: 0.4rem;"></i> ĐẶC QUYỀN HỘI VIÊN • MAISON PRIVILEGE</span>
+                            <span class="pill-badge">LOOKBOOK Nº 04</span>
+                        </div>
+
+                        <!-- Mid Content & 3 Feature Cards -->
+                        <div class="my-3">
+                            <div class="editorial-tag">THẾ GIỚI HAUTE COUTURE CÁ NHÂN HÓA</div>
+                            <h2 class="editorial-quote" style="font-size: 1.45rem;">
+                                Khởi đầu hành trình phong cách cùng những đặc quyền may đo và tuyển tập giới hạn.
+                            </h2>
+                            <p class="editorial-desc mb-3" style="font-size: 0.78rem;">
+                                Gia nhập cộng đồng thượng lưu của Maison để trải nghiệm dịch vụ chuẩn mực từ các nghệ nhân hàng đầu Paris và Sài Gòn.
+                            </p>
+
+                            <!-- 3 Glassmorphism Cards -->
+                            <div class="feature-glass-card">
+                                <div class="icon-box"><i class="bi bi-percent"></i></div>
+                                <div>
+                                    <h6>Ưu đãi khởi đầu</h6>
+                                    <p>Giảm ngay 10% đặc quyền áp dụng cho đơn hàng đầu tiên.</p>
+                                </div>
+                            </div>
+
+                            <div class="feature-glass-card">
+                                <div class="icon-box"><i class="bi bi-person-badge"></i></div>
+                                <div>
+                                    <h6>Private Fitting & Bespoke</h6>
+                                    <p>Ưu tiên đặt lịch may đo cá nhân tại Salon Tràng Tiền & Đồng Khởi.</p>
+                                </div>
+                            </div>
+
+                            <div class="feature-glass-card">
+                                <div class="icon-box"><i class="bi bi-envelope-paper"></i></div>
+                                <div>
+                                    <h6>Thư mời Private Preview</h6>
+                                    <p>Tham dự các buổi ra mắt bộ sưu tập theo mùa trước khi mở bán công khai.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Quote & Code -->
+                        <div class="d-flex justify-content-between align-items-end pt-2 border-top border-white border-opacity-25">
+                            <div style="max-width: 75%;">
+                                <div class="fst-italic text-white-50" style="font-size: 0.75rem;">"Sự tao nhã là vẻ đẹp duy nhất không bao giờ tàn phai."</div>
+                                <small class="text-uppercase tracking-wider font-monospace text-white-50" style="font-size: 0.65rem;">&mdash; FASHION SHOP ATELIER NOTES</small>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-white-50 d-block font-monospace" style="font-size: 0.62rem;">MÃ HỘI VIÊN</small>
+                                <span class="fw-bold font-monospace small">#MSN-2025</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CỘT PHẢI: FORM ĐĂNG KÝ (Ảnh 3) -->
+                <div class="col-lg-6 auth-form-col">
+                    <div>
+                        <!-- Top Status -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="auth-form-badge"><i class="bi bi-compass"></i> GIA NHẬP MAISON ATELIER</span>
+                            <a href="#" class="auth-help-link">HỖ TRỢ <i class="bi bi-arrow-up-right"></i></a>
+                        </div>
+
+                        <!-- Title & Subtitle -->
+                        <h2 class="auth-title mt-1">ĐĂNG KÝ TÀI KHOẢN</h2>
+                        <p class="auth-subtitle mb-2">
+                            Trở thành thành viên để lưu giữ kích cỡ may đo, danh sách mong muốn và tận hưởng dịch vụ chăm sóc thượng hạng.
+                        </p>
+
+                        <!-- Thông báo lỗi khi đăng ký -->
+                        <div class="alert alert-danger py-2 small rounded-3 mb-2" th:if="${#fields != null and #fields.hasErrors('${registerForm.*}')}">
+                            <ul class="mb-0 ps-3">
+                                <li th:each="err : ${#fields.errors('${registerForm.*}')}" th:text="${err}"></li>
+                            </ul>
+                        </div>
+
+                        <!-- Form Register -->
+                        <form th:action="@{/register}" th:object="${registerForm}" method="post">
+                            <div class="mb-2">
+                                <label for="fullname" class="auth-label">HỌ & TÊN ĐẦY ĐỦ</label>
+                                <div class="luxury-input-group">
+                                    <span class="input-icon"><i class="bi bi-person"></i></span>
+                                    <input type="text" id="fullname" name="fullName" th:value="*{fullName}" placeholder="Nguyễn Hoàng Minh" required>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-sm-6">
+                                    <label for="email" class="auth-label">EMAIL LIÊN HỆ</label>
+                                    <div class="luxury-input-group">
+                                        <span class="input-icon"><i class="bi bi-envelope"></i></span>
+                                        <input type="email" id="email" name="email" th:value="*{email}" placeholder="atelier@domain.vn" required>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label for="phone" class="auth-label">SỐ ĐIỆN THOẠI</label>
+                                    <div class="luxury-input-group">
+                                        <span class="input-icon"><i class="bi bi-telephone"></i></span>
+                                        <input type="tel" id="phone" name="phoneNumber" th:value="*{phoneNumber}" placeholder="+84 90 123 4567">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-1">
+                                <div class="d-flex justify-content-between">
+                                    <label for="regPassword" class="auth-label">MẬT KHẨU BẢO MẬT</label>
+                                    <span class="text-muted small" style="font-size: 0.65rem;">TỐI THIỂU 6 KÝ TỰ</span>
+                                </div>
+                                <div class="luxury-input-group">
+                                    <span class="input-icon"><i class="bi bi-lock"></i></span>
+                                    <input type="password" id="regPassword" name="password" placeholder="••••••••••••" required>
+                                    <button type="button" class="toggle-pw-btn" id="toggleRegPassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Password Strength Indicator -->
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted" style="font-size: 0.68rem;">Độ mạnh mật khẩu</small>
+                                <span class="badge bg-light text-secondary border" style="font-size: 0.62rem;">CHƯA NHẬP</span>
+                            </div>
+
+                            <div class="mb-2">
+                                <label for="confirmPassword" class="auth-label">XÁC NHẬN MẬT KHẨU</label>
+                                <div class="luxury-input-group">
+                                    <span class="input-icon"><i class="bi bi-lock"></i></span>
+                                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="••••••••••••" required>
+                                    <button type="button" class="toggle-pw-btn" id="toggleConfirmPassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Terms & Newsletter Checkboxes -->
+                            <div class="mb-2">
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input" type="checkbox" id="termsCheck" required>
+                                    <label class="form-check-label small text-muted" for="termsCheck" style="font-size: 0.75rem;">
+                                        Tôi đồng ý với <a href="#" class="text-dark text-decoration-underline">Điều khoản dịch vụ</a> và <a href="#" class="text-dark text-decoration-underline">Chính sách bảo mật</a> của Fashion Shop.
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="newsCheck" checked>
+                                    <label class="form-check-label small text-muted" for="newsCheck" style="font-size: 0.75rem;">
+                                        Nhận tin báo sớm về các bộ sưu tập giới hạn, phong cách may đo bespoke và sự kiện Private Sale.
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-auth-primary">
+                                <span>TẠO TÀI KHOẢN</span>
+                                <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </form>
+
+                        <!-- Social Divider -->
+                        <div class="auth-divider">
+                            <span>HOẶC ĐĂNG KÝ BẰNG</span>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <button type="button" class="btn-social">
+                                    <i class="bi bi-google text-danger"></i>
+                                    <span>GOOGLE</span>
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button type="button" class="btn-social">
+                                    <i class="bi bi-apple"></i>
+                                    <span>APPLE</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Switch to Login -->
+                        <p class="text-center small text-muted mb-2" style="font-size: 0.78rem;">
+                            Đã có tài khoản atelier? 
+                            <a th:href="@{/login}" class="text-dark fw-bold text-decoration-underline ms-1">ĐĂNG NHẬP NGAY</a>
+                        </p>
+                    </div>
+
+                    <!-- Trust Badges (Bottom) -->
+                    <div>
+                        <div class="auth-trust-bar">
+                            <div class="auth-trust-item">
+                                <i class="bi bi-shield-check"></i>
+                                <strong>BẢO MẬT 100%</strong>
+                                <small>Chuẩn mã hóa SSL</small>
+                            </div>
+                            <div class="auth-trust-item">
+                                <i class="bi bi-award"></i>
+                                <strong>ĐẶC QUYỀN HỘI VIÊN</strong>
+                                <small>Tích lũy điểm may đo</small>
+                            </div>
+                            <div class="auth-trust-item">
+                                <i class="bi bi-headset"></i>
+                                <strong>ATELIER 24/7</strong>
+                                <small>Trợ lý phong cách riêng</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- 3. Footer riêng của auth (Ảnh 3) -->
+    <div th:replace="~{auth/auth-footer :: auth-footer}"></div>
+
+    <script>
+        function setupToggle(btnId, inputId) {
+            const btn = document.getElementById(btnId);
+            const input = document.getElementById(inputId);
+            if (btn && input) {
+                btn.addEventListener('click', function() {
+                    const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                    input.setAttribute('type', type);
+                    this.querySelector('i').classList.toggle('bi-eye');
+                    this.querySelector('i').classList.toggle('bi-eye-slash');
+                });
+            }
+        }
+        setupToggle('toggleRegPassword', 'regPassword');
+        setupToggle('toggleConfirmPassword', 'confirmPassword');
+    </script>
+</body>
+</html>

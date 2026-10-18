@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<footer th:fragment="footer" class="site-footer bg-white border-top pt-5 pb-4 mt-auto">
+    <div class="container">
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-md-4">
+                <h5 class="fw-bold brand-font">FASHION SHOP</h5>
+                <p class="text-muted small">
+                    Thương hiệu thời trang may đo và ready-to-wear cao cấp mang âm hưởng đương đại và phom dáng chuẩn mực.
+                </p>
+                <div class="d-flex gap-3 fs-5">
+                    <a href="#" class="text-dark"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="text-dark"><i class="bi bi-instagram"></i></a>
+                    <a href="#" class="text-dark"><i class="bi bi-tiktok"></i></a>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <h6 class="fw-bold text-uppercase small mb-3">Sản phẩm</h6>
+                <ul class="list-unstyled small text-muted d-flex flex-column gap-2">
+                    <li><a th:href="@{/shop(category='nam')}" class="text-muted text-decoration-none">Thời trang Nam</a></li>
+                    <li><a th:href="@{/shop(category='nu')}" class="text-muted text-decoration-none">Thời trang Nữ</a></li>
+                    <li><a th:href="@{/shop(category='phukien')}" class="text-muted text-decoration-none">Phụ kiện Atelier</a></li>
+                    <li><a th:href="@{/shop(onSale=true)}" class="text-muted text-decoration-none">Sale & Ưu đãi</a></li>
+                </ul>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <h6 class="fw-bold text-uppercase small mb-3">Dịch vụ khách hàng</h6>
+                <ul class="list-unstyled small text-muted d-flex flex-column gap-2">
+                    <li><a href="#" class="text-muted text-decoration-none">Chính sách đổi trả trong 30 ngày</a></li>
+                    <li><a href="#" class="text-muted text-decoration-none">Hướng dẫn chọn kích cỡ</a></li>
+                    <li><a href="#" class="text-muted text-decoration-none">Bảo mật thông tin khách hàng</a></li>
+                    <li><a href="#" class="text-muted text-decoration-none">Theo dõi đơn hàng</a></li>
+                </ul>
+            </div>
+
+            <div class="col-12 col-md-3">
+                <h6 class="fw-bold text-uppercase small mb-3">Hệ thống Atelier</h6>
+                <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-1"></i> Flagship Store: 12 Nguyễn Huệ, Q.1, TP.HCM</p>
+                <p class="text-muted small mb-1"><i class="bi bi-telephone me-1"></i> Hotline: 1900 6868</p>
+                <p class="text-muted small mb-1"><i class="bi bi-envelope me-1"></i> Email: atelier@fashionshop.vn</p>
+            </div>
+        </div>
+
+        <div class="border-top pt-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 small text-muted">
+            <span>&copy; 2026 FASHION SHOP STUDIO & ATELIER. All rights reserved.</span>
+            <div class="d-flex gap-3">
+                <a th:href="@{/admin/dashboard}" class="text-muted text-decoration-none small"><i class="bi bi-shield-lock"></i> Cổng Quản Trị (Admin)</a>
+                <a href="#" class="text-muted text-decoration-none small">Điều khoản</a>
+                <a href="#" class="text-muted text-decoration-none small">Bảo mật</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

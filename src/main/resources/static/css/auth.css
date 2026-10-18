@@ -1,0 +1,569 @@
+/* =======================================================
+   FASHION SHOP - LUXURY ATELIER AUTH STYLES (COMPACT & RESPONSIVE)
+   ======================================================= */
+
+body.auth-body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: #f7f3ee;
+    color: #1a1a1a;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* 1. TOPBAR HEADER (Gọn gàng, thanh lịch) */
+.luxury-auth-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #ede8e1;
+    padding: 0.6rem 2.5rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.03em;
+}
+
+.auth-header-link {
+    color: #1a1a1a;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.78rem;
+    transition: color 0.2s ease;
+}
+
+.auth-header-link:hover {
+    color: #8b5e34;
+}
+
+.auth-brand-center {
+    text-align: center;
+}
+
+.auth-brand-name {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.16em;
+    color: #111111;
+    margin: 0;
+    line-height: 1.1;
+}
+
+.auth-brand-sub {
+    font-size: 0.58rem;
+    letter-spacing: 0.24em;
+    color: #7a7a7a;
+    text-transform: uppercase;
+}
+
+.auth-header-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.auth-header-nav a {
+    color: #4a4a4a;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.auth-header-nav a:hover {
+    color: #111111;
+}
+
+/* 2. AUTH MAIN PANEL (Thu gọn kích thước vừa khung hình không bị tràn) */
+.auth-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.2rem 1rem;
+}
+
+.auth-panel-container {
+    width: 100%;
+    max-width: 1040px;
+    background-color: #ffffff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+    border: 1px solid #ede8e1;
+}
+
+/* LEFT EDITORIAL COLUMN */
+.auth-editorial-col {
+    position: relative;
+    background: linear-gradient(145deg, #17181c 0%, #23262c 50%, #151619 100%);
+    min-height: 540px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 2rem;
+    color: #ffffff;
+}
+
+.auth-editorial-content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.pill-badge {
+    background: rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    text-transform: uppercase;
+}
+
+.editorial-tag {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: rgba(255, 255, 255, 0.85);
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+}
+
+.editorial-quote {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.55rem;
+    font-style: italic;
+    line-height: 1.3;
+    margin-bottom: 0.6rem;
+    font-weight: 500;
+    color: #ffffff;
+}
+
+.editorial-desc {
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.85);
+    max-width: 95%;
+    margin-bottom: 0;
+}
+
+/* Feature Cards (Register Left) */
+.feature-glass-card {
+    background: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.feature-glass-card .icon-box {
+    width: 30px;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.88rem;
+    flex-shrink: 0;
+}
+
+.feature-glass-card h6 {
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin: 0;
+    color: #ffffff;
+}
+
+.feature-glass-card p {
+    font-size: 0.72rem;
+    line-height: 1.35;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+/* RIGHT FORM COLUMN */
+.auth-form-col {
+    padding: 2rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.auth-form-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #333333;
+    text-transform: uppercase;
+}
+
+.auth-help-link {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #666666;
+    text-decoration: none;
+    letter-spacing: 0.04em;
+}
+
+.auth-icon-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #f7f3ee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: #1a1a1a;
+    margin: 0.75rem 0 0.5rem 0;
+}
+
+.auth-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.65rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    margin-bottom: 0.2rem;
+    color: #111111;
+}
+
+.auth-subtitle {
+    color: #666666;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    margin-bottom: 1.1rem;
+}
+
+/* Luxury Form Inputs (Thu gọn chiều cao) */
+.auth-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #333333;
+    margin-bottom: 0.25rem;
+}
+
+.luxury-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    border: 1px solid #e0dbd3;
+    border-radius: 8px;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.luxury-input-group:focus-within {
+    border-color: #111111;
+    box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.06);
+}
+
+.luxury-input-group .input-icon {
+    padding: 0.55rem 0.75rem;
+    color: #888888;
+    font-size: 0.95rem;
+}
+
+.luxury-input-group input {
+    border: none;
+    background: transparent;
+    padding: 0.55rem 0.5rem 0.55rem 0;
+    font-size: 0.85rem;
+    width: 100%;
+    outline: none;
+    color: #111111;
+}
+
+.luxury-input-group input::placeholder {
+    color: #a8a39d;
+    font-size: 0.82rem;
+}
+
+.luxury-input-group .toggle-pw-btn {
+    background: none;
+    border: none;
+    padding: 0.55rem 0.75rem;
+    color: #888888;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+/* Ẩn nút "hiện mật khẩu" mặc định của Edge/Chrome (tránh bị 2 con mắt).
+   Mỗi pseudo-element viết thành rule riêng, đặt NGOÀI @media. */
+input[type="password"]::-ms-reveal {
+    display: none;
+}
+
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
+/* Lỗi hiển thị ngay dưới từng ô nhập */
+.luxury-input-group.is-invalid {
+    border-color: #dc3545;
+}
+
+.luxury-input-group.is-invalid:focus-within {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.15);
+}
+
+.auth-field-error {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+    color: #dc3545;
+    font-size: 0.72rem;
+    font-weight: 500;
+}
+
+/* Slideshow ảnh cột trái trang đăng nhập */
+.auth-editorial-col {
+    overflow: hidden;
+}
+
+.auth-slides {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.auth-slide {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center bottom;
+    opacity: 0;
+    transform: scale(1.04);
+    transition: opacity 1s ease, transform 6s ease;
+}
+
+.auth-slide.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Lớp phủ tối nhẹ để chữ trắng phía trên/dưới dễ đọc */
+.auth-slides-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 25%, rgba(0, 0, 0, 0) 75%, rgba(0, 0, 0, 0.45) 100%);
+    pointer-events: none;
+}
+
+.auth-slide-dots {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.auth-slide-dot {
+    position: relative;
+    width: 28px;
+    height: 4px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.4);
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.auth-slide-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 0;
+    background: #ffffff;
+}
+
+.auth-slide-dot.active::after {
+    animation: authSlideProgress 5s linear forwards;
+}
+
+@keyframes authSlideProgress {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auth-slide { transition: opacity 0.3s ease; transform: none; }
+}
+
+/* Buttons */
+.btn-auth-primary {
+    background-color: #0d0d0d;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    width: 100%;
+}
+
+.btn-auth-primary:hover {
+    background-color: #262626;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Social Buttons */
+.auth-divider {
+    text-align: center;
+    position: relative;
+    margin: 0.9rem 0;
+}
+
+.auth-divider::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #ede8e1;
+}
+
+.auth-divider span {
+    position: relative;
+    background-color: #ffffff;
+    padding: 0 0.8rem;
+    color: #888888;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.btn-social {
+    border: 1px solid #e0dbd3;
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    width: 100%;
+}
+
+.btn-social:hover {
+    background-color: #faf7f2;
+    border-color: #ccc5b9;
+    color: #111111;
+}
+
+/* Trust Badges Bar */
+.auth-trust-bar {
+    background-color: #f7f3ee;
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.9rem;
+}
+
+.auth-trust-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.1rem;
+}
+
+.auth-trust-item i {
+    font-size: 0.95rem;
+    color: #111111;
+}
+
+.auth-trust-item strong {
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
+    color: #111111;
+    text-transform: uppercase;
+}
+
+.auth-trust-item small {
+    font-size: 0.62rem;
+    color: #777777;
+}
+
+/* 3. LUXURY FOOTER */
+.luxury-auth-footer {
+    padding: 0.8rem 2.5rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: #666666;
+}
+
+.luxury-auth-footer a {
+    color: #666666;
+    text-decoration: none;
+    font-weight: 600;
+    margin-left: 1.2rem;
+}
+
+.luxury-auth-footer a:hover {
+    color: #111111;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 991.98px) {
+    .luxury-auth-header {
+        padding: 0.6rem 1rem;
+    }
+    .auth-header-nav {
+        display: none;
+    }
+    .auth-form-col {
+        padding: 1.5rem 1.2rem;
+    }
+    .luxury-auth-footer {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.5rem;
+        text-align: center;
+    }
+    .luxury-auth-footer a {
+        margin: 0 0.5rem;
+    }
+}

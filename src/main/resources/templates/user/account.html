@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/user-base :: layout(
+          ~{::title},
+          ~{::#customer-content}
+      )}">
+<head>
+    <title>Tài khoản cá nhân | Fashion Shop</title>
+</head>
+<body>
+
+<div id="customer-content">
+
+    <style>
+        .acc-card { background:#fff; border:1px solid #eee; padding:24px; }
+        .acc-label { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:#8a8a8a; margin-bottom:2px; }
+        .acc-value { font-size:.9rem; color:#555; margin-bottom:14px; }
+        .acc-empty { color:#aaa; font-style:italic; }
+        .acc-title { font-family:'Playfair Display',serif; font-size:1.25rem; margin:0; }
+        .acc-head { display:flex; justify-content:space-between; align-items:center;
+            border-bottom:1px solid #eee; padding-bottom:12px; margin-bottom:16px; }
+        .acc-head.no-body { border-bottom:0; padding-bottom:0; margin-bottom:0; }
+        .acc-link { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:#222; text-decoration:none; }
+        .acc-link:hover { text-decoration:underline; }
+        .acc-menu a { display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:4px;
+            font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:#444; text-decoration:none; }
+        .acc-menu a:hover { background:#f5f5f5; }
+        .acc-menu a.active { background:#eeeeee; font-weight:600; color:#111; }
+        .acc-menu .count { margin-left:auto; color:#888; }
+        .acc-dot { width:6px; height:6px; border-radius:50%; background:#a1141b; margin-left:auto; }
+        .acc-stat-num { font-family:'Playfair Display',serif; font-size:2rem; }
+        .acc-red { color:#8b1a1a; font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; }
+        .acc-thumb { width:52px; height:64px; background:#ece6dc; display:flex; align-items:center;
+            justify-content:center; color:#a89a85; font-size:1.4rem; overflow:hidden; flex-shrink:0; }
+        .acc-thumb img { width:100%; height:100%; object-fit:cover; }
+        .acc-price { font-weight:600; font-size:.78rem; }
+    </style>
+
+    <div class="row g-4">
+
+        <!-- ===== MENU TRÁI ===== -->
+        <div class="col-lg-3">
+            <div class="acc-card acc-menu">
+                <div class="acc-label mb-2 pb-2 border-bottom">Danh mục</div>
+                <a th:href="@{/account}" class="active">
+                    <i class="bi bi-person"></i> Thông tin cá nhân <span class="acc-dot"></span>
+                </a>
+                <a th:href="@{/orders}">
+                    <i class="bi bi-bag-check"></i> Đơn hàng của tôi
+                    <span class="count" th:if="${orderCount > 0}" th:text="${orderCount}">1</span>
+                </a>
+                <a href="#"><i class="bi bi-geo-alt"></i> Sổ địa chỉ</a>
+                <a th:href="@{/wishlist}">
+                    <i class="bi bi-heart"></i> Sản phẩm yêu thích
+                    <span class="count" th:if="${wishlistCount > 0}" th:text="${wishlistCount}">1</span>
+                </a>
+                <a href="#"><i class="bi bi-lock"></i> Cài đặt bảo mật</a>
+                <hr>
+                <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
+            </div>
+        </div>
+
+        <!-- ===== NỘI DUNG PHẢI ===== -->
+        <div class="col-lg-9">
+
+            <!-- 2 ô thống kê -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <div class="acc-card">
+                        <div class="acc-label mb-3">Đơn hàng đang xử lý</div>
+                        <div class="d-flex justify-content-between align-items-end">
+                            <span class="acc-stat-num" th:text="${processingCount}">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="acc-card">
+                        <div class="acc-label mb-3">Sản phẩm đã thích</div>
+                        <div class="d-flex justify-content-between align-items-end">
+                            <span class="acc-stat-num" th:text="${wishlistCount}">0</span>
+                            <a th:if="${wishlistCount > 0}" th:href="@{/wishlist}" class="acc-link">Xem tất cả →</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thông tin cá nhân + Địa chỉ -->
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="acc-card h-100">
+                        <div class="acc-head">
+                            <h3 class="acc-title">Thông tin cá nhân</h3>
+                            <a href="#" class="acc-link"><i class="bi bi-pencil"></i> Chỉnh sửa</a>
+                        </div>
+
+                        <div class="acc-label">Họ và tên</div>
+                        <div class="acc-value">
+                            <span th:if="${profile != null and profile.fullName != null}" th:text="${profile.fullName}">Họ tên</span>
+                            <span th:unless="${profile != null and profile.fullName != null}" class="acc-empty">Chưa cập nhật</span>
+                        </div>
+
+                        <div class="acc-label">Email</div>
+                        <div class="acc-value" th:text="${email}">email@example.com</div>
+
+                        <div class="acc-label">Số điện thoại</div>
+                        <div class="acc-value">
+                            <span th:if="${profile != null and profile.phone != null}" th:text="${profile.phone}">0900000000</span>
+                            <span th:unless="${profile != null and profile.phone != null}" class="acc-empty">Chưa cập nhật</span>
+                        </div>
+
+                        <div class="acc-label">Ngày sinh</div>
+                        <div class="acc-value mb-0">
+                            <span th:if="${profile != null and profile.birthDate != null}" th:text="${profile.birthDate}">01/01/2000</span>
+                            <span th:unless="${profile != null and profile.birthDate != null}" class="acc-empty">Chưa cập nhật</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="acc-card h-100">
+                        <div class="acc-head">
+                            <h3 class="acc-title">Địa chỉ giao hàng mặc định</h3>
+                            <a href="#" class="acc-link">Thay đổi</a>
+                        </div>
+
+                        <div th:if="${defaultAddress != null}">
+                            <div class="acc-value" th:text="${defaultAddress}">Địa chỉ</div>
+                            <div class="small text-muted"
+                                 th:if="${profile != null and profile.fullName != null}"
+                                 th:text="'Người nhận: ' + ${profile.fullName} + (${profile.phone != null} ? ' - ' + ${profile.phone} : '')">Người nhận</div>
+                        </div>
+                        <div th:unless="${defaultAddress != null}" class="acc-value acc-empty">Chưa có địa chỉ giao hàng mặc định</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

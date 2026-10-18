@@ -1,0 +1,10 @@
+spring.datasource.url=jdbc:mariadb://localhost:3306/fashionshop
+spring.datasource.username=root
+spring.datasource.password=<mat-khau-cua-ban>
+
+ollama.base-url=http://localhost:11434
+ollama.embedding.model=bge-m3
+ollama.embedding.dimensions=1024
+
+
+vector.search.max-distance=1.0

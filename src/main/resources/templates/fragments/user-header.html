@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<header th:fragment="header" class="site-header sticky-top">
+    <nav class="navbar navbar-expand-lg site-navbar">
+        <div class="container">
+
+            <!-- Logo -->
+            <a class="navbar-brand site-brand d-flex align-items-center gap-2" th:href="@{/}">
+                <img th:src="@{/images/logo.png}" alt="Fashion Shop" class="site-brand-logo">
+                <span class="site-brand-name">FASHION SHOP</span>
+            </a>
+
+            <button class="navbar-toggler border-0 shadow-none" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#mainNav" aria-label="Mở menu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="mainNav">
+
+                <!-- Menu giữa -->
+                <ul class="navbar-nav mx-auto site-nav-links">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/}">Trang chủ</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/shop}">Sản phẩm</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center gap-2" th:href="@{/sale}">
+                            Sale <span class="sale-hot-badge">HOT</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Bên phải: tìm kiếm, yêu thích, giỏ hàng, tài khoản -->
+                <div class="d-flex align-items-center gap-3 site-actions">
+
+                    <div class="site-search-wrap position-relative">
+                        <form th:action="@{/shop}" method="get" class="site-search">
+                            <i class="bi bi-search"></i>
+                            <input type="search" name="keyword" id="siteSearchInput" autocomplete="off"
+                                   placeholder="Tìm kiếm bộ sưu tập..." aria-label="Tìm kiếm">
+                        </form>
+                        <div id="siteSearchDropdown" class="search-dropdown" hidden></div>
+                    </div>
+
+                    <!-- Yêu thích -->
+                    <a th:href="@{/wishlist}" class="site-icon-btn" aria-label="Yêu thích">
+                        <i class="bi bi-heart"></i>
+                        <span class="site-badge"
+                              th:if="${wishlistCount != null and wishlistCount > 0}"
+                              th:text="${wishlistCount}">0</span>
+                    </a>
+
+                    <!-- Giỏ hàng -->
+                    <a th:href="@{/cart}" class="site-icon-btn" aria-label="Giỏ hàng">
+                        <i class="bi bi-bag"></i>
+                        <span class="site-badge"
+                              th:if="${cartCount != null and cartCount > 0}"
+                              th:text="${cartCount}">0</span>
+                    </a>
+
+
+                    <!-- CHƯA đăng nhập: nút Đăng nhập / Đăng ký -->
+                    <div th:unless="${loggedIn}" class="d-flex align-items-center gap-2">
+                        <a th:href="@{/login}" class="btn btn-dark btn-sm rounded-pill px-3 text-uppercase"
+                           style="font-size:.72rem; letter-spacing:.08em;">Đăng nhập</a>
+                        <a th:href="@{/register}" class="btn btn-outline-dark btn-sm rounded-pill px-3 text-uppercase"
+                           style="font-size:.72rem; letter-spacing:.08em;">Đăng ký</a>
+                    </div>
+
+                    <!-- ĐÃ đăng nhập: bấm vào thẳng trang tài khoản -->
+                    <a th:if="${loggedIn}" th:href="@{/account}"
+                       class="site-user-btn" aria-label="Tài khoản" title="Tài khoản của tôi">
+                        <i class="bi bi-person-fill"></i>
+                    </a>
+
+                </div>
+            </div>
+        </div>
+    </nav>
+
+
+    <script th:inline="none">
+        (function () {
+            const input = document.getElementById('siteSearchInput');
+            const box = document.getElementById('siteSearchDropdown');
+            if (!input || !box) return;
+
+            let timer = null, controller = null;
+
+            const money = n => Number(n).toLocaleString('vi-VN') + ' ₫';
+
+            function hide() { box.hidden = true; box.replaceChildren(); }
+
+            function render(items) {
+                if (!items.length) { hide(); return; }          // không có kết quả -> không hiện gì
+                box.replaceChildren(...items.map(p => {
+                    const a = document.createElement('a');
+                    a.className = 'search-item';
+                    a.href = '/shop/' + p.id;
+
+                    const img = document.createElement('img');
+                    img.alt = '';
+                    img.src = p.imageUrl || '';
+                    img.onerror = () => { img.style.visibility = 'hidden'; };
+
+                    const info = document.createElement('div');
+                    const cat = document.createElement('small');
+                    cat.textContent = p.categoryName;
+                    const name = document.createElement('div');
+                    name.className = 'search-name';
+                    name.textContent = p.name;
+                    const price = document.createElement('div');
+                    price.className = 'search-price';
+                    price.textContent = money(p.onSale ? p.salePrice : p.price);
+                    info.append(cat, name, price);
+
+                    a.append(img, info);
+                    return a;
+                }));
+                box.hidden = false;
+            }
+
+            input.addEventListener('input', () => {
+                clearTimeout(timer);
+                const q = input.value.trim();
+                if (!q) { hide(); return; }
+                timer = setTimeout(async () => {
+                    if (controller) controller.abort();          // bỏ yêu cầu cũ nếu gõ tiếp
+                    controller = new AbortController();
+                    try {
+                        const res = await fetch('/api/products/search?q=' + encodeURIComponent(q),
+                            { signal: controller.signal });
+                        if (!res.ok) { hide(); return; }
+                        render(await res.json());
+                    } catch (e) { if (e.name !== 'AbortError') hide(); }
+                }, 250);
+            });
+
+            document.addEventListener('click', e => {
+                if (!e.target.closest('.site-search-wrap')) hide();
+            });
+            input.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
+        })();
+    </script>
+
+</header>
+
+
+
+
+</body>
+</html>

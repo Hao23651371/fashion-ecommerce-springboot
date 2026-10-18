@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/admin-base :: adminLayout(
+          ~{::title},
+          ~{::#admin-content},
+          'dashboard'
+      )}">
+<head>
+    <title>Bảng điều khiển | Fashion Shop Admin</title>
+</head>
+<body>
+
+    <!-- Khung trống cho nội dung Admin (Các thành viên tự viết code vào đây) -->
+    <div id="admin-content"></div>
+
+</body>
+</html>

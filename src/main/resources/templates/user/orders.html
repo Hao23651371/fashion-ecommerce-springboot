@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/user-base :: layout(
+          ~{::title},
+          ~{::#customer-content}
+      )}">
+<head>
+    <title>Đơn hàng của tôi | Fashion Shop</title>
+</head>
+<body>
+
+<div id="customer-content">
+
+    <style>
+        .acc-card { background:#fff; border:1px solid #eee; padding:24px; }
+        .acc-label { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:#8a8a8a; margin-bottom:2px; }
+        .acc-title { font-family:'Playfair Display',serif; font-size:1.5rem; margin:0; }
+        .acc-link { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:#222; text-decoration:none; }
+        .acc-menu a { display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:4px;
+            font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:#444; text-decoration:none; }
+        .acc-menu a:hover { background:#f5f5f5; }
+        .acc-menu a.active { background:#eeeeee; font-weight:600; color:#111; }
+        .acc-menu .count { margin-left:auto; color:#888; }
+        .acc-dot { width:6px; height:6px; border-radius:50%; background:#a1141b; margin-left:6px; }
+
+        .ord-tabs { display:flex; gap:28px; border-bottom:1px solid #eee; margin:16px 0 20px; flex-wrap:wrap; }
+        .ord-tabs a { font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#777; text-decoration:none;
+            padding-bottom:10px; border-bottom:2px solid transparent; margin-bottom:-1px; }
+        .ord-tabs a.active { color:#111; font-weight:600; border-bottom-color:#111; }
+
+        .ord-meta { font-size:.72rem; color:#888; }
+        .ord-meta strong { color:#222; letter-spacing:.05em; }
+        .ord-badge { font-size:.62rem; letter-spacing:.1em; text-transform:uppercase; padding:5px 12px; }
+        .st-processing { background:#fbf1de; color:#8a5a00; }
+        .st-shipping   { background:#f6e3e3; color:#8b1a1a; }
+        .st-completed  { background:#e4efe7; color:#2f6b45; }
+        .st-cancelled  { background:#ececec; color:#666; }
+
+        .ord-item { display:flex; gap:16px; padding:16px 0; border-bottom:1px solid #f1f1f1; }
+        .ord-thumb { width:52px; height:64px; background:#ece6dc; display:flex; align-items:center;
+            justify-content:center; color:#a89a85; font-size:1.3rem; overflow:hidden; flex-shrink:0; }
+        .ord-thumb img { width:100%; height:100%; object-fit:cover; }
+        .ord-name { font-family:'Playfair Display',serif; font-size:1rem; }
+        .ord-sub { font-size:.72rem; color:#888; }
+        .ord-price { font-weight:600; font-size:.78rem; }
+        .ord-total { font-family:'Playfair Display',serif; font-size:1.5rem; }
+        .ord-btn { font-size:.66rem; letter-spacing:.1em; text-transform:uppercase; padding:9px 18px;
+            border:1px solid #ddd; background:#fff; color:#222; text-decoration:none; }
+        .ord-btn.dark { background:#111; border-color:#111; color:#fff; }
+        .ord-empty { text-align:center; padding:48px 0; color:#999; }
+    </style>
+
+    <div class="row g-4">
+
+        <!-- ===== MENU TRÁI ===== -->
+        <div class="col-lg-3">
+            <div class="acc-card acc-menu">
+                <div class="acc-label mb-2 pb-2 border-bottom">Danh mục</div>
+                <a th:href="@{/account}"><i class="bi bi-person"></i> Thông tin cá nhân</a>
+                <a th:href="@{/orders}" class="active">
+                    <i class="bi bi-bag-check"></i> Đơn hàng của tôi
+                    <span class="count" th:if="${orderCount > 0}" th:text="${orderCount}">1</span>
+                    <span class="acc-dot"></span>
+                </a>
+                <a href="#"><i class="bi bi-geo-alt"></i> Sổ địa chỉ</a>
+                <a th:href="@{/wishlist}">
+                    <i class="bi bi-heart"></i> Sản phẩm yêu thích
+                    <span class="count" th:if="${wishlistCount > 0}" th:text="${wishlistCount}">1</span>
+                </a>
+                <a href="#"><i class="bi bi-lock"></i> Cài đặt bảo mật</a>
+                <hr>
+                <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
+            </div>
+        </div>
+
+        <!-- ===== NỘI DUNG PHẢI ===== -->
+        <div class="col-lg-9">
+
+            <div class="d-flex justify-content-between align-items-baseline flex-wrap">
+                <h1 class="acc-title">Đơn hàng của tôi
+                    <small class="text-muted fs-6" th:text="'(' + ${totalCount} + ' đơn hàng)'">(0 đơn hàng)</small>
+                </h1>
+            </div>
+
+            <!-- Tab lọc theo trạng thái (số chỉ hiện khi > 0) -->
+            <div class="ord-tabs">
+                <a th:href="@{/orders}" th:classappend="${currentTab == 'all'} ? 'active'">Tất cả</a>
+                <a th:href="@{/orders(status='processing')}" th:classappend="${currentTab == 'processing'} ? 'active'">
+                    Đang xử lý<span th:if="${tabCounts['processing'] > 0}" th:text="' (' + ${tabCounts['processing']} + ')'"></span></a>
+                <a th:href="@{/orders(status='shipping')}" th:classappend="${currentTab == 'shipping'} ? 'active'">
+                    Đang vận chuyển<span th:if="${tabCounts['shipping'] > 0}" th:text="' (' + ${tabCounts['shipping']} + ')'"></span></a>
+                <a th:href="@{/orders(status='completed')}" th:classappend="${currentTab == 'completed'} ? 'active'">
+                    Đã giao<span th:if="${tabCounts['completed'] > 0}" th:text="' (' + ${tabCounts['completed']} + ')'"></span></a>
+                <a th:href="@{/orders(status='cancelled')}" th:classappend="${currentTab == 'cancelled'} ? 'active'">
+                    Đã hủy<span th:if="${tabCounts['cancelled'] > 0}" th:text="' (' + ${tabCounts['cancelled']} + ')'"></span></a>
+            </div>
+
+            <!-- Chưa có đơn -->
+            <div class="acc-card ord-empty" th:if="${#lists.isEmpty(orders)}">
+                <p class="mb-3">Chưa có đơn hàng nào.</p>
+                <a th:href="@{/shop}" class="ord-btn dark">Tiếp tục mua sắm</a>
+            </div>
+
+            <!-- Danh sách đơn -->
+            <div class="acc-card mb-4" th:each="o : ${orders}">
+
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pb-3 border-bottom">
+                    <div class="ord-meta">
+                        <strong th:text="'#' + ${o.orderCode}">#MÃ</strong>
+                        &nbsp;·&nbsp; <span th:text="${o.createdAt}">01/01/2025</span>
+                        &nbsp;·&nbsp;
+                        <span th:switch="${o.paymentMethod}">
+                            <span th:case="'COD'">Thanh toán khi nhận hàng</span>
+                            <span th:case="'BANK_TRANSFER'">Chuyển khoản trực tuyến</span>
+                            <span th:case="'CREDIT_CARD'">Thanh toán thẻ tín dụng</span>
+                            <span th:case="*" th:text="${o.paymentMethod}">Phương thức</span>
+                        </span>
+                    </div>
+                    <span class="ord-badge" th:switch="${o.status}"
+                          th:classappend="${o.status == 'SHIPPING'} ? 'st-shipping'
+                                     : (${o.status == 'COMPLETED' or o.status == 'DELIVERED'} ? 'st-completed'
+                                     : (${o.status == 'CANCELLED'} ? 'st-cancelled' : 'st-processing'))">
+                        <span th:case="'PENDING'">Chờ xác nhận</span>
+                        <span th:case="'CONFIRMED'">Đã xác nhận</span>
+                        <span th:case="'PROCESSING'">Đang xử lý</span>
+                        <span th:case="'SHIPPING'">Đang vận chuyển</span>
+                        <span th:case="'COMPLETED'">Đã hoàn tất</span>
+                        <span th:case="'DELIVERED'">Đã giao</span>
+                        <span th:case="'CANCELLED'">Đã hủy</span>
+                        <span th:case="*" th:text="${o.status}">Trạng thái</span>
+                    </span>
+                </div>
+
+                <div class="ord-item" th:each="item : ${o.items}">
+                    <div class="ord-thumb">
+                        <img th:if="${item.imageUrl != null}" th:src="@{${item.imageUrl}}" alt="">
+                        <i th:unless="${item.imageUrl != null}" class="bi bi-image"></i>
+                    </div>
+                    <div>
+                        <div class="ord-name" th:text="${item.productName}">Tên sản phẩm</div>
+                        <div class="ord-sub"
+                             th:text="'Màu: ' + ${item.color} + ' · Size: ' + ${item.size} + ' · SL: ' + ${item.quantity}">Màu · Size · SL</div>
+                        <div class="ord-price"
+                             th:text="${#numbers.formatDecimal(item.unitPrice, 0, 'POINT', 0, 'COMMA')} + '₫'">0₫</div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 pt-3">
+                    <div>
+                        <span class="acc-label">Tổng thanh toán:</span>
+                        <span class="ord-total"
+                              th:text="${#numbers.formatDecimal(o.totalAmount, 0, 'POINT', 0, 'COMMA')} + '₫'">0₫</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="#" class="ord-btn">Xem chi tiết</a>
+                        <a href="#" class="ord-btn dark" th:if="${o.status == 'SHIPPING'}">Theo dõi đơn hàng</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

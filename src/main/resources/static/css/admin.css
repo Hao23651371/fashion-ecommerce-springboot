@@ -1,0 +1,183 @@
+/* =======================================================
+   FASHION SHOP - ADMIN DASHBOARD STYLES (MATCHES IMAGE 1)
+   ======================================================= */
+
+body.admin-body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: #f8fafc;
+    color: #1e293b;
+    overflow-x: hidden;
+}
+
+.admin-app-layout {
+    display: flex;
+    min-height: 100vh;
+    width: 100vw;
+}
+
+/* 1. SIDEBAR NAVIGATION */
+.admin-sidebar {
+    width: 260px;
+    min-width: 260px;
+    background-color: #1a1c21;
+    color: #94a3b8;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-right: 1px solid #282b32;
+    transition: transform 0.3s ease;
+}
+
+/* Red Logo Badge (UNIQLO / Fashion Style) */
+.brand-badge-red .brand-logo-img {
+    width: 32px;
+    height: 32px;
+    display: block;
+}
+/* Nút 3 gạch nằm trong sidebar, cạnh logo */
+.sidebar-toggle-btn {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.sidebar-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.sidebar-section-title {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+/* Sidebar Nav Links */
+.sidebar-nav .nav-link {
+    color: #94a3b8;
+    font-size: 0.88rem;
+    font-weight: 500;
+    padding: 0.65rem 0.9rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.sidebar-nav .nav-link i {
+    font-size: 1.05rem;
+}
+
+.sidebar-nav .nav-link:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Active Item with Purple Gradient/Solid (Matches Image 1) */
+.sidebar-nav .nav-link.active {
+    background-color: #5c56f6;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(92, 86, 246, 0.4);
+}
+
+.active-dot {
+    width: 7px;
+    height: 7px;
+    background-color: #ffffff;
+    border-radius: 50%;
+}
+
+/* Store Status Card (Bottom of sidebar) */
+.store-status-card {
+    background-color: #272a31;
+    border: 1px solid #333741;
+}
+
+.status-indicator-green {
+    width: 9px;
+    height: 9px;
+    background-color: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #10b981;
+}
+
+.sidebar-link-muted {
+    color: #94a3b8;
+    font-size: 0.82rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    transition: color 0.2s ease;
+}
+
+.sidebar-link-muted:hover {
+    color: #ffffff;
+}
+
+.sidebar-link-logout {
+    color: #f87171;
+}
+
+.sidebar-link-logout:hover {
+    color: #ef4444;
+}
+/* 2. MAIN WORKSPACE AREA */
+.admin-main-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* Prevents overflow from tables */
+    background-color: #f8fafc;
+}
+
+.admin-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 990;
+    height: 64px;
+}
+
+.admin-content-container {
+    flex: 1;
+}
+
+/* 3. RESPONSIVE & THU GỌN SIDEBAR */
+
+/* Mobile / tablet: sidebar trượt ra từ bên trái */
+@media (max-width: 991.98px) {
+    .admin-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        transform: translateX(-100%);
+    }
+    .admin-sidebar.show {
+        transform: translateX(0);
+    }
+}
+
+/* Màn hình lớn: ẩn/hiện sidebar bằng class .sidebar-collapsed trên <body> */
+@media (min-width: 992px) {
+    /* Nút mở ở topbar chỉ hiện khi sidebar đang bị ẩn */
+    .sidebar-open-btn {
+        display: none;
+    }
+    .sidebar-collapsed .sidebar-open-btn {
+        display: inline-block;
+    }
+
+    .sidebar-collapsed .admin-sidebar {
+        display: none !important;
+    }
+
+}
