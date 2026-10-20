@@ -52,7 +52,7 @@ Các tài khoản email được nạp từ SQL với mật khẩu BCrypt. Ngư�
 |---|---|---|
 | GET | `/` | Trang chủ |
 | GET | `/shop` | Danh sách sản phẩm, hỗ trợ tham số tìm kiếm `keyword` |
-| GET | `/shop/{id}` | Màn hình chi tiết sản phẩm theo mã sản phẩm |
+| GET | `/shop/{id}` | Trang chi tiết sản phẩm; chỉ hiển thị sản phẩm đang hoạt động thuộc danh mục đang hiển thị, không tìm thấy thì trả về trang 404 |
 | GET | `/sale` | Màn hình sản phẩm khuyến mãi |
 | GET | `/cart` | Màn hình giỏ hàng; hiện là khung template |
 | GET | `/checkout` | Màn hình thanh toán; hiện là khung template |
@@ -76,7 +76,25 @@ Tất cả route `/admin/**` yêu cầu `ROLE_ADMIN`.
 | `/admin/orders` | Đơn hàng |
 | `/admin/coupons` | Mã giảm giá |
 | `/admin/users` | Người dùng |
+| `/admin/statistics` | Khung giao diện thống kê |
 | `/admin/settings` | Trợ giúp và thiết lập |
+
+### Chatbot tư vấn sản phẩm
+
+Chatbot được hiển thị trong `fragments/chatbox.html` và được nạp trong layout storefront
+`layouts/user-base.html`. Chatbot xử lý câu hỏi tiếng Việt về sản phẩm, giá, khuyến mãi,
+mã giảm giá, màu, size, tồn kho và chính sách đổi trả dựa trên dữ liệu hiện có trong
+database.
+
+| Method | Route | Chức năng |
+|---|---|---|
+| POST | `/api/chatbot` | Nhận JSON `{ "message": "..." }`, trả JSON `{ "reply": "..." }`. |
+| POST | `/api/chatbot/stream` | Nhận cùng định dạng, trả nội dung phản hồi dạng `text/plain` theo từng đoạn để giao diện hiển thị dần. |
+
+Tin nhắn được chuẩn hóa và giới hạn tối đa 500 ký tự ở controller. Chatbot có thể trả
+danh sách sản phẩm phù hợp kèm liên kết chi tiết; nếu không có dữ liệu phù hợp sẽ
+trả lời theo chính sách hoặc hướng dẫn người dùng. Chức năng streaming không yêu cầu
+dịch vụ AI bên ngoài; logic hiện tại sử dụng dữ liệu sản phẩm và coupon từ ứng dụng.
 
 ## Tìm kiếm sản phẩm bằng vector trên header
 
@@ -128,7 +146,7 @@ Yêu cầu MariaDB có hỗ trợ kiểu `VECTOR` (script hiện tại ghi chú 
 |---|---|
 | `user/home.html` | Trang chủ storefront; hiển thị khu vực giới thiệu và danh sách sản phẩm mới, có badge hết hàng/giảm giá và liên kết sang chi tiết. |
 | `user/shop.html` | Trang danh sách sản phẩm và điểm vào tìm kiếm/lọc sản phẩm. Hiện phần nội dung chính là khung giao diện. |
-| `user/detail.html` | Trang chi tiết theo `/shop/{id}`, dùng `productId` để xác định sản phẩm. Hiện phần hiển thị chi tiết là khung giao diện. |
+| `user/detail.html` | Trang chi tiết theo `/shop/{id}`; hiển thị ảnh, giá, khuyến mãi, SKU, mô tả, thông tin danh mục/giới tính, màu sắc, size, tồn kho theo biến thể và sản phẩm cùng danh mục. Có modal hướng dẫn size, toast thông báo và các thao tác chọn biến thể phía trình duyệt. |
 | `user/sale.html` | Trang tập hợp sản phẩm đang khuyến mãi. Hiện phần nội dung chính là khung giao diện. |
 | `user/cart.html` | Trang xem và chuẩn bị các sản phẩm trong giỏ trước khi thanh toán. Hiện chưa có giao diện nghiệp vụ hoàn chỉnh. |
 | `user/checkout.html` | Trang nhập/thực hiện thông tin thanh toán và giao hàng. Hiện chưa có giao diện nghiệp vụ hoàn chỉnh. |
@@ -149,6 +167,7 @@ Yêu cầu MariaDB có hỗ trợ kiểu `VECTOR` (script hiện tại ghi chú 
 | `admin/orders.html` | Theo dõi và xử lý đơn hàng; hiện là khung giao diện. |
 | `admin/coupons.html` | Quản lý mã giảm giá; hiện là khung giao diện. |
 | `admin/users.html` | Quản lý người dùng; hiện là khung giao diện. |
+| `admin/statistics.html` | Khung giao diện trang thống kê trong khu vực quản trị. |
 | `admin/settings.html` | Khu vực trợ giúp và thiết lập; hiện là khung giao diện. |
 | `error/403.html` | Thông báo không có quyền truy cập. |
 | `error/404.html` | Thông báo không tìm thấy trang/tài nguyên. |
@@ -165,8 +184,37 @@ Yêu cầu MariaDB có hỗ trợ kiểu `VECTOR` (script hiện tại ghi chú 
 
 Các entity chính gồm `Account`, `UserProfile`, `ShippingAddress`, `Category`, `Product`, `ProductVariant`, `Coupon`, `Order`, `OrderItem`, `StockHistory`, `CartItem` và `WishlistItem`. `ShippingInfo` và `PaymentInfo` là các lớp `@Embeddable` trong `orders`. Database có các bảng tương ứng: `account`, `user_profile`, `shipping_address`, `category`, `product`, `product_variant`, `coupon`, `orders`, `order_item`, `stock_history`, `cart_item`, `wishlist_item`.
 
+## Cấu trúc backend hiện tại
+
+- `ProductService` chuyển sản phẩm và các biến thể đang hoạt động thành
+  `ProductDetailDto`, tính giá hiện tại, phần trăm giảm, tổng tồn kho, màu và size,
+  đồng thời lấy tối đa bốn sản phẩm liên quan cùng danh mục.
+- `ProductRepository` cung cấp truy vấn chi tiết sản phẩm và sản phẩm liên quan.
+- `CouponRepository` cung cấp dữ liệu coupon cho chatbot và các chức năng liên quan.
+- `ChatbotController` cung cấp hai endpoint trả lời thường và streaming.
+- `ChatbotService` phân tích câu hỏi, lọc sản phẩm theo tiêu chí và định dạng phản hồi.
+- `ProductDetailDto` là DTO dùng chung cho trang chi tiết sản phẩm và logic tư vấn.
+
+Nút thêm giỏ hàng, mua ngay và yêu thích trên trang chi tiết hiện mới mô phỏng tương tác
+ở phía trình duyệt; chưa tạo nghiệp vụ đặt hàng hoặc lưu `CartItem`/`WishlistItem`
+qua API.
+
+## Kiểm thử và build
+
+```bash
+# Windows
+gradlew.bat test
+gradlew.bat compileJava
+gradlew.bat build
+
+# Linux/macOS
+./gradlew test
+```
+
+Các test hiện có gồm test khởi động ứng dụng và test `ChatbotService` cho câu hỏi về
+coupon, sản phẩm khuyến mãi, khoảng giá, size và chính sách đổi trả.
+
 ## Cấu trúc tài liệu
 
-- [README_PROJECT_DOCS.md](README_PROJECT_DOCS.md): kiến trúc, module, route, entity và hướng dẫn chi tiết.
-- [TAI_LIEU_DU_AN_FASHION_SHOP.docx](TAI_LIEU_DU_AN_FASHION_SHOP.docx): báo cáo Word đồng bộ với phiên bản hiện tại.
+- [TAI_LIEU_DU_AN_FASHION_SHOP.docx](TAI_LIEU_DU_AN_FASHION_SHOP.docx): báo cáo Word chi tiết về kiến trúc, module, route, entity và các tính năng hiện tại.
 - [database/fashionshop.sql](database/fashionshop.sql): schema, bảng `product_embedding` và dữ liệu mẫu.

@@ -1,5 +1,7 @@
 package com.iuh.fashionshop.controller;
 
+import com.iuh.fashionshop.dto.ProductDetailDto;
+import com.iuh.fashionshop.service.ProductService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +15,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/shop")
 public class ShopController {
 
+    private final ProductService productService;
+
+    public ShopController(ProductService productService) {
+        this.productService = productService;
+    }
+
     @GetMapping
     public String list(@RequestParam(required = false) String keyword, Model model) {
         model.addAttribute("keyword", keyword);
@@ -21,7 +29,13 @@ public class ShopController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id, Model model) {
-        model.addAttribute("productId", id);
+        ProductDetailDto product = productService.getProductDetail(id);
+        if (product == null) {
+            return "error/404";
+        }
+        model.addAttribute("product", product);
+        model.addAttribute("relatedProducts", productService.getRelatedProducts(product.categoryId(), product.id(), 4));
         return "user/detail";
     }
 }
+

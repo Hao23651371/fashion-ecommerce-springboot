@@ -13,7 +13,7 @@ public class FashionShopApplication {
 
 	public static void main(String[] args) {
 		new SpringApplicationBuilder(FashionShopApplication.class)
-				.headless(false)   // quan trọng: cho phép dùng Desktop API
+				.headless(false) // quan trọng: cho phép dùng Desktop API
 				.run(args);
 	}
 

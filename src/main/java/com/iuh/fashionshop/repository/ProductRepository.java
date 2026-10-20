@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
@@ -50,7 +51,39 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                                @Param("categoryStatus") CategoryStatus categoryStatus,
                                Pageable pageable);
 
+    /** Tìm chi tiết sản phẩm kèm danh mục và các biến thể theo ID. */
+    @Query("""
+            select distinct p from Product p
+            join fetch p.category c
+            left join fetch p.variants v
+            where p.id = :id
+            """)
+    Optional<Product> findByIdWithDetails(@Param("id") Long id);
 
+    /** Tìm các sản phẩm liên quan cùng danh mục (loại trừ chính sản phẩm đang xem). */
+    @Query("""
+            select p from Product p
+            join fetch p.category c
+            where p.category.id = :categoryId
+              and p.id <> :productId
+              and p.status = :status
+              and c.status = :categoryStatus
+            order by p.createdAt desc, p.id desc
+            """)
+    List<Product> findRelatedProducts(@Param("categoryId") Long categoryId,
+                                      @Param("productId") Long productId,
+                                      @Param("status") ProductStatus status,
+                                      @Param("categoryStatus") CategoryStatus categoryStatus,
+                                      Pageable pageable);
 
-
+    /** Lấy tất cả sản phẩm đang bán kèm danh mục và các biến thể (dùng cho Chatbot / Tra cứu). */
+    @Query("""
+            select distinct p from Product p
+            join fetch p.category c
+            left join fetch p.variants v
+            where p.status = :status and c.status = :categoryStatus
+            order by p.createdAt desc, p.id desc
+            """)
+    List<Product> findAllActiveWithVariants(@Param("status") ProductStatus status,
+                                            @Param("categoryStatus") CategoryStatus categoryStatus);
 }
