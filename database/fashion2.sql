@@ -1,233 +1,18 @@
 -- =====================================================
--- FashionShop - DATABASE HOAN CHINH (TEN BANG/COT TIENG ANH)
--- MariaDB >= 11.7 (can kieu VECTOR). Ban dang dung 12.2.2 nen on.
+-- FashionShop - FILE 2/2: DU LIEU SAN PHAM (danh muc, san pham, bien the)
+-- KHONG tao bang, KHONG xoa database. Phai chay fashion1.sql TRUOC.
+--
+-- Muon them du lieu moi: tao them file fashion3.sql, fashion4.sql... chi gom cac cau INSERT,
+-- roi chay lan luot sau fashion2.sql (khong can tao lai bang).
 --
 -- Cach dung: mo trong HeidiSQL, Ctrl+A roi F9. DUNG chay trong IntelliJ (loi GSS-API).
--- File se XOA database fashionshop cu va tao lai toan bo (13 bang gom product_embedding).
--- Sau khi chay: bat Ollama, chay Spring Boot -> app tu tao vector cho 15 san pham.
 -- =====================================================
 
 SET NAMES utf8mb4;
 
-DROP DATABASE IF EXISTS fashionshop;
-
-CREATE DATABASE fashionshop
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
-
 USE fashionshop;
 
--- ================= 1. TAI KHOAN =================
-CREATE TABLE account (
-                         id                   BIGINT       NOT NULL AUTO_INCREMENT,
-                         email                VARCHAR(150) NOT NULL,
-                         password             VARCHAR(255) NOT NULL,
-                         role                 VARCHAR(20)  NOT NULL,
-                         status               VARCHAR(20)  NOT NULL,
-                         email_verified       BIT(1)       NOT NULL DEFAULT 0,
-                         verification_code    VARCHAR(100) NULL,
-                         verification_expiry  DATETIME(6)  NULL,
-                         created_at           DATETIME(6)  NOT NULL,
-                         last_login_at        DATETIME(6)  NULL,
-                         PRIMARY KEY (id),
-                         UNIQUE KEY uk_account_email (email)
-) ENGINE=InnoDB;
-
-CREATE TABLE user_profile (
-                              id            BIGINT       NOT NULL AUTO_INCREMENT,
-                              full_name     VARCHAR(100) NOT NULL,
-                              phone_number  VARCHAR(15)  NULL,
-                              birth_date    DATE         NULL,
-                              account_id    BIGINT       NOT NULL,
-                              PRIMARY KEY (id),
-                              UNIQUE KEY uk_user_profile_account (account_id),
-                              CONSTRAINT fk_user_profile_account FOREIGN KEY (account_id) REFERENCES account (id)
-) ENGINE=InnoDB;
-
-CREATE TABLE shipping_address (
-                                  id               BIGINT       NOT NULL AUTO_INCREMENT,
-                                  user_profile_id  BIGINT       NOT NULL,
-                                  address          VARCHAR(255) NOT NULL,
-                                  default_address  BIT(1)       NOT NULL DEFAULT 0,
-                                  PRIMARY KEY (id),
-                                  CONSTRAINT fk_shipping_address_user FOREIGN KEY (user_profile_id) REFERENCES user_profile (id)
-) ENGINE=InnoDB;
-
--- ================= 2. SAN PHAM =================
-CREATE TABLE category (
-                          id      BIGINT       NOT NULL AUTO_INCREMENT,
-                          name    VARCHAR(100) NOT NULL,
-                          status  VARCHAR(20)  NOT NULL,
-                          PRIMARY KEY (id)
-) ENGINE=InnoDB;
-
-CREATE TABLE product (
-                         id           BIGINT         NOT NULL AUTO_INCREMENT,
-                         category_id  BIGINT         NOT NULL,
-                         name         VARCHAR(200)   NOT NULL,
-                         description  TEXT           NULL,
-                         price        DECIMAL(15,2)  NOT NULL,
-                         sale_price   DECIMAL(15,2)  NULL,
-                         gender       VARCHAR(20)    NOT NULL,
-                         status       VARCHAR(20)    NOT NULL,
-                         image_url    VARCHAR(255)   NULL,
-                         created_at   DATETIME(6)    NOT NULL,
-                         PRIMARY KEY (id),
-                         CONSTRAINT fk_product_category FOREIGN KEY (category_id) REFERENCES category (id)
-) ENGINE=InnoDB;
-
-CREATE TABLE product_variant (
-                                 id              BIGINT      NOT NULL AUTO_INCREMENT,
-                                 product_id      BIGINT      NOT NULL,
-                                 size            VARCHAR(20) NOT NULL,
-                                 color           VARCHAR(50) NOT NULL,
-                                 sku             VARCHAR(50) NULL,
-                                 stock_quantity  INT         NOT NULL DEFAULT 0,
-                                 status          VARCHAR(20) NOT NULL,
-                                 version         INT         NOT NULL DEFAULT 0,
-                                 PRIMARY KEY (id),
-                                 UNIQUE KEY uk_variant_sku (sku),
-                                 UNIQUE KEY uk_variant_product_size_color (product_id, size, color),
-                                 CONSTRAINT fk_variant_product FOREIGN KEY (product_id) REFERENCES product (id)
-) ENGINE=InnoDB;
-
--- Bang vector (Ollama bge-m3 = 1024 chieu). De TRONG, app tu tao khi khoi dong.
-CREATE TABLE product_embedding (
-                                   product_id BIGINT       NOT NULL,
-                                   embedding  VECTOR(1024) NOT NULL,
-                                   updated_at DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-                                   PRIMARY KEY (product_id),
-                                   CONSTRAINT fk_product_embedding_product FOREIGN KEY (product_id) REFERENCES product (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- ================= 3. MA GIAM GIA =================
-CREATE TABLE coupon (
-                        id               BIGINT        NOT NULL AUTO_INCREMENT,
-                        code             VARCHAR(50)   NOT NULL,
-                        name             VARCHAR(150)  NOT NULL,
-                        discount_type    VARCHAR(20)   NOT NULL,
-                        discount_value   DECIMAL(15,2) NOT NULL,
-                        max_discount     DECIMAL(15,2) NULL,
-                        min_order_value  DECIMAL(15,2) NULL,
-                        quantity         INT           NOT NULL,
-                        used_count       INT           NOT NULL DEFAULT 0,
-                        start_date       DATETIME(6)   NOT NULL,
-                        end_date         DATETIME(6)   NOT NULL,
-                        status           VARCHAR(20)   NOT NULL,
-                        PRIMARY KEY (id),
-                        UNIQUE KEY uk_coupon_code (code)
-) ENGINE=InnoDB;
-
--- ================= 4. DON HANG =================
-CREATE TABLE orders (
-                        id                BIGINT        NOT NULL AUTO_INCREMENT,
-                        order_code        VARCHAR(30)   NOT NULL,
-                        user_profile_id   BIGINT        NOT NULL,
-                        coupon_id         BIGINT        NULL,
-                        status            VARCHAR(20)   NOT NULL,
-                        subtotal          DECIMAL(15,2) NOT NULL DEFAULT 0,
-                        discount_amount   DECIMAL(15,2) NOT NULL DEFAULT 0,
-                        total_amount      DECIMAL(15,2) NOT NULL DEFAULT 0,
-                        cancel_reason     VARCHAR(255)  NULL,
-                        created_at        DATETIME(6)   NOT NULL,
-                        completed_at      DATETIME(6)   NULL,
-                        cancelled_at      DATETIME(6)   NULL,
-                        recipient_name    VARCHAR(100)  NOT NULL,
-                        recipient_phone   VARCHAR(15)   NOT NULL,
-                        shipping_address  VARCHAR(255)  NOT NULL,
-                        shipping_fee      DECIMAL(15,2) NOT NULL DEFAULT 0,
-                        note              VARCHAR(255)  NULL,
-                        payment_method    VARCHAR(20)   NOT NULL,
-                        payment_status    VARCHAR(20)   NOT NULL,
-                        paid_at           DATETIME(6)   NULL,
-                        PRIMARY KEY (id),
-                        UNIQUE KEY uk_orders_code (order_code),
-                        CONSTRAINT fk_orders_user   FOREIGN KEY (user_profile_id) REFERENCES user_profile (id),
-                        CONSTRAINT fk_orders_coupon FOREIGN KEY (coupon_id) REFERENCES coupon (id)
-) ENGINE=InnoDB;
-
-CREATE TABLE order_item (
-                            id            BIGINT        NOT NULL AUTO_INCREMENT,
-                            order_id      BIGINT        NOT NULL,
-                            variant_id    BIGINT        NOT NULL,
-                            product_name  VARCHAR(200)  NOT NULL,
-                            size          VARCHAR(20)   NOT NULL,
-                            color         VARCHAR(50)   NOT NULL,
-                            unit_price    DECIMAL(15,2) NOT NULL,
-                            quantity      INT           NOT NULL,
-                            PRIMARY KEY (id),
-                            CONSTRAINT fk_order_item_order   FOREIGN KEY (order_id)   REFERENCES orders (id),
-                            CONSTRAINT fk_order_item_variant FOREIGN KEY (variant_id) REFERENCES product_variant (id)
-) ENGINE=InnoDB;
-
--- ================= 5. KHO =================
-CREATE TABLE stock_history (
-                               id                 BIGINT        NOT NULL AUTO_INCREMENT,
-                               variant_id         BIGINT        NOT NULL,
-                               type               VARCHAR(20)   NOT NULL,
-                               quantity_change    INT           NOT NULL,
-                               stock_after        INT           NOT NULL,
-                               supplier           VARCHAR(150)  NULL,
-                               import_price       DECIMAL(15,2) NULL,
-                               reason             VARCHAR(255)  NULL,
-                               order_id           BIGINT        NULL,
-                               performed_by_id    BIGINT        NULL,
-                               created_at         DATETIME(6)   NOT NULL,
-                               PRIMARY KEY (id),
-                               CONSTRAINT fk_stock_history_variant FOREIGN KEY (variant_id)      REFERENCES product_variant (id),
-                               CONSTRAINT fk_stock_history_order   FOREIGN KEY (order_id)        REFERENCES orders (id),
-                               CONSTRAINT fk_stock_history_user    FOREIGN KEY (performed_by_id) REFERENCES user_profile (id)
-) ENGINE=InnoDB;
-
--- ================= 6. GIO HANG & YEU THICH =================
-CREATE TABLE cart_item (
-                           id               BIGINT      NOT NULL AUTO_INCREMENT,
-                           user_profile_id  BIGINT      NOT NULL,
-                           variant_id       BIGINT      NOT NULL,
-                           quantity         INT         NOT NULL DEFAULT 1,
-                           added_at         DATETIME(6) NOT NULL,
-                           PRIMARY KEY (id),
-                           UNIQUE KEY uk_cart_item_user_variant (user_profile_id, variant_id),
-                           CONSTRAINT fk_cart_item_user    FOREIGN KEY (user_profile_id) REFERENCES user_profile (id),
-                           CONSTRAINT fk_cart_item_variant FOREIGN KEY (variant_id)      REFERENCES product_variant (id)
-) ENGINE=InnoDB;
-
-CREATE TABLE wishlist_item (
-                               id               BIGINT      NOT NULL AUTO_INCREMENT,
-                               user_profile_id  BIGINT      NOT NULL,
-                               product_id       BIGINT      NOT NULL,
-                               added_at         DATETIME(6) NOT NULL,
-                               PRIMARY KEY (id),
-                               UNIQUE KEY uk_wishlist_user_product (user_profile_id, product_id),
-                               CONSTRAINT fk_wishlist_user    FOREIGN KEY (user_profile_id) REFERENCES user_profile (id),
-                               CONSTRAINT fk_wishlist_product FOREIGN KEY (product_id)      REFERENCES product (id)
-) ENGINE=InnoDB;
-
--- =====================================================
--- DU LIEU MAU
--- =====================================================
--- ADMIN mat khau: Admin@123   |   CUSTOMER mat khau: Khach@123
-INSERT INTO account (email, password, role, status, email_verified, created_at) VALUES
-                                                                                    ('admin1@fashionshop.vn', '$2a$10$LNbJ3jILuVETgjv8QE7eOecgt9.vKsQszcihb3R12JpnbSJwsbCtK', 'ADMIN',    'ACTIVE', 1, NOW(6)),
-                                                                                    ('admin2@fashionshop.vn', '$2a$10$LNbJ3jILuVETgjv8QE7eOecgt9.vKsQszcihb3R12JpnbSJwsbCtK', 'ADMIN',    'ACTIVE', 1, NOW(6)),
-                                                                                    ('khach1@gmail.com',      '$2a$10$274cWtcQ3KIeg.WjXjRJSuzd1TpyCgEkT1CA7KtmmtZNs0Wj4KTye', 'CUSTOMER', 'ACTIVE', 1, NOW(6)),
-                                                                                    ('khach2@gmail.com',      '$2a$10$274cWtcQ3KIeg.WjXjRJSuzd1TpyCgEkT1CA7KtmmtZNs0Wj4KTye', 'CUSTOMER', 'ACTIVE', 1, NOW(6));
-
-INSERT INTO user_profile (full_name, phone_number, birth_date, account_id) VALUES
-                                                                               ('Nguyễn Quản Trị', '0901000001', '1995-03-15', (SELECT id FROM account WHERE email = 'admin1@fashionshop.vn')),
-                                                                               ('Phạm Thu Hà',     '0901000002', '1998-07-22', (SELECT id FROM account WHERE email = 'admin2@fashionshop.vn')),
-                                                                               ('Trần Thị Mai',    '0912000001', '2001-11-05', (SELECT id FROM account WHERE email = 'khach1@gmail.com')),
-                                                                               ('Lê Văn Hùng',     '0912000002', '1999-01-30', (SELECT id FROM account WHERE email = 'khach2@gmail.com'));
-
-INSERT INTO shipping_address (user_profile_id, address, default_address) VALUES
-                                                                             ((SELECT u.id FROM user_profile u JOIN account a ON a.id = u.account_id WHERE a.email = 'khach1@gmail.com'),
-                                                                              '12 Nguyễn Văn Bảo, Phường 4, Quận Gò Vấp, TP. Hồ Chí Minh', 1),
-                                                                             ((SELECT u.id FROM user_profile u JOIN account a ON a.id = u.account_id WHERE a.email = 'khach1@gmail.com'),
-                                                                              '45 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh', 0),
-                                                                             ((SELECT u.id FROM user_profile u JOIN account a ON a.id = u.account_id WHERE a.email = 'khach2@gmail.com'),
-                                                                              '88 Trần Hưng Đạo, Phường 2, Quận 5, TP. Hồ Chí Minh', 1);
-
--- ================= DANH MỤC =================
+-- ================= DANH MỤC, có thêm 1 cái ẩn =================
 INSERT INTO category (name, status) VALUES
                                         ('Đầm', 'VISIBLE'),
                                         ('Áo sơ mi', 'VISIBLE'),
@@ -235,7 +20,9 @@ INSERT INTO category (name, status) VALUES
                                         ('Áo khoác', 'VISIBLE'),
                                         ('Chân váy', 'VISIBLE'),
                                         ('Áo thun', 'VISIBLE'),
+                                        ('Áo hoodie', 'HIDDEN'),
                                         ('Áo len', 'VISIBLE');
+
 
 -- ================= SẢN PHẨM =================
 -- image_url trỏ tới Cloudinary theo Public ID "sp-<tên-ngắn>". Upload ảnh với ĐÚNG Public ID đó là ảnh tự hiện.
@@ -310,6 +97,14 @@ INSERT INTO product (category_id, name, description, price, sale_price, gender, 
                                                                                                                     'Áo khoác denim xanh dáng ngắn, chất denim dày dặn bền màu, cổ bẻ, hai túi ngực và cúc kim loại. Phong cách trẻ trung, dễ phối cùng áo thun, đầm hoặc chân váy. Nam nữ đều mặc được, hợp đi chơi và du lịch.',
                                                                                                                     1390000, NULL, 'UNISEX', 'ACTIVE', 'https://res.cloudinary.com/dxk6xlsre/image/upload/f_auto,q_auto,w_600/sp-ao-khoac-denim', NOW(6)),
 
+
+                                                                                                                   -- ================= Sản phẩm bị ẩn -> /shop/{id} phải trả 404 và không hiện ở trang chủ, chỉ admin thấy =================
+                                                                                                                   ((SELECT id FROM category WHERE name = 'Áo len'),
+                                                                                                                    'Áo len cardigan màu xám (đang ẩn)',
+                                                                                                                    'Áo len cardigan màu xám dáng dài, sợi len mềm ấm, cài cúc phía trước. Sản phẩm đang tạm ẩn khỏi cửa hàng để test trường hợp sản phẩm không hiển thị.',
+                                                                                                                    890000, NULL, 'FEMALE', 'INACTIVE',   -- TODO: đổi 'INACTIVE' cho đúng ProductStatus
+                                                                                                                    'https://res.cloudinary.com/dxk6xlsre/image/upload/v1792676354/sp-ao-len-cardigan-xam.png', NOW(6)),
+
                                                                                                                    ((SELECT id FROM category WHERE name = 'Áo sơ mi'),
                                                                                                                     'Áo sơ mi nam kẻ sọc xanh navy',
                                                                                                                     'Áo sơ mi nam kẻ sọc xanh navy, chất cotton pha thoáng mát ít nhăn, phom regular vừa vặn. Cổ bẻ lịch sự, tay dài có thể xắn gọn. Phù hợp đi làm công sở, gặp đối tác hay đi chơi.',
@@ -376,14 +171,39 @@ INSERT INTO product_variant (product_id, size, color, sku, stock_quantity, statu
 ((SELECT id FROM product WHERE name = 'Áo khoác denim xanh dáng ngắn'), 'M', 'Xanh denim', 'AK-DENIM-M', 9, 'ACTIVE', 0),
 ((SELECT id FROM product WHERE name = 'Áo khoác denim xanh dáng ngắn'), 'L', 'Xanh denim', 'AK-DENIM-L', 12, 'ACTIVE', 0),
 ((SELECT id FROM product WHERE name = 'Áo khoác denim xanh dáng ngắn'), 'XL', 'Xanh denim', 'AK-DENIM-XL', 7, 'ACTIVE', 0),
+-- sp-ao-len-cardigan-xam
+((SELECT id FROM product WHERE name = 'Áo len cardigan màu xám (đang ẩn)'), 'M', 'Xám', 'AL-CARDI-XAM-M', 10, 'ACTIVE', 0),
+((SELECT id FROM product WHERE name = 'Áo len cardigan màu xám (đang ẩn)'), 'L', 'Xám', 'AL-CARDI-XAM-L', 5,  'ACTIVE', 0),
+-- Biến thể HẾT HÀNG (stock_quantity = 0) -> test badge "hết hàng", chặn thêm vào giỏ, chặn đặt hàng
+((SELECT id FROM product WHERE name = 'Áo thun oversize màu đen in chữ'), 'S', 'Đen', 'AT-OVER-D-S', 0, 'ACTIVE', 0),
 -- Áo sơ mi nam kẻ sọc xanh navy
 ((SELECT id FROM product WHERE name = 'Áo sơ mi nam kẻ sọc xanh navy'), 'M', 'Xanh navy', 'SM-NAM-KS-M', 13, 'ACTIVE', 0),
 ((SELECT id FROM product WHERE name = 'Áo sơ mi nam kẻ sọc xanh navy'), 'L', 'Xanh navy', 'SM-NAM-KS-L', 15, 'ACTIVE', 0),
 ((SELECT id FROM product WHERE name = 'Áo sơ mi nam kẻ sọc xanh navy'), 'XL', 'Xanh navy', 'SM-NAM-KS-XL', 8, 'ACTIVE', 0);
 
--- ================= KIEM TRA SAU KHI CHAY (dung: 4, 7, 15, 48, 0) =================
-SELECT COUNT(*) AS so_tai_khoan FROM account;
-SELECT COUNT(*) AS so_danh_muc  FROM category;
-SELECT COUNT(*) AS so_san_pham  FROM product;
-SELECT COUNT(*) AS so_bien_the  FROM product_variant;
-SELECT COUNT(*) AS so_vector    FROM product_embedding;
+
+-- ================= HÌNH ẢNH SẢN PHẨM (product_image) =================
+-- HƯỚNG DẪN:
+-- 1 sản phẩm có thể có 1 ảnh chính (is_thumbnail = 1, display_order = 1) và tối đa 3 ảnh phụ (display_order 2, 3, 4)
+-- Khi muốn thêm ảnh cho sản phẩm khác, bạn chỉ cần copy khối dưới và đổi Tên sản phẩm + link ảnh tương ứng.
+
+INSERT INTO product_image (product_id, image_url, is_thumbnail, display_order) VALUES
+    -- 1. Đầm lụa dáng dài màu be (1 ảnh chính + 3 ảnh phụ = 4 ảnh)
+    ((SELECT id FROM product WHERE name = 'Đầm lụa dáng dài màu be'), 'https://res.cloudinary.com/dxk6xlsre/image/upload/f_auto,q_auto,w_600/sp-dam-lua-be', 1, 1),
+    ((SELECT id FROM product WHERE name = 'Đầm lụa dáng dài màu be'), 'https://res.cloudinary.com/dxk6xlsre/image/upload/f_auto,q_auto,w_600/sp-dam-midi-hoa-nhi', 0, 2),
+    ((SELECT id FROM product WHERE name = 'Đầm lụa dáng dài màu be'), 'https://res.cloudinary.com/dxk6xlsre/image/upload/f_auto,q_auto,w_600/sp-chan-vay-xep-ly-kem', 0, 3),
+    ((SELECT id FROM product WHERE name = 'Đầm lụa dáng dài màu be'), 'https://res.cloudinary.com/dxk6xlsre/image/upload/f_auto,q_auto,w_600/sp-chan-vay-chua-a-denim', 0, 4),
+
+    -- 2. Áo sơ mi linen trắng tối giản (1 ảnh chính + 3 ảnh phụ = 4 ảnh)
+    ((SELECT id FROM product WHERE name = 'Áo sơ mi linen trắng tối giản'), 'https://res.cloudinary.com/dxk6xlsre/image/upload/f_auto,q_auto,w_600/sp-so-mi-linen-trang', 1, 1),
+    ((SELECT id FROM product WHERE name = 'Áo sơ mi linen trắng tối giản'), 'https://res.cloudinary.com/dxk6xlsre/image/upload/f_auto,q_auto,w_600/sp-so-mi-nam-ke-soc', 0, 2),
+    ((SELECT id FROM product WHERE name = 'Áo sơ mi linen trắng tối giản'), 'https://res.cloudinary.com/dxk6xlsre/image/upload/f_auto,q_auto,w_600/sp-ao-thun-basic-trang', 0, 3),
+    ((SELECT id FROM product WHERE name = 'Áo sơ mi linen trắng tối giản'), 'https://res.cloudinary.com/dxk6xlsre/image/upload/f_auto,q_auto,w_600/sp-ao-thun-oversize-den', 0, 4);
+
+
+-- ================= KIEM TRA SAU KHI CHAY =================
+SELECT COUNT(*) AS so_danh_muc    FROM category;
+SELECT COUNT(*) AS so_san_pham    FROM product;
+SELECT COUNT(*) AS so_bien_the    FROM product_variant;
+SELECT COUNT(*) AS so_anh_san_pham FROM product_image;
+SELECT COUNT(*) AS so_vector      FROM product_embedding;

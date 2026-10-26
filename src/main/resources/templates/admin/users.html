@@ -1,23 +1,730 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{layouts/admin-base :: adminLayout(
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/admin-base :: adminLayout(
           ~{::title},
           ~{::#admin-content},
           'users'
       )}">
+
 <head>
-    <title>Người dùng | Fashion Shop Admin</title>
+    <title>Quản lý Tài khoản | Fashion Shop Admin</title>
 </head>
+
 <body>
 
     <div id="admin-content">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-4">
-                <h4 class="fw-bold mb-2">Đây là trang Người dùng</h4>
-                <p class="text-muted mb-0">Giao diện trang này chưa được xây dựng.</p>
+
+        <!-- CSS RIÊNG CHO TRANG QUẢN LÝ TÀI KHOẢN (ĐƯỢC TÁCH RA FILE TỰ ĐỘNG) -->
+        <link rel="stylesheet" th:href="@{/css/admin/users.css}">
+
+        <!-- 1. TIÊU ĐỀ TRANG VÀ NÚT TẠO MỚI -->
+        <div
+            class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+            <div>
+                <h4 class="fw-bold mb-1 text-dark">
+                    <i class="bi bi-people-fill text-primary me-2"></i>Quản lý Tài khoản (Account)
+                </h4>
+                <p class="text-muted small mb-0">Quản lý toàn bộ danh sách và thông tin tài khoản đăng nhập theo các
+                    thuộc tính của bảng Account.</p>
+            </div>
+            <div>
+                <button type="button"
+                    class="btn btn-primary d-flex align-items-center gap-2 px-3 py-2 shadow-sm rounded-3"
+                    data-bs-toggle="modal" data-bs-target="#createAccountModal">
+                    <i class="bi bi-person-plus-fill fs-6"></i>
+                    <span class="fw-semibold">Thêm tài khoản mới</span>
+                </button>
             </div>
         </div>
+
+        <!-- 2. THÔNG BÁO FLASH MESSAGE -->
+        <div th:if="${successMessage}"
+            class="alert alert-success alert-dismissible fade show shadow-sm border-0 d-flex align-items-center gap-2 mb-4"
+            role="alert">
+            <i class="bi bi-check-circle-fill fs-5"></i>
+            <div class="fw-medium" th:text="${successMessage}">Thao tác thành công!</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
+        <div th:if="${errorMessage}"
+            class="alert alert-danger alert-dismissible fade show shadow-sm border-0 d-flex align-items-center gap-2 mb-4"
+            role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            <div class="fw-medium" th:text="${errorMessage}">Đã xảy ra lỗi!</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
+        <!-- 3. THỐNG KÊ NHANH DỰA TRÊN DỮ LIỆU BẢNG ACCOUNT -->
+        <div class="row g-3 mb-4" id="statsCardsRow">
+            <div class="col-6 col-md-4 col-xl">
+                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="text-muted small fw-semibold">Tổng tài khoản</span>
+                        <span class="badge bg-primary bg-opacity-10 text-primary p-2 rounded-circle">
+                            <i class="bi bi-people fs-6"></i>
+                        </span>
+                    </div>
+                    <h3 class="fw-bold mb-0 text-dark" th:text="${totalAccounts}">0</h3>
+                    <small class="text-muted" style="font-size: 0.75rem;">Toàn bộ bảng account</small>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-xl">
+                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="text-muted small fw-semibold">Hoạt động (ACTIVE)</span>
+                        <span class="badge bg-success bg-opacity-10 text-success p-2 rounded-circle">
+                            <i class="bi bi-check-circle fs-6"></i>
+                        </span>
+                    </div>
+                    <h3 class="fw-bold mb-0 text-success" th:text="${activeAccounts}">0</h3>
+                    <small class="text-muted" style="font-size: 0.75rem;">Trạng thái ACTIVE</small>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-xl">
+                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="text-muted small fw-semibold">Bị khóa (BANNED)</span>
+                        <span class="badge bg-danger bg-opacity-10 text-danger p-2 rounded-circle">
+                            <i class="bi bi-slash-circle fs-6"></i>
+                        </span>
+                    </div>
+                    <h3 class="fw-bold mb-0 text-danger" th:text="${bannedAccounts}">0</h3>
+                    <small class="text-muted" style="font-size: 0.75rem;">Trạng thái BANNED</small>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-6 col-xl">
+                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="text-muted small fw-semibold">Quản trị viên (ADMIN)</span>
+                        <span class="badge bg-danger bg-opacity-10 text-danger p-2 rounded-circle">
+                            <i class="bi bi-shield-lock fs-6"></i>
+                        </span>
+                    </div>
+                    <h3 class="fw-bold mb-0 text-dark" th:text="${adminAccounts}">0</h3>
+                    <small class="text-muted" style="font-size: 0.75rem;">Vai trò ADMIN</small>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-6 col-xl">
+                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="text-muted small fw-semibold">Khách hàng (CUSTOMER)</span>
+                        <span class="badge bg-info bg-opacity-10 text-info p-2 rounded-circle">
+                            <i class="bi bi-person fs-6"></i>
+                        </span>
+                    </div>
+                    <h3 class="fw-bold mb-0 text-dark" th:text="${customerAccounts}">0</h3>
+                    <small class="text-muted" style="font-size: 0.75rem;">Vai trò CUSTOMER</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. KHU VỰC TÌM KIẾM VÀ LỌC (CHIA THÀNH 2 Ô RIÊNG BIỆT TRÊN CÙNG 1 HÀNG) -->
+        <form id="filterAccountForm" th:action="@{/admin/users}" method="get" class="mb-4">
+            <input type="hidden" name="size" th:value="${pageSize != null ? pageSize : 15}">
+            <input type="hidden" name="sortDir" id="sortDirInput" th:value="${sortDir != null ? sortDir : 'asc'}">
+
+            <div class="row g-3 align-items-stretch">
+
+                <!-- ================= Ô 1: TÌM KIẾM TÀI KHOẢN (CARD RIÊNG) ================= -->
+                <div class="col-12 col-xl-4 col-lg-5">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white h-100 p-3">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-primary text-white rounded-pill px-2 py-1"
+                                style="font-size: 0.72rem;">1</span>
+                            <span class="fw-bold text-dark small text-uppercase" style="letter-spacing: 0.03em;">
+                                <i class="bi bi-search me-1 text-primary"></i>Tìm kiếm tài khoản
+                            </span>
+                        </div>
+
+                        <div>
+                            <label class="form-label small text-muted mb-1" style="font-size: 0.75rem;"
+                                for="searchKeywordInput">Từ khóa tìm kiếm</label>
+                            <div class="search-hover-wrapper position-relative">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-muted" id="searchIcon"
+                                        style="cursor: pointer;">
+                                        <i class="bi bi-search"></i>
+                                    </span>
+                                    <input type="text" name="keyword" th:value="${keyword}" id="searchKeywordInput"
+                                        class="form-control bg-light border-start-0"
+                                        placeholder="Tìm theo email hoặc ID..." autocomplete="off">
+                                </div>
+
+                                <!-- BẢNG HOVER HIỂN THỊ CHỈ EMAIL VÀ ID -->
+                                <div id="searchHoverCard" class="search-hover-card p-3 shadow-lg">
+                                    <div
+                                        class="d-flex align-items-center gap-2 pb-2 mb-2 border-bottom text-primary fw-bold small">
+                                        <i class="bi bi-search fs-6"></i>
+                                        <span>Phạm vi tìm kiếm tài khoản:</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span
+                                                class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25"
+                                                style="font-size: 0.72rem;">1. Email</span>
+                                            <span class="small fw-bold text-dark">Địa chỉ Email</span>
+                                        </div>
+                                        <div class="small text-secondary ps-2 mt-1">Tìm theo email đăng nhập (VD: <code
+                                                class="text-dark bg-light px-1">khach1@gmail.com</code>, <code
+                                                class="text-dark bg-light px-1">admin...</code>)</div>
+                                    </div>
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span
+                                                class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25"
+                                                style="font-size: 0.72rem;">2. ID</span>
+                                            <span class="small fw-bold text-dark">Mã ID tài khoản</span>
+                                        </div>
+                                        <div class="small text-secondary ps-2 mt-1">Nhập số ID tự tăng của tài khoản
+                                            (VD: <code class="text-dark bg-light px-1">1</code>, <code
+                                                class="text-dark bg-light px-1">2</code>, <code
+                                                class="text-dark bg-light px-1">6</code>)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= Ô 2: BỘ LỌC TIÊU CHÍ (CARD RIÊNG, TRÊN 1 HÀNG KHÔNG LỌT NÚT) ================= -->
+                <div class="col-12 col-xl-8 col-lg-7">
+                    <div class="card border-0 shadow-sm rounded-3 bg-white h-100 p-3">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-secondary text-white rounded-pill px-2 py-1"
+                                style="font-size: 0.72rem;">2</span>
+                            <span class="fw-bold text-dark small text-uppercase" style="letter-spacing: 0.03em;">
+                                <i class="bi bi-funnel me-1 text-secondary"></i>Bộ lọc tiêu chí
+                            </span>
+                        </div>
+
+                        <div class="d-flex align-items-end gap-2 flex-nowrap overflow-x-auto pb-1">
+                            <!-- Vai trò -->
+                            <div class="flex-grow-1" style="min-width: 130px;">
+                                <label class="form-label small text-muted mb-1" style="font-size: 0.75rem;">Vai
+                                    trò</label>
+                                <select name="role" id="filterRole" class="form-select bg-light">
+                                    <option value="">Tất cả vai trò</option>
+                                    <option th:each="r : ${allRoles}" th:value="${r.name()}"
+                                        th:text="${r.name() + ' (' + r.label + ')'}"
+                                        th:selected="${selectedRole != null and selectedRole.name() == r.name()}">
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Trạng thái -->
+                            <div class="flex-grow-1" style="min-width: 130px;">
+                                <label class="form-label small text-muted mb-1" style="font-size: 0.75rem;">Trạng
+                                    thái</label>
+                                <select name="status" id="filterStatus" class="form-select bg-light">
+                                    <option value="">Tất cả trạng thái</option>
+                                    <option value="ACTIVE"
+                                        th:selected="${selectedStatus != null and selectedStatus.name() == 'ACTIVE'}">
+                                        ACTIVE (Hoạt động)</option>
+                                    <option value="BANNED"
+                                        th:selected="${selectedStatus != null and selectedStatus.name() == 'BANNED'}">
+                                        BANNED (Bị khóa)</option>
+                                </select>
+                            </div>
+
+                            <!-- Xác thực email -->
+                            <div class="flex-grow-1" style="min-width: 130px;">
+                                <label class="form-label small text-muted mb-1" style="font-size: 0.75rem;">Xác thực
+                                    email</label>
+                                <select name="emailVerified" id="filterVerified" class="form-select bg-light">
+                                    <option value="">Tất cả xác thực</option>
+                                    <option value="true"
+                                        th:selected="${selectedVerified != null and selectedVerified == true}">Đã xác
+                                        thực</option>
+                                    <option value="false"
+                                        th:selected="${selectedVerified != null and selectedVerified == false}">Chưa xác
+                                        thực</option>
+                                </select>
+                            </div>
+
+                            <!-- Nút Lọc và Đặt lại trên cùng 1 hàng không lọt xuống -->
+                            <div class="d-flex gap-2 flex-shrink-0">
+                                <button type="submit" id="filterSubmitBtn"
+                                    class="btn btn-primary d-inline-flex align-items-center gap-1 text-nowrap px-3"
+                                    title="Lọc dữ liệu tức thì không load lại trang">
+                                    <i class="bi bi-funnel-fill"></i>
+                                    <span>Lọc</span>
+                                </button>
+                                <button type="button" id="resetFilterBtn"
+                                    class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 text-nowrap px-3"
+                                    title="Đặt lại bộ lọc về mặc định">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                    <span>Đặt lại</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </form>
+
+        <!-- 5. BẢNG HIỂN THỊ DỮ LIỆU TÀI KHOẢN (ĐÚNG CÁC THUỘC TÍNH BẢNG ACCOUNT) -->
+        <div id="accountTableWrapper">
+            <div class="card border-0 shadow-sm rounded-3 bg-white overflow-hidden mb-4">
+                <div
+                    class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 fw-bold text-dark d-flex align-items-center gap-2">
+                        <i class="bi bi-table text-primary"></i>
+                        <span>Danh sách tài khoản</span>
+                        <span id="resultsCountBadge"
+                            class="badge bg-secondary-subtle text-secondary rounded-pill fw-normal"
+                            th:text="${accounts.totalElements + ' kết quả'}">0 kết quả</span>
+                    </h6>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-nowrap">
+                        <thead class="table-light text-secondary small text-uppercase"
+                            style="font-size: 0.76rem; letter-spacing: 0.04em;">
+                            <tr>
+                                <th class="ps-4" style="width: 105px;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span>ID</span>
+                                        <button type="button" id="toggleSortBtn"
+                                            class="btn btn-sm d-inline-flex align-items-center justify-content-center p-0 rounded border transition-all"
+                                            th:classappend="${sortDir == 'desc'} ? 'btn-primary text-white shadow-sm sort-active' : 'btn-light text-secondary border bg-white'"
+                                            style="width: 26px; height: 26px; cursor: pointer;"
+                                            th:title="${sortDir == 'desc'} ? 'Đang sắp xếp giảm dần (Sáng màu). Bấm để tắt và sắp xếp ID tăng dần' : 'Đang sắp xếp tăng dần mặc định (Tắt). Bấm để sắp xếp ID giảm dần'">
+                                            <i class="bi bi-arrow-down-up" style="font-size: 0.8rem;"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th>Email</th>
+                                <th style="width: 130px;">Vai trò (role)</th>
+                                <th style="width: 140px;">Trạng thái (status)</th>
+                                <th style="width: 140px;">Email Verified</th>
+                                <th style="width: 120px;">Mã xác thực</th>
+                                <th style="width: 160px;">Hạn mã xác thực</th>
+                                <th style="width: 160px;">Ngày tạo</th>
+                                <th style="width: 160px;">Đăng nhập cuối</th>
+                                <th class="text-end pe-4" style="width: 160px;">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody class="border-top-0">
+                            <tr th:if="${accounts.empty}">
+                                <td colspan="10" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                    <span>Không tìm thấy tài khoản nào khớp với điều kiện tìm kiếm.</span>
+                                </td>
+                            </tr>
+
+                            <tr th:each="acc : ${accounts.content}">
+                                <!-- ID -->
+                                <td class="ps-4">
+                                    <span class="badge bg-light text-secondary border font-monospace"
+                                        th:text="'#' + ${acc.id}">#1</span>
+                                </td>
+
+                                <!-- Email -->
+                                <td>
+                                    <div>
+                                        <span class="fw-semibold text-dark d-block"
+                                            th:text="${acc.email}">user@example.com</span>
+                                        <small
+                                            th:if="${currentAdminEmail != null and currentAdminEmail.equalsIgnoreCase(acc.email)}"
+                                            class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning"
+                                            style="font-size: 0.68rem;">Tài khoản của bạn</small>
+                                    </div>
+                                </td>
+
+                                <!-- Vai trò (role) -->
+                                <td>
+                                    <span th:if="${acc.role.name() == 'ADMIN'}"
+                                        class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-2">
+                                        <i class="bi bi-shield-fill-check me-1"></i>ADMIN
+                                    </span>
+                                    <span th:if="${acc.role.name() == 'CUSTOMER'}"
+                                        class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-2">
+                                        <i class="bi bi-person-fill me-1"></i>CUSTOMER
+                                    </span>
+                                </td>
+
+                                <!-- Trạng thái (status) -->
+                                <td>
+                                    <span th:if="${acc.status.name() == 'ACTIVE'}"
+                                        class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-2 d-inline-flex align-items-center gap-1">
+                                        <span class="bg-success rounded-circle d-inline-block"
+                                            style="width: 6px; height: 6px;"></span>
+                                        ACTIVE
+                                    </span>
+                                    <span th:if="${acc.status.name() == 'BANNED'}"
+                                        class="badge bg-danger text-white px-2 py-1 rounded-2 d-inline-flex align-items-center gap-1 shadow-sm">
+                                        <i class="bi bi-slash-circle-fill"></i>
+                                        BANNED
+                                    </span>
+                                </td>
+
+                                <!-- Xác thực email (email_verified) -->
+                                <td>
+                                    <span th:if="${acc.emailVerified}"
+                                        class="text-success small fw-semibold d-inline-flex align-items-center gap-1">
+                                        <i class="bi bi-check-circle-fill"></i> Đã xác thực
+                                    </span>
+                                    <span th:unless="${acc.emailVerified}"
+                                        class="text-warning-emphasis small fw-medium d-inline-flex align-items-center gap-1">
+                                        <i class="bi bi-clock-history"></i> Chưa xác thực
+                                    </span>
+                                </td>
+
+                                <!-- Mã xác thực (verification_code) -->
+                                <td>
+                                    <code th:if="${acc.verificationCode != null and !acc.verificationCode.isBlank()}"
+                                        class="bg-light text-dark px-2 py-1 rounded border font-monospace"
+                                        th:text="${acc.verificationCode}">123456</code>
+                                    <span
+                                        th:unless="${acc.verificationCode != null and !acc.verificationCode.isBlank()}"
+                                        class="text-muted">—</span>
+                                </td>
+
+                                <!-- Hạn mã xác thực (verification_expiry) -->
+                                <td>
+                                    <span th:if="${acc.verificationExpiry != null}"
+                                        class="small font-monospace text-secondary"
+                                        th:text="${#temporals.format(acc.verificationExpiry, 'dd/MM/yyyy HH:mm')}">
+                                        25/10/2026 21:00
+                                    </span>
+                                    <span th:unless="${acc.verificationExpiry != null}" class="text-muted">—</span>
+                                </td>
+
+                                <!-- Ngày tạo (created_at) -->
+                                <td>
+                                    <span th:if="${acc.createdAt != null}" class="small text-secondary"
+                                        th:text="${#temporals.format(acc.createdAt, 'dd/MM/yyyy HH:mm')}">
+                                        25/10/2026 18:00
+                                    </span>
+                                    <span th:unless="${acc.createdAt != null}" class="text-muted">—</span>
+                                </td>
+
+                                <!-- Đăng nhập lần cuối (last_login_at) -->
+                                <td>
+                                    <span th:if="${acc.lastLoginAt != null}" class="small text-secondary"
+                                        th:text="${#temporals.format(acc.lastLoginAt, 'dd/MM/yyyy HH:mm')}">
+                                        25/10/2026 20:30
+                                    </span>
+                                    <span th:unless="${acc.lastLoginAt != null}"
+                                        class="badge bg-light text-muted border" style="font-size: 0.72rem;">Chưa đăng
+                                        nhập</span>
+                                </td>
+
+                                <!-- Các hành động CRUD -->
+                                <td class="text-end pe-4">
+                                    <div class="d-inline-flex align-items-center gap-1">
+                                        <!-- Nút Sửa (Modal) -->
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-2 px-2 py-1"
+                                            title="Chỉnh sửa tài khoản" data-bs-toggle="modal"
+                                            data-bs-target="#editAccountModal" th:data-id="${acc.id}"
+                                            th:data-email="${acc.email}" th:data-role="${acc.role.name()}"
+                                            th:data-status="${acc.status.name()}"
+                                            th:data-verified="${acc.emailVerified}"
+                                            th:data-code="${acc.verificationCode}"
+                                            th:data-expiry="${acc.verificationExpiry != null ? #temporals.format(acc.verificationExpiry, 'yyyy-MM-dd''T''HH:mm') : ''}"
+                                            th:data-created="${acc.createdAt != null ? #temporals.format(acc.createdAt, 'dd/MM/yyyy HH:mm:ss') : ''}"
+                                            th:data-login="${acc.lastLoginAt != null ? #temporals.format(acc.lastLoginAt, 'dd/MM/yyyy HH:mm:ss') : 'Chưa đăng nhập'}">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+
+                                        <!-- Nút Khóa / Mở khóa nhanh: Không bị khóa -> Ổ khóa mở; Bị khóa -> Ổ khóa đang khóa -->
+                                        <form th:action="@{/admin/users/{id}/toggle-status(id=${acc.id})}" method="post"
+                                            class="d-inline">
+                                            <button th:if="${acc.status.name() == 'ACTIVE'}" type="submit"
+                                                class="btn btn-sm btn-outline-success rounded-2 px-2 py-1"
+                                                title="Tài khoản không bị khóa (Bấm để khóa)"
+                                                th:disabled="${currentAdminEmail != null and currentAdminEmail.equalsIgnoreCase(acc.email)}"
+                                                onclick="return confirm('Bạn có chắc muốn KHÓA tài khoản này không?');">
+                                                <i class="bi bi-unlock-fill"></i>
+                                            </button>
+                                            <button th:if="${acc.status.name() == 'BANNED'}" type="submit"
+                                                class="btn btn-sm btn-outline-warning rounded-2 px-2 py-1"
+                                                title="Tài khoản đang bị khóa (Bấm để mở khóa)"
+                                                onclick="return confirm('Bạn có chắc muốn MỞ KHÓA tài khoản này không?');">
+                                                <i class="bi bi-lock-fill"></i>
+                                            </button>
+                                        </form>
+
+                                        <!-- Nút Xóa -->
+                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1"
+                                            title="Xóa tài khoản" data-bs-toggle="modal"
+                                            data-bs-target="#deleteAccountModal" th:data-id="${acc.id}"
+                                            th:data-email="${acc.email}"
+                                            th:disabled="${currentAdminEmail != null and currentAdminEmail.equalsIgnoreCase(acc.email)}">
+                                            <i class="bi bi-trash3-fill"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- PHÂN TRANG (PAGINATION) - Chỉ hiển thị khi số lượng tài khoản vượt quá 15 (> 15) -->
+                <div th:if="${accounts.totalElements > 15}"
+                    class="card-footer bg-white py-3 px-4 border-top d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                    <div class="small text-muted">
+                        Hiển thị trang <strong th:text="${accounts.number + 1}">1</strong> / <strong
+                            th:text="${accounts.totalPages}">1</strong>
+                        (Tổng số <strong th:text="${accounts.totalElements}">0</strong> tài khoản, 15 tài khoản/trang)
+                    </div>
+
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm m-0 gap-1">
+                            <!-- Nút Trang trước -->
+                            <li class="page-item" th:classappend="${accounts.first} ? 'disabled'">
+                                <a class="page-link rounded ajax-page-link"
+                                    th:href="@{/admin/users(page=${accounts.number - 1}, size=${pageSize != null ? pageSize : 15}, keyword=${keyword}, role=${selectedRole}, status=${selectedStatus}, emailVerified=${selectedVerified}, sortDir=${sortDir})}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+
+                            <!-- Các số trang -->
+                            <li th:each="i : ${#numbers.sequence(0, accounts.totalPages - 1)}"
+                                th:if="${i >= accounts.number - 2 and i <= accounts.number + 2}" class="page-item"
+                                th:classappend="${i == accounts.number} ? 'active'">
+                                <a class="page-link rounded ajax-page-link"
+                                    th:href="@{/admin/users(page=${i}, size=${pageSize != null ? pageSize : 15}, keyword=${keyword}, role=${selectedRole}, status=${selectedStatus}, emailVerified=${selectedVerified}, sortDir=${sortDir})}"
+                                    th:text="${i + 1}">1</a>
+                            </li>
+
+                            <!-- Nút Trang sau -->
+                            <li class="page-item" th:classappend="${accounts.last} ? 'disabled'">
+                                <a class="page-link rounded ajax-page-link"
+                                    th:href="@{/admin/users(page=${accounts.number + 1}, size=${pageSize != null ? pageSize : 15}, keyword=${keyword}, role=${selectedRole}, status=${selectedStatus}, emailVerified=${selectedVerified}, sortDir=${sortDir})}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================================= -->
+        <!-- 6. MODAL THÊM TÀI KHOẢN MỚI (CREATE)                                    -->
+        <!-- ======================================================================= -->
+        <div class="modal fade" id="createAccountModal" tabindex="-1" aria-labelledby="createAccountModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-light border-bottom">
+                        <h5 class="modal-title fw-bold text-dark" id="createAccountModalLabel">
+                            <i class="bi bi-person-plus-fill text-primary me-2"></i>Thêm tài khoản mới
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form th:action="@{/admin/users/create}" method="post">
+                        <div class="modal-body p-4">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Email <span
+                                        class="text-danger">*</span></label>
+                                <input type="email" name="email" class="form-control" placeholder="vidu@fashionshop.vn"
+                                    required maxlength="150">
+                                <div class="form-text">Địa chỉ email đăng nhập duy nhất trong hệ thống.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Mật khẩu <span
+                                        class="text-danger">*</span></label>
+                                <input type="password" name="password" class="form-control"
+                                    placeholder="Nhập mật khẩu (sẽ được mã hóa BCrypt)" required minlength="6">
+                                <div class="form-text">Mật khẩu tối thiểu 6 ký tự.</div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">Vai trò (role) <span
+                                            class="text-danger">*</span></label>
+                                    <select name="role" class="form-select" required>
+                                        <option value="CUSTOMER" selected>CUSTOMER (Khách hàng)</option>
+                                        <option value="ADMIN">ADMIN (Quản trị viên)</option>
+                                    </select>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">Trạng thái (status) <span
+                                            class="text-danger">*</span></label>
+                                    <select name="status" class="form-select" required>
+                                        <option value="ACTIVE" selected>ACTIVE (Hoạt động)</option>
+                                        <option value="BANNED">BANNED (Bị khóa)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Xác thực email (email_verified) <span
+                                        class="text-danger">*</span></label>
+                                <select name="emailVerified" class="form-select" required>
+                                    <option value="false" selected>Chưa xác thực (false)</option>
+                                    <option value="true">Đã xác thực (true)</option>
+                                </select>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">Mã xác thực (verification_code)</label>
+                                    <input type="text" name="verificationCode" class="form-control"
+                                        placeholder="Để trống nếu không có" maxlength="100">
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">Hạn mã xác thực</label>
+                                    <input type="datetime-local" name="verificationExpiry" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light border-top">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                            <button type="submit" class="btn btn-primary fw-semibold px-4">
+                                <i class="bi bi-check-lg me-1"></i>Lưu tài khoản
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================================= -->
+        <!-- 7. MODAL CHỈNH SỬA TÀI KHOẢN (EDIT)                                     -->
+        <!-- ======================================================================= -->
+        <div class="modal fade" id="editAccountModal" tabindex="-1" aria-labelledby="editAccountModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-light border-bottom">
+                        <h5 class="modal-title fw-bold text-dark" id="editAccountModalLabel">
+                            <i class="bi bi-pencil-square text-primary me-2"></i>Chỉnh sửa tài khoản
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="editAccountForm" method="post">
+                        <div class="modal-body p-4">
+                            <div class="row g-3 mb-3">
+                                <div class="col-sm-4">
+                                    <label class="form-label small fw-semibold">ID tài khoản</label>
+                                    <input type="text" id="editId" class="form-control bg-light font-monospace"
+                                        readonly>
+                                </div>
+                                <div class="col-sm-8">
+                                    <label class="form-label small fw-semibold">Email <span
+                                            class="text-danger">*</span></label>
+                                    <input type="email" id="editEmail" name="email" class="form-control" required
+                                        maxlength="150">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Mật khẩu mới</label>
+                                <input type="password" name="password" class="form-control"
+                                    placeholder="Để trống nếu giữ nguyên mật khẩu cũ" minlength="6">
+                                <div class="form-text text-muted">Chỉ nhập nếu muốn thay đổi mật khẩu (hệ thống sẽ tự mã
+                                    hóa BCrypt).</div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">Vai trò (role) <span
+                                            class="text-danger">*</span></label>
+                                    <select id="editRole" name="role" class="form-select" required>
+                                        <option value="CUSTOMER">CUSTOMER (Khách hàng)</option>
+                                        <option value="ADMIN">ADMIN (Quản trị viên)</option>
+                                    </select>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">Trạng thái (status) <span
+                                            class="text-danger">*</span></label>
+                                    <select id="editStatus" name="status" class="form-select" required>
+                                        <option value="ACTIVE">ACTIVE (Hoạt động)</option>
+                                        <option value="BANNED">BANNED (Bị khóa)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Xác thực email (email_verified) <span
+                                        class="text-danger">*</span></label>
+                                <select id="editVerified" name="emailVerified" class="form-select" required>
+                                    <option value="true">Đã xác thực (true)</option>
+                                    <option value="false">Chưa xác thực (false)</option>
+                                </select>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">Mã xác thực (verification_code)</label>
+                                    <input type="text" id="editCode" name="verificationCode" class="form-control"
+                                        maxlength="100">
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">Hạn mã xác thực</label>
+                                    <input type="datetime-local" id="editExpiry" name="verificationExpiry"
+                                        class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 pt-2 border-top">
+                                <div class="col-sm-6">
+                                    <label class="form-label small text-muted mb-0">Ngày tạo (created_at):</label>
+                                    <div id="editCreated" class="small fw-semibold text-secondary"></div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label small text-muted mb-0">Đăng nhập cuối
+                                        (last_login_at):</label>
+                                    <div id="editLogin" class="small fw-semibold text-secondary"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light border-top">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                            <button type="submit" class="btn btn-primary fw-semibold px-4">
+                                <i class="bi bi-save me-1"></i>Cập nhật
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================================= -->
+        <!-- 8. MODAL XÁC NHẬN XÓA TÀI KHOẢN (DELETE)                                 -->
+        <!-- ======================================================================= -->
+        <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title fw-bold" id="deleteAccountModalLabel">
+                            <i class="bi bi-trash3-fill me-2"></i>Xác nhận xóa
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                    </div>
+                    <form id="deleteAccountForm" method="post">
+                        <div class="modal-body p-4 text-center">
+                            <i class="bi bi-exclamation-circle text-danger display-4 d-block mb-3"></i>
+                            <p class="mb-1">Bạn có chắc chắn muốn xóa tài khoản:</p>
+                            <p class="fw-bold text-dark mb-2" id="deleteAccountEmail"></p>
+                            <div class="alert alert-warning small text-start mb-0 py-2">
+                                <i class="bi bi-info-circle me-1"></i>Hành động này sẽ xóa dữ liệu tài khoản khỏi bảng
+                                account. Nếu tài khoản đã phát sinh đơn hàng, hệ thống sẽ ngăn chặn việc xóa.
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light justify-content-center border-top">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-danger fw-semibold px-4">Xóa ngay</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- JAVASCRIPT XỬ LÝ: AJAX LỌC MƯỢT MÀ, SẮP XẾP ID, HOVER VÀ MODALS (ĐƯỢC TÁCH RA FILE RIÊNG) -->
+        <script th:src="@{/js/admin/users.js}"></script>
     </div>
 
 </body>
+
 </html>

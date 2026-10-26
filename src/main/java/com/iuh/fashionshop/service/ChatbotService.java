@@ -1,13 +1,9 @@
 package com.iuh.fashionshop.service;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.text.NumberFormat;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -29,9 +25,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 
 import com.iuh.fashionshop.dto.ProductDetailDto;
 import com.iuh.fashionshop.dto.ProductDetailDto.ColorDto;
@@ -40,6 +34,8 @@ import com.iuh.fashionshop.model.Coupon;
 import com.iuh.fashionshop.model.enums.CouponStatus;
 import com.iuh.fashionshop.model.enums.DiscountType;
 import com.iuh.fashionshop.repository.CouponRepository;
+import com.iuh.fashionshop.service.ai.GeminiChatClient;
+import com.iuh.fashionshop.service.ai.OllamaChatClient;
 
 @Service
 public class ChatbotService {
@@ -51,14 +47,6 @@ public class ChatbotService {
 
     /** Số sản phẩm tối đa đưa vào prompt LLM. */
     private static final int MAX_PRODUCTS = 5;
-
-    /** Dùng chung cho warm-up và chat thật để Ollama không load lại model. */
-    private static final String KEEP_ALIVE = "60m";
-    private static final Map<String, Object> CHAT_OPTIONS = Map.of(
-            "temperature", 0.3,
-            "num_ctx", 2048,
-            "num_predict", 350
-    );
 
     private static final String SYSTEM_PROMPT = """
         Bạn là chuyên viên tư vấn thời trang thông minh, tận tình của cửa hàng FashionShop.
@@ -79,23 +67,25 @@ public class ChatbotService {
     private final ProductSearchService searchService;
     private final ProductService productService;
     private final CouponRepository couponRepository;
-    private final RestClient ollama;
-    private final String chatModel;
+    private final OllamaChatClient ollamaChatClient;
+    private final GeminiChatClient geminiChatClient;
+    private final String provider;
+    private final boolean fallbackToOllama;
 
     public ChatbotService(ProductSearchService searchService,
                           ProductService productService,
                           CouponRepository couponRepository,
-                          @Value("${ollama.base-url}") String baseUrl,
-                          @Value("${ollama.chat.model}") String chatModel,
-                          @Value("${ollama.chat.timeout-seconds:120}") int timeoutSeconds) {
+                          OllamaChatClient ollamaChatClient,
+                          GeminiChatClient geminiChatClient,
+                          @Value("${chatbot.provider:ollama}") String provider,
+                          @Value("${chatbot.fallback-to-ollama:false}") boolean fallbackToOllama) {
         this.searchService = searchService;
         this.productService = productService;
         this.couponRepository = couponRepository;
-        var factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(5));
-        factory.setReadTimeout(Duration.ofSeconds(timeoutSeconds));
-        this.ollama = RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
-        this.chatModel = chatModel;
+        this.ollamaChatClient = ollamaChatClient;
+        this.geminiChatClient = geminiChatClient;
+        this.provider = (provider == null) ? "ollama" : provider.trim().toLowerCase();
+        this.fallbackToOllama = fallbackToOllama;
     }
 
     // ======================= LÀM NÓNG KHI KHỞI ĐỘNG =======================
@@ -103,13 +93,8 @@ public class ChatbotService {
     @EventListener(ApplicationReadyEvent.class)
     public void warmUp() {
         Thread.startVirtualThread(() -> {
-            try {
-                ollama.post().uri("/api/chat")
-                        .body(Map.of("model", chatModel, "keep_alive", KEEP_ALIVE, "options", CHAT_OPTIONS))
-                        .retrieve().toBodilessEntity();
-                log.info("Đã làm nóng model chat {}", chatModel);
-            } catch (Exception e) {
-                log.warn("Không làm nóng được model chat: {}", e.getMessage());
+            if ("ollama".equalsIgnoreCase(provider) || fallbackToOllama) {
+                ollamaChatClient.warmUp();
             }
             try {
                 searchService.search("áo", 1);
@@ -148,56 +133,53 @@ public class ChatbotService {
         String userContent = "DỮ LIỆU CỬA HÀNG:\n" + formatProducts(products)
                 + "\n\nCÂU HỎI CỦA KHÁCH: " + userMessage;
 
-        Map<String, Object> body = Map.of(
-                "model", chatModel,
-                "stream", true,
-                "keep_alive", KEEP_ALIVE,
-                "options", CHAT_OPTIONS,
-                "messages", List.of(
-                        Map.of("role", "system", "content", SYSTEM_PROMPT),
-                        Map.of("role", "user", "content", userContent)
-                )
-        );
-
         AtomicBoolean sent = new AtomicBoolean(false);
         AtomicBoolean first = new AtomicBoolean(true);
-        try {
-            ollama.post().uri("/api/chat").body(body).exchange((req, res) -> {
-                if (res.getStatusCode().isError()) {
-                    throw new IllegalStateException("Ollama trả về HTTP " + res.getStatusCode());
+
+        Consumer<String> streamConsumer = chunk -> {
+            if (chunk != null && !chunk.isEmpty()) {
+                if (first.compareAndSet(true, false)) {
+                    log.info("Chatbot: vector {}ms, chữ đầu tiên sau {}ms",
+                            t1 - t0, System.currentTimeMillis() - t0);
                 }
-                try (BufferedReader br = new BufferedReader(
-                        new InputStreamReader(res.getBody(), StandardCharsets.UTF_8))) {
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        if (line.isBlank()) {
-                            continue;
-                        }
-                        String piece = extractContent(line);
-                        if (piece != null && !piece.isEmpty()) {
-                            String clean = piece.replaceAll("[\\p{IsHan}]+", "");
-                            if (!clean.isEmpty()) {
-                                if (first.compareAndSet(true, false)) {
-                                    log.info("Chatbot: vector {}ms, chữ đầu tiên sau {}ms",
-                                            t1 - t0, System.currentTimeMillis() - t0);
-                                }
-                                sent.set(true);
-                                out.accept(clean);
-                            }
-                        }
-                        if (line.contains("\"done\":true")) {
-                            break;
-                        }
+                sent.set(true);
+                out.accept(chunk);
+            }
+        };
+
+        boolean success = false;
+        if ("gemini".equalsIgnoreCase(provider)) {
+            try {
+                geminiChatClient.stream(SYSTEM_PROMPT, userContent, streamConsumer);
+                success = true;
+                log.info("Chatbot (Gemini) hoàn tất sau {}ms", System.currentTimeMillis() - t0);
+            } catch (Exception e) {
+                log.warn("Chatbot: Gemini gặp sự cố ({}), kiểm tra phương án dự phòng", e.getMessage());
+                if (sent.get()) {
+                    return;
+                }
+                if (fallbackToOllama) {
+                    try {
+                        log.info("Chatbot: Đang thử fallback sang Ollama...");
+                        ollamaChatClient.stream(SYSTEM_PROMPT, userContent, streamConsumer);
+                        success = true;
+                        log.info("Chatbot (Fallback Ollama) hoàn tất sau {}ms", System.currentTimeMillis() - t0);
+                    } catch (Exception ex) {
+                        log.warn("Chatbot: Fallback Ollama cũng gặp sự cố: {}", ex.getMessage());
                     }
                 }
-                return null;
-            });
-            log.info("Chatbot xong sau {}ms", System.currentTimeMillis() - t0);
-        } catch (RuntimeException e) {
-            log.warn("Chatbot lỗi khi gọi Ollama: {}", e.getMessage());
-            if (sent.get()) {
-                return;
             }
+        } else {
+            try {
+                ollamaChatClient.stream(SYSTEM_PROMPT, userContent, streamConsumer);
+                success = true;
+                log.info("Chatbot (Ollama) hoàn tất sau {}ms", System.currentTimeMillis() - t0);
+            } catch (Exception e) {
+                log.warn("Chatbot: Ollama gặp sự cố: {}", e.getMessage());
+            }
+        }
+
+        if (!success && !sent.get()) {
             if (products.isEmpty()) {
                 out.accept("Dạ FashionShop rất tiếc hiện trợ lý AI đang bận một chút. Bạn có thể dùng ô tìm kiếm hoặc xem các danh mục thời trang trên menu nha! 🥰");
             } else {
@@ -871,40 +853,6 @@ public class ChatbotService {
     }
 
     // ============================== TIỆN ÍCH ==============================
-
-    private static String extractContent(String line) {
-        String key = "\"content\":\"";
-        int i = line.indexOf(key);
-        if (i < 0) {
-            return null;
-        }
-        i += key.length();
-        StringBuilder sb = new StringBuilder();
-        while (i < line.length()) {
-            char c = line.charAt(i++);
-            if (c == '"') {
-                break;
-            }
-            if (c == '\\' && i < line.length()) {
-                char n = line.charAt(i++);
-                switch (n) {
-                    case 'n' -> sb.append('\n');
-                    case 't' -> sb.append('\t');
-                    case 'r' -> { }
-                    case 'u' -> {
-                        if (i + 4 <= line.length()) {
-                            sb.append((char) Integer.parseInt(line.substring(i, i + 4), 16));
-                            i += 4;
-                        }
-                    }
-                    default -> sb.append(n);
-                }
-            } else {
-                sb.append(c);
-            }
-        }
-        return sb.toString();
-    }
 
     private static String stripAccents(String s) {
         return Normalizer.normalize(s == null ? "" : s, Normalizer.Form.NFD)

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- MỘT thẻ sản phẩm (Product Card) dùng chung cho home, shop, sale, wishlist -->
+<a th:fragment="card(product)" class="product-card" th:href="@{/shop/{id}(id=${product.id()})}">
+    <div class="product-thumb">
+        <i class="bi bi-image"></i>
+        <img th:if="${product.imageUrl() != null and !#strings.isEmpty(product.imageUrl())}"
+             th:src="${product.imageUrl()}" th:alt="${product.name()}" loading="lazy" onerror="this.remove()">
+
+        <span class="product-badge soldout" th:if="${product.soldOut()}">HẾT HÀNG</span>
+        <span class="product-badge" th:if="${!product.soldOut() and product.onSale()}" th:text="'-' + ${product.discountPercent()} + '%'">-15%</span>
+    </div>
+    <div class="product-info">
+        <span class="product-category" th:text="${product.categoryName()}">Danh mục</span>
+        <h3 class="product-name" th:text="${product.name()}">Tên sản phẩm</h3>
+        <div class="product-price">
+            <span class="now" th:classappend="${product.onSale()} ? 'sale'"
+                  th:text="${#numbers.formatDecimal(product.onSale() ? product.salePrice() : product.price(), 0, 'POINT', 0, 'COMMA')} + ' ₫'">0 ₫</span>
+            <span class="old" th:if="${product.onSale()}"
+                  th:text="${#numbers.formatDecimal(product.price(), 0, 'POINT', 0, 'COMMA')} + ' ₫'">0 ₫</span>
+        </div>
+        <div class="product-colors" th:if="${!#lists.isEmpty(product.colors())}">
+            <span class="color-dot" th:each="c : ${product.colors()}"
+                  th:style="'background:' + ${c.hex()}" th:title="${c.name()}"></span>
+        </div>
+    </div>
+</a>
+
+</body>
+</html>

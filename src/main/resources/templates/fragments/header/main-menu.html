@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Menu giữa: điều hướng (Trang chủ, Sản phẩm, Sale HOT) -->
+<ul th:fragment="main-menu" class="navbar-nav mx-auto site-nav-links">
+    <li class="nav-item">
+        <a class="nav-link" th:href="@{/}">Trang chủ</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" th:href="@{/shop}">Sản phẩm</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link d-flex align-items-center gap-2" th:href="@{/sale}">
+            Sale <span class="sale-hot-badge">HOT</span>
+        </a>
+    </li>
+</ul>
+
+</body>
+</html>

@@ -11,42 +11,6 @@
 
 <div id="customer-content">
 
-    <!-- CSS riêng của thẻ sản phẩm (sau này có thể chuyển sang theme.css) -->
-    <style>
-        .home-section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 0.5rem 0 1rem; }
-        .home-section-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 600; margin: 0; color: #111; }
-        .home-section-link { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #111; text-decoration: none; }
-        .home-section-link:hover { text-decoration: underline; }
-
-        .product-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.25rem; margin-bottom: 2.5rem; }
-        @media (max-width: 1199.98px) { .product-grid { grid-template-columns: repeat(4, 1fr); } }
-        @media (max-width: 991.98px)  { .product-grid { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 767.98px)  { .product-grid { grid-template-columns: repeat(2, 1fr); gap: 0.9rem; } }
-
-        .product-card { display: flex; flex-direction: column; background: #fff; border: 1px solid #ede8e1; border-radius: 14px; overflow: hidden; color: inherit; text-decoration: none; transition: transform .2s ease, box-shadow .2s ease; }
-        .product-card:hover { transform: translateY(-4px); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08); color: inherit; }
-
-        .product-thumb { position: relative; aspect-ratio: 3 / 4; background: linear-gradient(145deg, #f1ebe3, #e6ddd1); display: flex; align-items: center; justify-content: center; color: #b9ab98; font-size: 2.6rem; }
-        .product-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-
-        .product-badge { z-index: 1; position: absolute; top: 0.7rem; left: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; background: #b3261e; color: #fff; }
-        .product-badge.soldout { background: #111; }
-
-        .product-info { padding: 0.9rem 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.3rem; }
-        .product-category { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: #8a8a8a; }
-        .product-name { font-size: 0.95rem; font-weight: 600; color: #111; margin: 0; line-height: 1.35; }
-
-        .product-price { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
-        .product-price .now { font-weight: 700; color: #111; }
-        .product-price .now.sale { color: #b3261e; }
-        .product-price .old { font-size: 0.8rem; color: #999; text-decoration: line-through; }
-
-        .product-colors { display: flex; gap: 0.35rem; margin-top: 0.2rem; }
-        .color-dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #d6d0c7; display: inline-block; }
-
-        .home-empty { padding: 2rem; text-align: center; color: #777; background: #fff; border: 1px dashed #ddd5c9; border-radius: 14px; margin-bottom: 2rem; }
-    </style>
-
     <!-- ===== SẢN PHẨM MỚI ===== -->
     <div class="home-section-head">
         <h2 class="home-section-title">Sản phẩm mới</h2>
@@ -58,30 +22,9 @@
     </div>
 
     <div class="product-grid" th:unless="${#lists.isEmpty(latestProducts)}">
-        <a class="product-card" th:each="p : ${latestProducts}" th:href="@{/shop/{id}(id=${p.id()})}">
-            <div class="product-thumb">
-                <i class="bi bi-image"></i>
-                <img th:if="${p.imageUrl() != null and !#strings.isEmpty(p.imageUrl())}"
-                     th:src="${p.imageUrl()}" th:alt="${p.name()}" loading="lazy" onerror="this.remove()">
-
-                <span class="product-badge soldout" th:if="${p.soldOut()}">HẾT HÀNG</span>
-                <span class="product-badge" th:if="${!p.soldOut() and p.onSale()}" th:text="'-' + ${p.discountPercent()} + '%'">-15%</span>
-            </div>
-            <div class="product-info">
-                <span class="product-category" th:text="${p.categoryName()}">Danh mục</span>
-                <h3 class="product-name" th:text="${p.name()}">Tên sản phẩm</h3>
-                <div class="product-price">
-                    <span class="now" th:classappend="${p.onSale()} ? 'sale'"
-                          th:text="${#numbers.formatDecimal(p.onSale() ? p.salePrice() : p.price(), 0, 'POINT', 0, 'COMMA')} + ' ₫'">0 ₫</span>
-                    <span class="old" th:if="${p.onSale()}"
-                          th:text="${#numbers.formatDecimal(p.price(), 0, 'POINT', 0, 'COMMA')} + ' ₫'">0 ₫</span>
-                </div>
-                <div class="product-colors" th:if="${!#lists.isEmpty(p.colors())}">
-                    <span class="color-dot" th:each="c : ${p.colors()}"
-                          th:style="'background:' + ${c.hex()}" th:title="${c.name()}"></span>
-                </div>
-            </div>
-        </a>
+        <th:block th:each="p : ${latestProducts}">
+            <div th:replace="~{fragments/product-card :: card(${p})}"></div>
+        </th:block>
     </div>
 
 </div>

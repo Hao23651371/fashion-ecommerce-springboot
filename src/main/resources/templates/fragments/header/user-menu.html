@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Nút Đăng nhập/Đăng ký (khi chưa login) hoặc Nút Tài khoản (khi đã login) -->
+<th:block th:fragment="user-menu">
+    <!-- CHƯA đăng nhập: nút Đăng nhập / Đăng ký -->
+    <div th:unless="${loggedIn}" class="d-flex align-items-center gap-2">
+        <a th:href="@{/login}" class="btn btn-dark btn-sm rounded-pill px-3 text-uppercase"
+           style="font-size:.72rem; letter-spacing:.08em;">Đăng nhập</a>
+        <a th:href="@{/register}" class="btn btn-outline-dark btn-sm rounded-pill px-3 text-uppercase"
+           style="font-size:.72rem; letter-spacing:.08em;">Đăng ký</a>
+    </div>
+
+    <!-- ĐÃ đăng nhập: bấm vào thẳng trang tài khoản -->
+    <a th:if="${loggedIn}" th:href="@{/account}"
+       class="site-user-btn" aria-label="Tài khoản" title="Tài khoản của tôi">
+        <i class="bi bi-person-fill"></i>
+    </a>
+</th:block>
+
+</body>
+</html>

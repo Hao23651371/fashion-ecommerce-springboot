@@ -28,6 +28,7 @@ public class AccountUserDetailsService implements UserDetailsService {
                 .password(account.getPassword())
                 .roles(account.getRole().name()) // ADMIN -> ROLE_ADMIN, CUSTOMER -> ROLE_CUSTOMER
                 .accountLocked(account.getStatus() == AccountStatus.BANNED)
+                .disabled(!account.isEmailVerified()) // Bắt buộc phải xác thực email mới được đăng nhập
                 .build();
     }
 }

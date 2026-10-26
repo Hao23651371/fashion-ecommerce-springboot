@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/admin-base :: adminLayout(
+          ~{::title},
+          ~{::#admin-content},
+          'account'
+      )}">
+<head>
+    <title>Tài khoản đăng nhập | Fashion Shop Admin</title>
+</head>
+<body>
+
+    <div id="admin-content">
+        <!-- Thông báo xác nhận trang tài khoản đăng nhập -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary"
+                         style="width: 48px; height: 48px; font-size: 1.5rem;">
+                        <i class="bi bi-person-badge-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold mb-1">Đây là trang tài khoản đăng nhập</h4>
+                        <p class="text-muted mb-0">Quản lý và xem chi tiết thông tin tài khoản quản trị viên đang hoạt động trong hệ thống.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chi tiết thông tin tài khoản -->
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm text-center p-4">
+                    <div class="position-relative d-inline-block mx-auto mb-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
+                             style="width: 96px; height: 96px; font-size: 2.5rem; background: linear-gradient(135deg, #4f46e5, #7c3aed);">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <span class="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle p-2"
+                              title="Đang hoạt động" style="width: 18px; height: 18px;"></span>
+                    </div>
+
+                    <h5 class="fw-bold mb-1" th:text="${adminProfile != null and adminProfile.fullName != null ? adminProfile.fullName : (currentUserName != null ? currentUserName : 'Quản trị viên')}">Quản trị viên</h5>
+                    <p class="text-muted small mb-2" th:text="${currentEmail != null ? currentEmail : 'admin@fashionshop.com'}">admin@fashionshop.com</p>
+
+                    <div class="mb-3">
+                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2 rounded-pill">
+                            <i class="bi bi-shield-fill-check me-1"></i> Quản trị viên (ADMIN)
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm p-4">
+                    <h5 class="fw-bold mb-3 pb-2 border-bottom">Thông tin chi tiết tài khoản</h5>
+
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="text-muted small d-block">Họ và tên</label>
+                            <span class="fw-semibold text-dark"
+                                  th:text="${adminProfile != null and adminProfile.fullName != null ? adminProfile.fullName : 'Chưa cập nhật'}">
+                                Nguyễn Văn Admin
+                            </span>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label class="text-muted small d-block">Email đăng nhập</label>
+                            <span class="fw-semibold text-dark"
+                                  th:text="${currentEmail != null ? currentEmail : (adminAccount != null ? adminAccount.email : 'admin@fashionshop.com')}">
+                                admin@fashionshop.com
+                            </span>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label class="text-muted small d-block">Số điện thoại</label>
+                            <span class="fw-semibold text-dark"
+                                  th:text="${adminProfile != null and adminProfile.phoneNumber != null ? adminProfile.phoneNumber : 'Chưa cập nhật'}">
+                                Chưa cập nhật
+                            </span>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label class="text-muted small d-block">Ngày sinh</label>
+                            <span class="fw-semibold text-dark"
+                                  th:text="${adminProfile != null and adminProfile.birthDate != null ? adminProfile.birthDate : 'Chưa cập nhật'}">
+                                Chưa cập nhật
+                            </span>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label class="text-muted small d-block">Trạng thái tài khoản</label>
+                            <span class="badge bg-success bg-opacity-10 text-success">
+                                <i class="bi bi-check-circle-fill me-1"></i> Đang hoạt động
+                            </span>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label class="text-muted small d-block">Quyền truy cập</label>
+                            <span class="badge bg-primary bg-opacity-10 text-primary">Toàn quyền Quản trị (ROLE_ADMIN)</span>
+                        </div>
+
+                        <div class="col-sm-6" th:if="${adminAccount != null and adminAccount.lastLoginAt != null}">
+                            <label class="text-muted small d-block">Đăng nhập gần nhất</label>
+                            <span class="fw-semibold text-secondary"
+                                  th:text="${#temporals.format(adminAccount.lastLoginAt, 'HH:mm - dd/MM/yyyy')}">
+                                00:00 - 01/01/2026
+                            </span>
+                        </div>
+
+                        <div class="col-sm-6" th:if="${adminAccount != null and adminAccount.createdAt != null}">
+                            <label class="text-muted small d-block">Ngày tham gia hệ thống</label>
+                            <span class="fw-semibold text-secondary"
+                                  th:text="${#temporals.format(adminAccount.createdAt, 'dd/MM/yyyy')}">
+                                01/01/2026
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

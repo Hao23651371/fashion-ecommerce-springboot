@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Icon yêu thích + badge wishlistCount -->
+<a th:fragment="wishlist-icon" th:href="@{/wishlist}" class="site-icon-btn" aria-label="Yêu thích">
+    <i class="bi bi-heart"></i>
+    <span class="site-badge"
+          th:if="${wishlistCount != null and wishlistCount > 0}"
+          th:text="${wishlistCount}">0</span>
+</a>
+
+</body>
+</html>

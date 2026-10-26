@@ -10,4 +10,7 @@ import java.util.Optional;
 public interface UserProfileRepository extends JpaRepository<UserProfile, Long> {
     Optional<UserProfile> findByAccountId(Long accountId);
     Optional<UserProfile> findByAccountEmail(String email);
+    Optional<UserProfile> findByAccount(com.iuh.fashionshop.model.Account account);
+    Optional<UserProfile> findByPhoneNumber(String phoneNumber);
+    boolean existsByPhoneNumber(String phoneNumber);
 }

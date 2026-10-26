@@ -1,0 +1,72 @@
+# =========================================================================
+# FASHIONSHOP - CẤU HÌNH MÔI TRƯỜNG CỤC BỘ (FILE MẪU)
+# Hướng dẫn: Sao chép file này thành "application-local.properties" cùng thư mục,
+# sau đó điền thông tin phù hợp với máy của bạn.
+# Xem hướng dẫn chi tiết tại mục "Cấu hình môi trường cục bộ" trong TAI_LIEU_DU_AN_FASHION_SHOP.
+# =========================================================================
+
+# -------------------------------------------------------------------------
+# 1. KẾT NỐI CƠ SỞ DỮ LIỆU MARIADB / MYSQL (BẮT BUỘC)
+# Mục đích: Kết nối database cục bộ để ứng dụng hoạt động.
+# Xem hướng dẫn chi tiết tại mục "Tạo database và import SQL" trong TAI_LIEU_DU_AN_FASHION_SHOP.
+# -------------------------------------------------------------------------
+spring.datasource.url=jdbc:mariadb://localhost:3306/fashionshop
+spring.datasource.username=root
+# Mật khẩu database cục bộ của bạn (để trống nếu không đặt mật khẩu)
+spring.datasource.password=
+
+# -------------------------------------------------------------------------
+# 2. DỊCH VỤ GỬI EMAIL XÁC THỰC OTP (TÙY CHỌN)
+# Mục đích: Gửi OTP xác thực khi đăng ký tài khoản tại /register.
+# Dùng App Password 16 ký tự của Google (không phải mật khẩu đăng nhập Gmail).
+# Xem hướng dẫn chi tiết tại mục "Cấu hình Email OTP" trong TAI_LIEU_DU_AN_FASHION_SHOP.
+# -------------------------------------------------------------------------
+spring.mail.username=
+spring.mail.password=
+
+# -------------------------------------------------------------------------
+# 3. CHỌN NHÀ CUNG CẤP CHATBOT AI (TÙY CHỌN, Mặc định: ollama)
+# Mục đích: Chọn AI sinh câu trả lời tư vấn thời trang ('ollama' hoặc 'gemini').
+# - ollama: Chạy hoàn toàn miễn phí cục bộ trên máy, không cần API key.
+# - gemini: Dùng Google Gemini qua cloud, cần tự tạo API key riêng.
+# Xem hướng dẫn chi tiết tại mục "Cấu hình Chatbot AI" trong TAI_LIEU_DU_AN_FASHION_SHOP.
+# -------------------------------------------------------------------------
+chatbot.provider=ollama
+# Tự động thử sang Ollama nếu Gemini gặp lỗi (true/false)
+chatbot.fallback-to-ollama=false
+
+# -------------------------------------------------------------------------
+# 4. CẤU HÌNH GOOGLE GEMINI (BẮT BUỘC nếu chatbot.provider=gemini)
+# Mục đích: Kết nối Google Gemini API để tư vấn thời trang thông minh.
+# Lấy API Key miễn phí tại: https://aistudio.google.com/
+# Lưu ý: Mỗi thành viên TỰ TẠO key riêng, KHÔNG dùng chung key.
+# Xem hướng dẫn chi tiết tại mục "Chế độ Chatbot Gemini" trong TAI_LIEU_DU_AN_FASHION_SHOP.
+# -------------------------------------------------------------------------
+gemini.api-key=
+# Tên mã model (chọn model có Free Tier trong Google AI Studio; nếu không chắc ghi CẦN XÁC NHẬN)
+gemini.model=
+gemini.timeout-seconds=15
+gemini.max-output-tokens=350
+gemini.temperature=0.3
+gemini.cooldown-seconds=60
+gemini.cache-seconds=600
+
+# -------------------------------------------------------------------------
+# 5. CẤU HÌNH OLLAMA CỤC BỘ (BẮT BUỘC cho Vector Search và Chatbot Ollama)
+# Mục đích:
+# - bge-m3: Tạo vector embedding để tìm kiếm thông minh và RAG.
+# - qwen2.5:3b: Mô hình chat cục bộ nếu dùng chatbot.provider=ollama.
+# Xem hướng dẫn chi tiết tại mục "Cài đặt Ollama" trong TAI_LIEU_DU_AN_FASHION_SHOP.
+# -------------------------------------------------------------------------
+ollama.base-url=http://localhost:11434
+ollama.embedding.model=bge-m3
+ollama.embedding.dimensions=1024
+ollama.chat.model=qwen2.5:3b
+ollama.chat.timeout-seconds=120
+
+# -------------------------------------------------------------------------
+# 6. THIẾT LẬP VECTOR SEARCH & TIMEOUT PHẢN HỒI (TÙY CHỌN)
+# Mục đích: Ngưỡng khoảng cách cosine và thời gian chờ streaming phản hồi chat.
+# -------------------------------------------------------------------------
+vector.search.max-distance=1.0
+spring.mvc.async.request-timeout=120000

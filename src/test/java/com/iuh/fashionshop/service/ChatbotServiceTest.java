@@ -9,6 +9,8 @@ import com.iuh.fashionshop.model.enums.DiscountType;
 import com.iuh.fashionshop.model.enums.Gender;
 import com.iuh.fashionshop.model.enums.ProductStatus;
 import com.iuh.fashionshop.repository.CouponRepository;
+import com.iuh.fashionshop.service.ai.GeminiChatClient;
+import com.iuh.fashionshop.service.ai.OllamaChatClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +38,12 @@ class ChatbotServiceTest {
     @Mock
     private CouponRepository couponRepository;
 
+    @Mock
+    private OllamaChatClient ollamaChatClient;
+
+    @Mock
+    private GeminiChatClient geminiChatClient;
+
     private ChatbotService chatbotService;
 
     private List<ProductDetailDto> mockProducts;
@@ -46,9 +54,10 @@ class ChatbotServiceTest {
                 searchService,
                 productService,
                 couponRepository,
-                "http://localhost:11434",
-                "qwen2.5:3b",
-                5
+                ollamaChatClient,
+                geminiChatClient,
+                "ollama",
+                false
         );
 
         // Chuẩn bị danh sách sản phẩm mẫu đầy đủ thông tin size, màu, tồn kho

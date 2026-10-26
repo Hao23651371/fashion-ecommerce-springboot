@@ -98,10 +98,32 @@ body.admin-body {
     border-radius: 50%;
 }
 
-/* Store Status Card (Bottom of sidebar) */
-.store-status-card {
+/* Admin User Card (Bottom of sidebar) */
+.admin-user-card {
     background-color: #272a31;
     border: 1px solid #333741;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.admin-user-card:hover {
+    background-color: #333741;
+    border-color: #4b5563;
+}
+
+.admin-user-card.active {
+    background: linear-gradient(135deg, rgba(92, 86, 246, 0.25), rgba(124, 58, 237, 0.25));
+    border-color: #5c56f6;
+    box-shadow: 0 0 10px rgba(92, 86, 246, 0.25);
+}
+
+.admin-avatar-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    font-size: 1.05rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .status-indicator-green {
@@ -110,6 +132,7 @@ body.admin-body {
     background-color: #10b981;
     border-radius: 50%;
     box-shadow: 0 0 8px #10b981;
+    border: 1.5px solid #1e2128;
 }
 
 .sidebar-link-muted {

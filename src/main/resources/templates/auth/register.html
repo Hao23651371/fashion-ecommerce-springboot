@@ -21,8 +21,16 @@
         <div class="auth-panel-container">
             <div class="row g-0">
 
-                <!-- CỘT TRÁI: ĐẶC QUYỀN HỘI VIÊN (Ảnh 3) -->
+                <!-- CỘT TRÁI: SLIDESHOW LOOKBOOK (tự đổi ảnh mỗi 5 giây) -->
                 <div class="col-lg-6 d-none d-lg-flex auth-editorial-col">
+                    <!-- Lớp ảnh -->
+                    <div class="auth-slides" aria-hidden="true">
+                        <img class="auth-slide" src="https://res.cloudinary.com/dxk6xlsre/image/upload/v1792256284/register1.jpg" alt="">
+                        <img class="auth-slide" src="https://res.cloudinary.com/dxk6xlsre/image/upload/v1792687354/register2.png" alt="" loading="lazy">
+                        <img class="auth-slide" src="https://res.cloudinary.com/dxk6xlsre/image/upload/v1792686176/register3.png" alt="" loading="lazy">
+                    </div>
+                    <div class="auth-slides-overlay"></div>
+
                     <div class="auth-editorial-content">
                         <!-- Top Badges -->
                         <div class="d-flex justify-content-between align-items-center">
@@ -30,52 +38,16 @@
                             <span class="pill-badge">LOOKBOOK Nº 04</span>
                         </div>
 
-                        <!-- Mid Content & 3 Feature Cards -->
-                        <div class="my-3">
-                            <div class="editorial-tag">THẾ GIỚI HAUTE COUTURE CÁ NHÂN HÓA</div>
-                            <h2 class="editorial-quote" style="font-size: 1.45rem;">
-                                Khởi đầu hành trình phong cách cùng những đặc quyền may đo và tuyển tập giới hạn.
-                            </h2>
-                            <p class="editorial-desc mb-3" style="font-size: 0.78rem;">
-                                Gia nhập cộng đồng thượng lưu của Maison để trải nghiệm dịch vụ chuẩn mực từ các nghệ nhân hàng đầu Paris và Sài Gòn.
-                            </p>
-
-                            <!-- 3 Glassmorphism Cards -->
-                            <div class="feature-glass-card">
-                                <div class="icon-box"><i class="bi bi-percent"></i></div>
-                                <div>
-                                    <h6>Ưu đãi khởi đầu</h6>
-                                    <p>Giảm ngay 10% đặc quyền áp dụng cho đơn hàng đầu tiên.</p>
-                                </div>
+                        <!-- Bottom: 3 thanh chuyển ảnh + Edition -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="auth-slide-dots">
+                                <button type="button" class="auth-slide-dot" aria-label="Ảnh 1"></button>
+                                <button type="button" class="auth-slide-dot" aria-label="Ảnh 2"></button>
+                                <button type="button" class="auth-slide-dot" aria-label="Ảnh 3"></button>
                             </div>
-
-                            <div class="feature-glass-card">
-                                <div class="icon-box"><i class="bi bi-person-badge"></i></div>
-                                <div>
-                                    <h6>Private Fitting & Bespoke</h6>
-                                    <p>Ưu tiên đặt lịch may đo cá nhân tại Salon Tràng Tiền & Đồng Khởi.</p>
-                                </div>
-                            </div>
-
-                            <div class="feature-glass-card">
-                                <div class="icon-box"><i class="bi bi-envelope-paper"></i></div>
-                                <div>
-                                    <h6>Thư mời Private Preview</h6>
-                                    <p>Tham dự các buổi ra mắt bộ sưu tập theo mùa trước khi mở bán công khai.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Bottom Quote & Code -->
-                        <div class="d-flex justify-content-between align-items-end pt-2 border-top border-white border-opacity-25">
-                            <div style="max-width: 75%;">
-                                <div class="fst-italic text-white-50" style="font-size: 0.75rem;">"Sự tao nhã là vẻ đẹp duy nhất không bao giờ tàn phai."</div>
-                                <small class="text-uppercase tracking-wider font-monospace text-white-50" style="font-size: 0.65rem;">&mdash; FASHION SHOP ATELIER NOTES</small>
-                            </div>
-                            <div class="text-end">
-                                <small class="text-white-50 d-block font-monospace" style="font-size: 0.62rem;">MÃ HỘI VIÊN</small>
-                                <span class="fw-bold font-monospace small">#MSN-2025</span>
-                            </div>
+                            <span class="tracking-widest text-uppercase text-white-50 font-monospace" style="font-size: 0.65rem;">
+                                HANOI ATELIER • EDITION 25.1
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -86,7 +58,7 @@
                         <!-- Top Status -->
                         <div class="d-flex justify-content-between align-items-center">
                             <span class="auth-form-badge"><i class="bi bi-compass"></i> GIA NHẬP MAISON ATELIER</span>
-                            <a href="#" class="auth-help-link">HỖ TRỢ <i class="bi bi-arrow-up-right"></i></a>
+                            <a th:href="@{/terms#support}" target="_blank" class="auth-help-link">HỖ TRỢ <i class="bi bi-arrow-up-right"></i></a>
                         </div>
 
                         <!-- Title & Subtitle -->
@@ -95,36 +67,51 @@
                             Trở thành thành viên để lưu giữ kích cỡ may đo, danh sách mong muốn và tận hưởng dịch vụ chăm sóc thượng hạng.
                         </p>
 
-                        <!-- Thông báo lỗi khi đăng ký -->
-                        <div class="alert alert-danger py-2 small rounded-3 mb-2" th:if="${#fields != null and #fields.hasErrors('${registerForm.*}')}">
-                            <ul class="mb-0 ps-3">
-                                <li th:each="err : ${#fields.errors('${registerForm.*}')}" th:text="${err}"></li>
-                            </ul>
-                        </div>
-
                         <!-- Form Register -->
-                        <form th:action="@{/register}" th:object="${registerForm}" method="post">
+                        <form th:action="@{/register}" th:object="${registerForm}" method="post" id="registerForm" novalidate onsubmit="return false;">
+
+                            <!-- Thông báo lỗi tổng quát khi đăng ký -->
+                            <div class="alert alert-danger py-2 small rounded-3 mb-2" th:if="${#fields.hasErrors('*')}">
+                                <i class="bi bi-exclamation-circle-fill me-1"></i>
+                                <span>Thông tin đăng ký chưa hợp lệ. Quý khách vui lòng kiểm tra các mục báo lỗi bên dưới.</span>
+                            </div>
+
                             <div class="mb-2">
                                 <label for="fullname" class="auth-label">HỌ & TÊN ĐẦY ĐỦ</label>
-                                <div class="luxury-input-group">
+                                <div class="luxury-input-group" th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'">
                                     <span class="input-icon"><i class="bi bi-person"></i></span>
-                                    <input type="text" id="fullname" name="fullName" th:value="*{fullName}" placeholder="Nguyễn Hoàng Minh" required>
+                                    <input type="text" id="fullname" name="fullName" th:value="*{fullName}" placeholder="Nguyễn Hoàng Minh" required autocomplete="name">
+                                </div>
+                                <div class="auth-field-error" id="fullNameError" th:if="${#fields.hasErrors('fullName')}">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    <span th:errors="*{fullName}"></span>
                                 </div>
                             </div>
 
                             <div class="row g-2 mb-2">
                                 <div class="col-sm-6">
                                     <label for="email" class="auth-label">EMAIL LIÊN HỆ</label>
-                                    <div class="luxury-input-group">
+                                    <div class="luxury-input-group" th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'">
                                         <span class="input-icon"><i class="bi bi-envelope"></i></span>
-                                        <input type="email" id="email" name="email" th:value="*{email}" placeholder="atelier@domain.vn" required>
+                                        <input type="email" id="email" name="email" th:value="*{email}" placeholder="atelier@domain.vn" required autocomplete="email">
+                                    </div>
+                                    <div class="auth-field-error" id="emailError" th:if="${#fields.hasErrors('email')}">
+                                        <i class="bi bi-exclamation-circle-fill"></i>
+                                        <span th:errors="*{email}"></span>
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
-                                    <label for="phone" class="auth-label">SỐ ĐIỆN THOẠI</label>
-                                    <div class="luxury-input-group">
+                                    <div class="d-flex justify-content-between">
+                                        <label for="phone" class="auth-label">SỐ ĐIỆN THOẠI</label>
+                                        <span class="text-muted small" style="font-size: 0.65rem;">ĐẦU SỐ 03, 05, 07, 08, 09</span>
+                                    </div>
+                                    <div class="luxury-input-group" th:classappend="${#fields.hasErrors('phoneNumber')} ? 'is-invalid'">
                                         <span class="input-icon"><i class="bi bi-telephone"></i></span>
-                                        <input type="tel" id="phone" name="phoneNumber" th:value="*{phoneNumber}" placeholder="+84 90 123 4567">
+                                        <input type="tel" id="phone" name="phoneNumber" th:value="*{phoneNumber}" placeholder="0901 234 567" autocomplete="tel">
+                                    </div>
+                                    <div class="auth-field-error" id="phoneError" th:if="${#fields.hasErrors('phoneNumber')}">
+                                        <i class="bi bi-exclamation-circle-fill"></i>
+                                        <span th:errors="*{phoneNumber}"></span>
                                     </div>
                                 </div>
                             </div>
@@ -134,39 +121,51 @@
                                     <label for="regPassword" class="auth-label">MẬT KHẨU BẢO MẬT</label>
                                     <span class="text-muted small" style="font-size: 0.65rem;">TỐI THIỂU 6 KÝ TỰ</span>
                                 </div>
-                                <div class="luxury-input-group">
+                                <div class="luxury-input-group" th:classappend="${#fields.hasErrors('password')} ? 'is-invalid'">
                                     <span class="input-icon"><i class="bi bi-lock"></i></span>
-                                    <input type="password" id="regPassword" name="password" placeholder="••••••••••••" required>
-                                    <button type="button" class="toggle-pw-btn" id="toggleRegPassword">
+                                    <input type="password" id="regPassword" name="password" placeholder="••••••••••••" required autocomplete="new-password">
+                                    <button type="button" class="toggle-pw-btn" id="toggleRegPassword" tabindex="-1">
                                         <i class="bi bi-eye"></i>
                                     </button>
+                                </div>
+                                <div class="auth-field-error" id="passwordError" th:if="${#fields.hasErrors('password')}">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    <span th:errors="*{password}"></span>
                                 </div>
                             </div>
 
                             <!-- Password Strength Indicator -->
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <small class="text-muted" style="font-size: 0.68rem;">Độ mạnh mật khẩu</small>
-                                <span class="badge bg-light text-secondary border" style="font-size: 0.62rem;">CHƯA NHẬP</span>
+                                <span class="badge bg-light text-secondary border" style="font-size: 0.62rem;" id="passwordStrengthBadge">CHƯA NHẬP</span>
                             </div>
 
                             <div class="mb-2">
                                 <label for="confirmPassword" class="auth-label">XÁC NHẬN MẬT KHẨU</label>
-                                <div class="luxury-input-group">
+                                <div class="luxury-input-group" th:classappend="${#fields.hasErrors('confirmPassword')} ? 'is-invalid'">
                                     <span class="input-icon"><i class="bi bi-lock"></i></span>
-                                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="••••••••••••" required>
-                                    <button type="button" class="toggle-pw-btn" id="toggleConfirmPassword">
+                                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="••••••••••••" required autocomplete="new-password">
+                                    <button type="button" class="toggle-pw-btn" id="toggleConfirmPassword" tabindex="-1">
                                         <i class="bi bi-eye"></i>
                                     </button>
+                                </div>
+                                <div class="auth-field-error" id="confirmPasswordError" th:if="${#fields.hasErrors('confirmPassword')}">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    <span th:errors="*{confirmPassword}"></span>
                                 </div>
                             </div>
 
                             <!-- Terms & Newsletter Checkboxes -->
                             <div class="mb-2">
                                 <div class="form-check mb-1">
-                                    <input class="form-check-input" type="checkbox" id="termsCheck" required>
+                                    <input class="form-check-input" type="checkbox" id="termsCheck" name="termsAccepted" th:checked="*{termsAccepted != null and termsAccepted}" th:classappend="${#fields.hasErrors('termsAccepted')} ? 'is-invalid'">
                                     <label class="form-check-label small text-muted" for="termsCheck" style="font-size: 0.75rem;">
-                                        Tôi đồng ý với <a href="#" class="text-dark text-decoration-underline">Điều khoản dịch vụ</a> và <a href="#" class="text-dark text-decoration-underline">Chính sách bảo mật</a> của Fashion Shop.
+                                        Tôi đồng ý với <a th:href="@{/terms#terms}" target="_blank" class="text-dark text-decoration-underline">Điều khoản dịch vụ</a> và <a th:href="@{/terms#privacy}" target="_blank" class="text-dark text-decoration-underline">Chính sách bảo mật</a> của Fashion Shop.
                                     </label>
+                                </div>
+                                <div class="auth-field-error" id="termsError" th:if="${#fields.hasErrors('termsAccepted')}">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    <span th:errors="*{termsAccepted}"></span>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="newsCheck" checked>
@@ -176,7 +175,7 @@
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn-auth-primary">
+                            <button type="button" id="btnSubmitRegister" class="btn-auth-primary">
                                 <span>TẠO TÀI KHOẢN</span>
                                 <i class="bi bi-arrow-right"></i>
                             </button>
@@ -204,7 +203,7 @@
 
                         <!-- Switch to Login -->
                         <p class="text-center small text-muted mb-2" style="font-size: 0.78rem;">
-                            Đã có tài khoản atelier? 
+                            Đã có tài khoản? 
                             <a th:href="@{/login}" class="text-dark fw-bold text-decoration-underline ms-1">ĐĂNG NHẬP NGAY</a>
                         </p>
                     </div>
@@ -235,10 +234,117 @@
         </div>
     </main>
 
-    <!-- 3. Footer riêng của auth (Ảnh 3) -->
+    <!-- 3. Modal Xác Thực Mã OTP Email -->
+    <div class="modal fade otp-modal" id="otpModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 460px;">
+            <div class="modal-content">
+                <div class="otp-modal-header text-center">
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" id="btnDismissOtpModal"></button>
+                    <div class="d-flex justify-content-center">
+                        <div class="otp-icon-wrap">
+                            <i class="bi bi-shield-lock-fill"></i>
+                        </div>
+                    </div>
+                    <h5 class="modal-title fw-bold text-uppercase text-white" id="otpModalLabel" style="letter-spacing: 2px; font-size: 1.15rem;">
+                        Xác thực tài khoản
+                    </h5>
+                    <p class="text-white-50 small mb-0 mt-1" style="font-size: 0.78rem;">
+                        Fashion Shop Atelier & Bespoke Verification
+                    </p>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <p class="text-muted small mb-2" style="font-size: 0.85rem; line-height: 1.5;">
+                        Mã xác thực gồm <strong>6 chữ số</strong> đã được gửi tới email:
+                    </p>
+                    <div class="fw-bold text-dark mb-3 p-2 rounded-3 bg-light border" id="modalTargetEmail" style="word-break: break-all; font-size: 0.95rem;">
+                        user@example.com
+                    </div>
+
+                    <!-- 6 Ô NHẬP OTP -->
+                    <div class="otp-inputs-wrapper" id="otpInputsContainer">
+                        <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" autocomplete="one-time-code" data-index="0" autofocus>
+                        <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" data-index="1">
+                        <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" data-index="2">
+                        <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" data-index="3">
+                        <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" data-index="4">
+                        <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" data-index="5">
+                    </div>
+
+                    <!-- Thông báo phản hồi (đỏ khi sai/hết hạn, xanh khi gửi lại hoặc thành công) -->
+                    <div class="otp-feedback-msg" id="otpFeedbackMsg">
+                        <i class="bi bi-exclamation-triangle-fill" id="otpFeedbackIcon"></i>
+                        <span id="otpFeedbackText"></span>
+                    </div>
+
+                    <!-- Đồng hồ đếm ngược 5 phút -->
+                    <div class="mt-3">
+                        <div class="otp-timer-box">
+                            <i class="bi bi-clock-history"></i>
+                            <span>Hiệu lực mã:</span>
+                            <strong id="otpCountdownTimer" class="text-danger">05:00</strong>
+                        </div>
+                    </div>
+
+                    <!-- Gửi lại mã -->
+                    <div class="mt-3 small text-muted">
+                        <span>Chưa nhận được mã? </span>
+                        <button type="button" class="otp-resend-link ms-1" id="btnResendOtp">
+                            Gửi lại mã
+                        </button>
+                        <span id="resendCountdownText" class="text-muted d-none ms-1">(sau <strong id="resendSeconds">60</strong>s)</span>
+                    </div>
+
+                    <!-- Nút bấm xác nhận -->
+                    <div class="mt-4">
+                        <button type="button" class="btn btn-dark w-100 py-2 rounded-3 fw-bold tracking-wider" id="btnConfirmOtp" style="letter-spacing: 1px;">
+                            <span>XÁC NHẬN KÍCH HOẠT</span>
+                            <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Footer riêng của auth (Ảnh 3) -->
     <div th:replace="~{auth/auth-footer :: auth-footer}"></div>
 
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
+        // Slideshow cột trái: tự đổi ảnh mỗi 5 giây, bấm vào thanh để chuyển ngay
+        (function () {
+            const slides = document.querySelectorAll('.auth-slide');
+            const dots = document.querySelectorAll('.auth-slide-dot');
+            if (!slides.length) return;
+
+            const DURATION = 5000; // 5 giây (phải khớp với animation trong auth.css)
+            let current = 0;
+            let timer;
+
+            function show(i) {
+                current = (i + slides.length) % slides.length;
+                slides.forEach((s, k) => s.classList.toggle('active', k === current));
+                dots.forEach((d, k) => {
+                    d.classList.remove('active');
+                    if (k === current) {
+                        void d.offsetWidth; // khởi động lại hiệu ứng thanh chạy
+                        d.classList.add('active');
+                    }
+                });
+            }
+
+            function start() {
+                clearInterval(timer);
+                timer = setInterval(() => show(current + 1), DURATION);
+            }
+
+            dots.forEach((d, k) => d.addEventListener('click', () => { show(k); start(); }));
+            show(0);
+            start();
+        })();
+
         function setupToggle(btnId, inputId) {
             const btn = document.getElementById(btnId);
             const input = document.getElementById(inputId);
@@ -253,6 +359,524 @@
         }
         setupToggle('toggleRegPassword', 'regPassword');
         setupToggle('toggleConfirmPassword', 'confirmPassword');
+
+        // Dynamic password strength check & validation helpers
+        const form = document.getElementById('registerForm');
+        const fullnameInput = document.getElementById('fullname');
+        const emailInput = document.getElementById('email');
+        const phoneInput = document.getElementById('phone');
+        const regPasswordInput = document.getElementById('regPassword');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const termsCheck = document.getElementById('termsCheck');
+        const strengthBadge = document.getElementById('passwordStrengthBadge');
+
+        function setFieldError(input, errorId, message) {
+            const group = input.closest('.luxury-input-group');
+            if (group) group.classList.add('is-invalid');
+            if (input.type === 'checkbox') input.classList.add('is-invalid');
+
+            let errBox = document.getElementById(errorId);
+            if (!errBox) {
+                errBox = document.createElement('div');
+                errBox.id = errorId;
+                errBox.className = 'auth-field-error';
+                if (group) {
+                    group.parentNode.insertBefore(errBox, group.nextSibling);
+                } else if (input.parentNode) {
+                    input.parentNode.appendChild(errBox);
+                }
+            }
+            errBox.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i> <span>' + message + '</span>';
+            errBox.style.display = 'flex';
+        }
+
+        function clearFieldError(input, errorId) {
+            const group = input.closest('.luxury-input-group');
+            if (group) group.classList.remove('is-invalid');
+            if (input.type === 'checkbox') input.classList.remove('is-invalid');
+
+            const errBox = document.getElementById(errorId);
+            if (errBox) {
+                errBox.innerHTML = '';
+                errBox.style.display = 'none';
+            }
+        }
+
+        // Real-time password strength indicator
+        if (regPasswordInput && strengthBadge) {
+            regPasswordInput.addEventListener('input', function () {
+                const val = this.value;
+                if (!val) {
+                    strengthBadge.textContent = 'CHƯA NHẬP';
+                    strengthBadge.className = 'badge bg-light text-secondary border';
+                } else if (val.length < 6) {
+                    strengthBadge.textContent = 'QUÁ NGẮN';
+                    strengthBadge.className = 'badge bg-danger text-white';
+                } else {
+                    const hasLetter = /[a-zA-Z]/.test(val);
+                    const hasNumber = /[0-9]/.test(val);
+                    const hasSpecial = /[^a-zA-Z0-9]/.test(val);
+
+                    if (hasLetter && hasNumber && hasSpecial && val.length >= 8) {
+                        strengthBadge.textContent = 'MẠNH';
+                        strengthBadge.className = 'badge bg-success text-white';
+                    } else if ((hasLetter && hasNumber) || (hasLetter && hasSpecial)) {
+                        strengthBadge.textContent = 'TRUNG BÌNH';
+                        strengthBadge.className = 'badge bg-warning text-dark';
+                    } else {
+                        strengthBadge.textContent = 'YẾU';
+                        strengthBadge.className = 'badge bg-danger text-white';
+                    }
+                }
+            });
+        }
+
+        // Phone validation helper with clear, specific error messages
+        function validatePhoneValue(value) {
+            const raw = (value || '').trim();
+            if (!raw) return null; // Không bắt buộc nhập khi đăng ký
+
+            const cleaned = raw.replace(/[\s.-]/g, '');
+
+            if (!/^\+?[0-9]+$/.test(cleaned)) {
+                return 'Số điện thoại chỉ được chứa các chữ số (ví dụ: 0901234567)';
+            }
+
+            if (cleaned.startsWith('0')) {
+                if (cleaned.length !== 10) {
+                    return 'Số điện thoại phải gồm đúng 10 chữ số (bạn đã nhập ' + cleaned.length + ' số)';
+                }
+                if (cleaned.startsWith('02')) {
+                    return 'Đầu số 02 là mã vùng máy bàn cố định. Vui lòng nhập số di động (03, 05, 07, 08 hoặc 09)';
+                }
+                if (!/^(03|05|07|08|09)/.test(cleaned)) {
+                    return 'Số điện thoại di động Việt Nam phải bắt đầu bằng đầu số: 03, 05, 07, 08 hoặc 09';
+                }
+                return null;
+            }
+
+            if (cleaned.startsWith('+84')) {
+                const rest = cleaned.substring(3);
+                if (rest.length !== 9) {
+                    return 'Số điện thoại quốc tế (+84) cần 9 chữ số tiếp theo (hiện có ' + rest.length + ' số)';
+                }
+                if (!/^[35789]/.test(rest)) {
+                    return 'Đầu số di động sau +84 phải là 3, 5, 7, 8 hoặc 9 (ví dụ: +84901234567)';
+                }
+                return null;
+            }
+
+            return 'Số điện thoại Việt Nam phải bắt đầu bằng số 0 (hoặc +84), ví dụ: 0901234567';
+        }
+
+        // Clear error on input
+        if (fullnameInput) fullnameInput.addEventListener('input', () => clearFieldError(fullnameInput, 'fullNameError'));
+        if (emailInput) emailInput.addEventListener('input', () => clearFieldError(emailInput, 'emailError'));
+        if (phoneInput) {
+            phoneInput.addEventListener('input', () => clearFieldError(phoneInput, 'phoneError'));
+            phoneInput.addEventListener('blur', function () {
+                const err = validatePhoneValue(this.value);
+                if (err) {
+                    setFieldError(phoneInput, 'phoneError', err);
+                } else {
+                    clearFieldError(phoneInput, 'phoneError');
+                }
+            });
+        }
+        if (regPasswordInput) regPasswordInput.addEventListener('input', () => clearFieldError(regPasswordInput, 'passwordError'));
+        if (confirmPasswordInput) confirmPasswordInput.addEventListener('input', () => clearFieldError(confirmPasswordInput, 'confirmPasswordError'));
+        if (termsCheck) termsCheck.addEventListener('change', () => clearFieldError(termsCheck, 'termsError'));
+
+        // Elements Modal OTP
+        const otpModalEl = document.getElementById('otpModal');
+        function getOtpModal() {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                return bootstrap.Modal.getOrCreateInstance(otpModalEl);
+            }
+            return null;
+        }
+
+        const modalTargetEmail = document.getElementById('modalTargetEmail');
+        const otpDigits = document.querySelectorAll('.otp-digit');
+        const otpInputsContainer = document.getElementById('otpInputsContainer');
+        const otpFeedbackMsg = document.getElementById('otpFeedbackMsg');
+        const otpFeedbackIcon = document.getElementById('otpFeedbackIcon');
+        const otpFeedbackText = document.getElementById('otpFeedbackText');
+        const otpCountdownTimer = document.getElementById('otpCountdownTimer');
+        const btnResendOtp = document.getElementById('btnResendOtp');
+        const resendCountdownText = document.getElementById('resendCountdownText');
+        const resendSeconds = document.getElementById('resendSeconds');
+        const btnConfirmOtp = document.getElementById('btnConfirmOtp');
+        const btnSubmitRegister = document.getElementById('btnSubmitRegister');
+
+        let registeredEmail = '';
+        let expiryInterval = null;
+        let resendInterval = null;
+
+        function handleRegisterSubmit() {
+            let hasError = false;
+            let firstInvalid = null;
+
+            // 1. Họ và tên
+            const nameVal = (fullnameInput.value || '').trim();
+            if (!nameVal) {
+                setFieldError(fullnameInput, 'fullNameError', 'Họ và tên không được để trống');
+                if (!firstInvalid) firstInvalid = fullnameInput;
+                hasError = true;
+            } else if (nameVal.length < 2 || nameVal.length > 100) {
+                setFieldError(fullnameInput, 'fullNameError', 'Họ và tên phải từ 2 đến 100 ký tự');
+                if (!firstInvalid) firstInvalid = fullnameInput;
+                hasError = true;
+            } else if (!/^[\p{L}\s.'-]+$/u.test(nameVal)) {
+                setFieldError(fullnameInput, 'fullNameError', 'Họ và tên chỉ được chứa chữ cái và khoảng trắng');
+                if (!firstInvalid) firstInvalid = fullnameInput;
+                hasError = true;
+            }
+
+            // 2. Email
+            const emailVal = (emailInput.value || '').trim();
+            const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,64}$/;
+            if (!emailVal) {
+                setFieldError(emailInput, 'emailError', 'Email không được để trống');
+                if (!firstInvalid) firstInvalid = emailInput;
+                hasError = true;
+            } else if (!emailRegex.test(emailVal)) {
+                setFieldError(emailInput, 'emailError', 'Email không đúng định dạng (ví dụ: name@example.com)');
+                if (!firstInvalid) firstInvalid = emailInput;
+                hasError = true;
+            }
+
+            // 3. Số điện thoại (nếu có nhập)
+            const phoneErr = validatePhoneValue(phoneInput ? phoneInput.value : '');
+            if (phoneErr) {
+                setFieldError(phoneInput, 'phoneError', phoneErr);
+                if (!firstInvalid) firstInvalid = phoneInput;
+                hasError = true;
+            }
+
+            // 4. Mật khẩu
+            const passVal = regPasswordInput.value || '';
+            if (!passVal) {
+                setFieldError(regPasswordInput, 'passwordError', 'Mật khẩu không được để trống');
+                if (!firstInvalid) firstInvalid = regPasswordInput;
+                hasError = true;
+            } else if (passVal.length < 6 || passVal.length > 50) {
+                setFieldError(regPasswordInput, 'passwordError', 'Mật khẩu phải từ 6 đến 50 ký tự');
+                if (!firstInvalid) firstInvalid = regPasswordInput;
+                hasError = true;
+            } else if (/\s/.test(passVal)) {
+                setFieldError(regPasswordInput, 'passwordError', 'Mật khẩu không được chứa khoảng trắng');
+                if (!firstInvalid) firstInvalid = regPasswordInput;
+                hasError = true;
+            }
+
+            // 5. Xác nhận mật khẩu
+            const confirmVal = confirmPasswordInput.value || '';
+            if (!confirmVal) {
+                setFieldError(confirmPasswordInput, 'confirmPasswordError', 'Vui lòng xác nhận lại mật khẩu');
+                if (!firstInvalid) firstInvalid = confirmPasswordInput;
+                hasError = true;
+            } else if (passVal !== confirmVal) {
+                setFieldError(confirmPasswordInput, 'confirmPasswordError', 'Mật khẩu xác nhận không khớp với mật khẩu đã nhập');
+                if (!firstInvalid) firstInvalid = confirmPasswordInput;
+                hasError = true;
+            }
+
+            // 6. Điều khoản dịch vụ
+            if (!termsCheck.checked) {
+                setFieldError(termsCheck, 'termsError', 'Quý khách vui lòng đồng ý với Điều khoản dịch vụ và Chính sách bảo mật');
+                if (!firstInvalid) firstInvalid = termsCheck;
+                hasError = true;
+            }
+
+            if (hasError) {
+                if (firstInvalid) firstInvalid.focus();
+                return;
+            }
+
+            // Gửi request lấy mã OTP
+            const submitBtn = btnSubmitRegister;
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span><span>ĐANG GỬI MÃ XÁC THỰC...</span>';
+
+            const formData = new FormData(form);
+
+            fetch('/register/send-otp', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+
+                if (data.success) {
+                    registeredEmail = data.email;
+                    modalTargetEmail.textContent = registeredEmail;
+                    openOtpModal();
+                } else {
+                    if (data.errors) {
+                        if (data.errors.fullName) setFieldError(fullnameInput, 'fullNameError', data.errors.fullName);
+                        if (data.errors.email) setFieldError(emailInput, 'emailError', data.errors.email);
+                        if (data.errors.phoneNumber) setFieldError(phoneInput, 'phoneError', data.errors.phoneNumber);
+                        if (data.errors.password) setFieldError(regPasswordInput, 'passwordError', data.errors.password);
+                        if (data.errors.confirmPassword) setFieldError(confirmPasswordInput, 'confirmPasswordError', data.errors.confirmPassword);
+                        if (data.errors.termsAccepted) setFieldError(termsCheck, 'termsError', data.errors.termsAccepted);
+                    } else if (data.message) {
+                        alert(data.message);
+                    }
+                }
+            })
+            .catch(err => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+                alert('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng.');
+            });
+        }
+
+        if (btnSubmitRegister) {
+            btnSubmitRegister.addEventListener('click', handleRegisterSubmit);
+        }
+
+        // =========================================================================
+        // XỬ LÝ HỘP THOẠI NHẬP MÃ OTP
+        // =========================================================================
+        function openOtpModal() {
+            clearOtpInputs();
+            hideOtpFeedback();
+            startOtpCountdown(300); // 5 phút = 300 giây
+            startResendCooldown(60); // 60 giây chờ gửi lại
+            const modal = getOtpModal();
+            if (modal) modal.show();
+            setTimeout(() => {
+                if (otpDigits[0]) otpDigits[0].focus();
+            }, 400);
+        }
+
+        function clearOtpInputs() {
+            otpDigits.forEach(input => {
+                input.value = '';
+                input.classList.remove('is-invalid', 'is-valid');
+            });
+        }
+
+        function showOtpError(message) {
+            otpFeedbackMsg.className = 'otp-feedback-msg show-error';
+            otpFeedbackIcon.className = 'bi bi-x-circle-fill me-1';
+            otpFeedbackText.textContent = message;
+        }
+
+        function showOtpSuccess(message) {
+            otpFeedbackMsg.className = 'otp-feedback-msg show-success';
+            otpFeedbackIcon.className = 'bi bi-check-circle-fill me-1';
+            otpFeedbackText.textContent = message;
+        }
+
+        function hideOtpFeedback() {
+            otpFeedbackMsg.className = 'otp-feedback-msg';
+            otpFeedbackText.textContent = '';
+        }
+
+        // Xử lý sự kiện bàn phím trên 6 ô input OTP
+        otpDigits.forEach((digit, idx) => {
+            digit.addEventListener('input', function (e) {
+                const val = this.value.replace(/[^0-9]/g, '');
+                this.value = val;
+
+                // Xóa trạng thái báo lỗi khi người dùng gõ lại
+                otpDigits.forEach(d => d.classList.remove('is-invalid'));
+                hideOtpFeedback();
+
+                if (val && idx < otpDigits.length - 1) {
+                    otpDigits[idx + 1].focus();
+                }
+
+                // Kiểm tra nếu đã nhập đủ 6 số -> TỰ ĐỘNG XÁC THỰC
+                checkAndAutoSubmitOtp();
+            });
+
+            digit.addEventListener('keydown', function (e) {
+                if (e.key === 'Backspace') {
+                    if (!this.value && idx > 0) {
+                        otpDigits[idx - 1].focus();
+                    }
+                } else if (e.key === 'ArrowLeft' && idx > 0) {
+                    otpDigits[idx - 1].focus();
+                } else if (e.key === 'ArrowRight' && idx < otpDigits.length - 1) {
+                    otpDigits[idx + 1].focus();
+                }
+            });
+
+            // Hỗ trợ Paste 6 số vào ô bất kỳ
+            digit.addEventListener('paste', function (e) {
+                e.preventDefault();
+                const pasted = (e.clipboardData || window.clipboardData).getData('text');
+                const cleanDigits = pasted.replace(/[^0-9]/g, '').slice(0, 6);
+                if (cleanDigits) {
+                    for (let i = 0; i < cleanDigits.length && i < otpDigits.length; i++) {
+                        otpDigits[i].value = cleanDigits[i];
+                    }
+                    const nextIdx = Math.min(cleanDigits.length, otpDigits.length - 1);
+                    otpDigits[nextIdx].focus();
+                    checkAndAutoSubmitOtp();
+                }
+            });
+        });
+
+        function checkAndAutoSubmitOtp() {
+            const entered = Array.from(otpDigits).map(d => d.value).join('');
+            if (entered.length === 6) {
+                verifyOtpCode(entered);
+            }
+        }
+
+        // Nút Xác nhận kích hoạt
+        btnConfirmOtp.addEventListener('click', function () {
+            const entered = Array.from(otpDigits).map(d => d.value).join('');
+            if (entered.length < 6) {
+                showOtpError('Vui lòng nhập đủ 6 chữ số mã xác thực!');
+                const firstEmpty = Array.from(otpDigits).find(d => !d.value);
+                if (firstEmpty) firstEmpty.focus();
+                return;
+            }
+            verifyOtpCode(entered);
+        });
+
+        // Gửi API kiểm tra mã OTP
+        function verifyOtpCode(code) {
+            btnConfirmOtp.disabled = true;
+            btnConfirmOtp.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>ĐANG XÁC THỰC...';
+
+            fetch('/register/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: registeredEmail, otp: code })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btnConfirmOtp.disabled = false;
+                btnConfirmOtp.innerHTML = '<span>XÁC NHẬN KÍCH HOẠT</span><i class="bi bi-arrow-right ms-1"></i>';
+
+                if (data.success) {
+                    // Xác thực thành công
+                    clearInterval(expiryInterval);
+                    otpDigits.forEach(d => {
+                        d.classList.remove('is-invalid');
+                        d.classList.add('is-valid');
+                    });
+                    showOtpSuccess(data.message || 'Xác thực thành công! Đang chuyển hướng sang đăng nhập...');
+
+                    setTimeout(() => {
+                        window.location.href = '/login?registered=true';
+                    }, 1200);
+                } else {
+                    // NHẬP SAI HOẶC HẾT HẠN:
+                    // Theo đúng yêu cầu: Báo đỏ viền, rung lắc, tự động xóa sạch 6 ô và thông báo đỏ nhập lại
+                    otpDigits.forEach(d => d.classList.add('is-invalid'));
+                    otpInputsContainer.classList.add('shake-error');
+                    setTimeout(() => {
+                        otpInputsContainer.classList.remove('shake-error');
+                        // Tự động xóa sạch 6 ô và focus lại ô đầu tiên
+                        clearOtpInputs();
+                        otpDigits.forEach(d => d.classList.add('is-invalid'));
+                        otpDigits[0].focus();
+                    }, 400);
+
+                    const errMsg = data.message || 'Mã xác thực không chính xác. Vui lòng nhập lại!';
+                    showOtpError(errMsg);
+                }
+            })
+            .catch(err => {
+                btnConfirmOtp.disabled = false;
+                btnConfirmOtp.innerHTML = '<span>XÁC NHẬN KÍCH HOẠT</span><i class="bi bi-arrow-right ms-1"></i>';
+                showOtpError('Không thể kết nối đến máy chủ. Vui lòng thử lại!');
+            });
+        }
+
+        // Đếm ngược 5 phút (300s)
+        function startOtpCountdown(durationSeconds) {
+            clearInterval(expiryInterval);
+            let remain = durationSeconds;
+
+            function updateDisplay() {
+                const mins = Math.floor(remain / 60);
+                const secs = remain % 60;
+                otpCountdownTimer.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                if (remain <= 60) {
+                    otpCountdownTimer.className = 'text-danger fw-bold animate-pulse';
+                } else {
+                    otpCountdownTimer.className = 'text-danger fw-bold';
+                }
+            }
+
+            updateDisplay();
+            expiryInterval = setInterval(() => {
+                remain--;
+                if (remain <= 0) {
+                    clearInterval(expiryInterval);
+                    otpCountdownTimer.textContent = '00:00';
+                    showOtpError('Mã xác thực đã hết hạn (quá 5 phút). Vui lòng nhấn "Gửi lại mã"!');
+                    otpDigits.forEach(d => d.classList.add('is-invalid'));
+                } else {
+                    updateDisplay();
+                }
+            }, 1000);
+        }
+
+        // Đếm ngược thời gian chờ gửi lại mã (60s)
+        function startResendCooldown(seconds) {
+            clearInterval(resendInterval);
+            btnResendOtp.disabled = true;
+            resendCountdownText.classList.remove('d-none');
+            let remain = seconds;
+            resendSeconds.textContent = remain;
+
+            resendInterval = setInterval(() => {
+                remain--;
+                if (remain <= 0) {
+                    clearInterval(resendInterval);
+                    btnResendOtp.disabled = false;
+                    resendCountdownText.classList.add('d-none');
+                } else {
+                    resendSeconds.textContent = remain;
+                }
+            }, 1000);
+        }
+
+        // Xử lý nút Gửi lại mã
+        btnResendOtp.addEventListener('click', function () {
+            if (!registeredEmail) return;
+
+            btnResendOtp.disabled = true;
+            btnResendOtp.textContent = 'Đang gửi...';
+
+            fetch('/register/resend-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: registeredEmail })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btnResendOtp.textContent = 'Gửi lại mã';
+                if (data.success) {
+                    clearOtpInputs();
+                    showOtpSuccess(data.message || 'Đã gửi mã xác thực mới tới email của bạn (hiệu lực 5 phút).');
+                    startOtpCountdown(300);
+                    startResendCooldown(60);
+                    otpDigits[0].focus();
+                } else {
+                    showOtpError(data.message || 'Không thể gửi lại mã. Vui lòng thử lại.');
+                    btnResendOtp.disabled = false;
+                }
+            })
+            .catch(err => {
+                btnResendOtp.textContent = 'Gửi lại mã';
+                btnResendOtp.disabled = false;
+                showOtpError('Lỗi kết nối máy chủ khi gửi lại mã!');
+            });
+        });
     </script>
 </body>
 </html>
+

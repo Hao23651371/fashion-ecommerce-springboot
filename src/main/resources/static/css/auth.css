@@ -567,3 +567,170 @@ input[type="password"]::-ms-clear {
         margin: 0 0.5rem;
     }
 }
+
+/* ==========================================================================
+   OTP EMAIL VERIFICATION MODAL & INPUTS
+   ========================================================================== */
+.otp-modal .modal-content {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+}
+
+.otp-modal-header {
+    background: linear-gradient(135deg, #111111 0%, #1f2937 100%);
+    color: #ffffff;
+    padding: 1.5rem 1.8rem;
+    position: relative;
+    border-bottom: 2px solid #d4af37;
+}
+
+.otp-modal-header .btn-close-white {
+    position: absolute;
+    top: 1.2rem;
+    right: 1.2rem;
+    filter: invert(1);
+    opacity: 0.8;
+}
+
+.otp-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(212, 175, 55, 0.15);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    color: #d4af37;
+    margin-bottom: 0.75rem;
+}
+
+.otp-inputs-wrapper {
+    display: flex;
+    justify-content: center;
+    gap: 0.55rem;
+    margin: 1.4rem 0 1rem 0;
+}
+
+.otp-digit {
+    width: 46px;
+    height: 56px;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: #111111;
+    background-color: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.otp-digit:focus {
+    border-color: #111111;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.12);
+    transform: translateY(-2px);
+}
+
+.otp-digit.is-invalid {
+    border-color: #dc2626 !important;
+    background-color: #fef2f2 !important;
+    color: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
+}
+
+.otp-digit.is-valid {
+    border-color: #16a34a !important;
+    background-color: #f0fdf4 !important;
+    color: #16a34a !important;
+}
+
+/* Rung lắc khi nhập sai mã */
+@keyframes otpShake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-8px); }
+    40%, 80% { transform: translateX(8px); }
+}
+
+.shake-error {
+    animation: otpShake 0.45s ease-in-out;
+}
+
+.otp-feedback-msg {
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    margin-top: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.otp-feedback-msg.show-error {
+    display: flex;
+    color: #dc2626;
+    background-color: #fee2e2;
+    border: 1px solid #fca5a5;
+}
+
+.otp-feedback-msg.show-success {
+    display: flex;
+    color: #15803d;
+    background-color: #dcfce7;
+    border: 1px solid #86efac;
+}
+
+.otp-timer-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: #4b5563;
+    background: #f1f5f9;
+    padding: 0.35rem 0.85rem;
+    border-radius: 50px;
+    margin-top: 0.25rem;
+}
+
+.otp-resend-link {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #111111;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.otp-resend-link:hover:not(:disabled) {
+    color: #d4af37;
+}
+
+.otp-resend-link:disabled {
+    color: #9ca3af;
+    cursor: not-allowed;
+    text-decoration: none;
+}
+
+.demo-bypass-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    color: #64748b;
+    background-color: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    margin-top: 0.85rem;
+}

@@ -109,9 +109,15 @@
                         </div>
 
                         <div class="acc-label">Ngày sinh</div>
-                        <div class="acc-value mb-0">
+                        <div class="acc-value">
                             <span th:if="${profile != null and profile.birthDate != null}" th:text="${profile.birthDate}">01/01/2000</span>
                             <span th:unless="${profile != null and profile.birthDate != null}" class="acc-empty">Chưa cập nhật</span>
+                        </div>
+
+                        <div class="acc-label">Đăng nhập gần nhất</div>
+                        <div class="acc-value mb-0">
+                            <span th:if="${profile != null and profile.lastLoginAt != null}" th:text="${profile.lastLoginAt}">00:00 - 01/01/2026</span>
+                            <span th:unless="${profile != null and profile.lastLoginAt != null}" class="acc-empty">Chưa có ghi nhận</span>
                         </div>
                     </div>
                 </div>

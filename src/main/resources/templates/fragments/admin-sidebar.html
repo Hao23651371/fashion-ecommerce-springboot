@@ -43,7 +43,7 @@
                        th:class="'nav-link d-flex align-items-center justify-content-between ' + (${activeMenu == 'categories'} ? 'active' : '')">
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-boxes"></i>
-                            <span>Danh mục</span>
+                            <span>Quản lý Danh Mục</span>
                         </div>
                     </a>
                 </li>
@@ -52,7 +52,7 @@
                        th:class="'nav-link d-flex align-items-center justify-content-between ' + (${activeMenu == 'products'} ? 'active' : '')">
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-tag-fill"></i>
-                            <span>Sản phẩm</span>
+                            <span>Quản lý Sản phẩm</span>
                         </div>
                     </a>
                 </li>
@@ -61,7 +61,7 @@
                        th:class="'nav-link d-flex align-items-center justify-content-between ' + (${activeMenu == 'inventory'} ? 'active' : '')">
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-box-seam-fill"></i>
-                            <span>Quản lý kho</span>
+                            <span>Quản lý Kho</span>
                         </div>
                     </a>
                 </li>
@@ -70,7 +70,7 @@
                        th:class="'nav-link d-flex align-items-center justify-content-between ' + (${activeMenu == 'orders'} ? 'active' : '')">
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-bag-check-fill"></i>
-                            <span>Đơn hàng</span>
+                            <span>Quản lý Đơn hàng</span>
                         </div>
 
                     </a>
@@ -89,7 +89,7 @@
                        th:class="'nav-link d-flex align-items-center justify-content-between ' + (${activeMenu == 'coupons'} ? 'active' : '')">
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-ticket-perforated-fill"></i>
-                            <span>Mã giảm giá</span>
+                            <span>Quản lý Mã giảm giá</span>
                         </div>
                     </a>
                 </li>
@@ -98,7 +98,7 @@
                        th:class="'nav-link d-flex align-items-center justify-content-between ' + (${activeMenu == 'users'} ? 'active' : '')">
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-people-fill"></i>
-                            <span>Người dùng</span>
+                            <span>Quản lý Tài khoản</span>
                         </div>
                     </a>
                 </li>
@@ -108,23 +108,26 @@
 
     <!-- Bottom Part -->
     <div class="sidebar-footer p-3">
-        <!-- Store Status Card -->
-        <div class="store-status-card mb-2 d-flex align-items-center justify-content-between p-2 rounded">
+        <!-- Admin Account / Avatar Card -->
+        <a th:href="@{/admin/account}"
+           th:class="'admin-user-card mb-2 d-flex align-items-center justify-content-between p-2 rounded text-decoration-none ' + (${activeMenu == 'account'} ? 'active' : '')"
+           title="Trang tài khoản đăng nhập">
             <div class="d-flex align-items-center gap-2 overflow-hidden">
-                <span class="status-indicator-green"></span>
+                <div class="position-relative flex-shrink-0">
+                    <div class="admin-avatar-circle d-flex align-items-center justify-content-center text-white fw-bold">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <span class="status-indicator-green position-absolute bottom-0 end-0"></span>
+                </div>
                 <div class="lh-sm text-truncate">
-                    <div class="text-white fw-semibold small text-truncate">Flagship Atelier HCM</div>
-                    <small class="text-secondary" style="font-size: 0.72rem;">Đang hoạt động</small>
+                    <div class="text-white fw-semibold small text-truncate"
+                         th:text="${currentUserName != null ? currentUserName : (currentEmail != null ? currentEmail : 'Quản trị viên')}">
+                        Admin
+                    </div>
+                    <small class="text-secondary" style="font-size: 0.72rem;">Tài khoản đăng nhập</small>
                 </div>
             </div>
-            <i class="bi bi-chevron-expand text-secondary ms-1"></i>
-        </div>
-
-
-        <!-- Help & Settings Link -->
-        <a th:href="@{/admin/settings}" class="sidebar-link-muted d-flex align-items-center gap-2 text-decoration-none">
-            <i class="bi bi-gear-fill"></i>
-            <span>Trợ giúp & Thiết lập</span>
+            <i class="bi bi-chevron-right text-secondary ms-1" style="font-size: 0.75rem;"></i>
         </a>
 
         <!-- Đăng xuất -->

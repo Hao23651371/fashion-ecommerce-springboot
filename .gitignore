@@ -39,3 +39,9 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Environment & Uploads ###
+.env
+.env.*
+!.env.example
+uploads/

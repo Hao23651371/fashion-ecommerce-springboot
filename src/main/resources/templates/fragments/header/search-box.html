@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Ô tìm kiếm + dropdown gợi ý nhanh -->
+<div th:fragment="search-box" class="site-search-wrap position-relative">
+    <form th:action="@{/shop}" method="get" class="site-search">
+        <i class="bi bi-search"></i>
+        <input type="search" name="keyword" id="siteSearchInput" autocomplete="off"
+               placeholder="Tìm kiếm bộ sưu tập..." aria-label="Tìm kiếm"
+               th:attr="data-search-url=@{/api/products/search},data-detail-url=@{/shop/}">
+    </form>
+    <div id="siteSearchDropdown" class="search-dropdown" hidden></div>
+    <script th:src="@{/js/customer/search.js}" defer></script>
+</div>
+
+</body>
+</html>

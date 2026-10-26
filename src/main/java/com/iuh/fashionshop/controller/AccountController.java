@@ -31,7 +31,8 @@ public class AccountController {
         // 1. Thông tin cá nhân (account + user_profile)
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 SELECT up.id AS profileId, up.full_name AS fullName, up.phone_number AS phone,
-                       DATE_FORMAT(up.birth_date, '%d/%m/%Y') AS birthDate, a.email AS email
+                       DATE_FORMAT(up.birth_date, '%d/%m/%Y') AS birthDate, a.email AS email,
+                       DATE_FORMAT(a.last_login_at, '%H:%i - %d/%m/%Y') AS lastLoginAt
                 FROM account a
                 LEFT JOIN user_profile up ON up.account_id = a.id
                 WHERE a.email = ?

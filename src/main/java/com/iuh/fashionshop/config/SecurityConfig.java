@@ -1,9 +1,11 @@
 package com.iuh.fashionshop.config;
 
+import com.iuh.fashionshop.repository.AccountRepository;
 import com.iuh.fashionshop.service.AccountUserDetailsService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.LocalDateTime;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -41,19 +43,35 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           AuthenticationSuccessHandler customAuthenticationSuccessHandler) throws Exception {
         http
                 .csrf(csrf -> csrf.disable()) // Tắt CSRF để thuận tiện test
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**", "/webjars/**").permitAll()
-                        .requestMatchers("/login", "/register", "/logout").permitAll()
+                        // 1. Public - Tài nguyên tĩnh & Trang lỗi
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**", "/webjars/**", "/favicon.ico", "/error").permitAll()
+
+                        // 2. Public - Các trang storefront & xác thực công khai
+                        .requestMatchers("/", "/shop/**", "/sale",
+                                         "/login", "/register/**", "/logout",
+                                         "/terms", "/policy", "/support", "/auth/terms").permitAll()
+
+                        // 3. Public - Các REST API công khai (tìm kiếm & chatbot)
+                        .requestMatchers("/api/products/search", "/api/chatbot/**").permitAll()
+
+                        // 4. Customer - Khu vực khách hàng cá nhân (yêu cầu đăng nhập)
+                        .requestMatchers("/cart/**", "/checkout/**", "/wishlist/**", "/orders/**", "/account/**").authenticated()
+
+                        // 5. Admin - Khu vực quản trị (yêu cầu quyền ROLE_ADMIN)
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        // 6. Các route khác còn lại
                         .anyRequest().permitAll()
                 )
                 .formLogin(form -> form
                         .loginPage("/login")
                         .loginProcessingUrl("/login")
-                        .successHandler(customAuthenticationSuccessHandler())
+                        .successHandler(customAuthenticationSuccessHandler)
                         .failureHandler(customAuthenticationFailureHandler()) // thay cho failureUrl("/login?error=true")
                         .permitAll()
                 )
@@ -70,16 +88,28 @@ public class SecurityConfig {
 
     /**
      * Điều hướng thông minh sau đăng nhập:
+     * - Tự động ghi nhận thời gian đăng nhập gần nhất (lastLoginAt) vào CSDL
      * - Role ADMIN -> /admin/dashboard
      * - Role CUSTOMER -> / (Trang chủ khách hàng)
      */
     @Bean
-    public AuthenticationSuccessHandler customAuthenticationSuccessHandler() {
+    public AuthenticationSuccessHandler customAuthenticationSuccessHandler(AccountRepository accountRepository) {
         return new AuthenticationSuccessHandler() {
             @Override
             public void onAuthenticationSuccess(HttpServletRequest request,
                                                 HttpServletResponse response,
                                                 Authentication authentication) throws IOException, ServletException {
+                try {
+                    String email = authentication.getName();
+                    if (email != null && !email.isBlank()) {
+                        accountRepository.findByEmail(email.trim().toLowerCase()).ifPresent(acc -> {
+                            acc.setLastLoginAt(LocalDateTime.now());
+                            accountRepository.save(acc);
+                        });
+                    }
+                } catch (Exception ignored) {
+                }
+
                 Set<String> roles = AuthorityUtils.authorityListToSet(authentication.getAuthorities());
                 if (roles.contains("ROLE_ADMIN")) {
                     response.sendRedirect("/admin/dashboard");
@@ -106,10 +136,22 @@ public class SecurityConfig {
                 errorType = "email";
             } else if (exception instanceof LockedException) {
                 errorType = "locked";
+            } else if (exception instanceof org.springframework.security.authentication.DisabledException) {
+                errorType = "unverified";
             } else if (exception instanceof BadCredentialsException) {
                 errorType = "password";
             } else {
-                errorType = "unknown";
+                Throwable cause = exception.getCause();
+                boolean isDb = false;
+                while (cause != null) {
+                    String name = cause.getClass().getName();
+                    if (name.contains("SQLException") || name.contains("JDBC") || name.contains("Hikari") || name.contains("DataAccessException")) {
+                        isDb = true;
+                        break;
+                    }
+                    cause = cause.getCause();
+                }
+                errorType = isDb ? "db_error" : "unknown";
             }
 
             StringBuilder url = new StringBuilder("/login?error=").append(errorType);

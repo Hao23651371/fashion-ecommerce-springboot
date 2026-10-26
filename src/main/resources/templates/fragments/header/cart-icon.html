@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Icon giỏ hàng + badge cartCount -->
+<a th:fragment="cart-icon" th:href="@{/cart}" class="site-icon-btn" aria-label="Giỏ hàng">
+    <i class="bi bi-bag"></i>
+    <span class="site-badge"
+          th:if="${cartCount != null and cartCount > 0}"
+          th:text="${cartCount}">0</span>
+</a>
+
+</body>
+</html>

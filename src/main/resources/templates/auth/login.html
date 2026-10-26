@@ -17,71 +17,126 @@
 <div th:replace="~{auth/auth-header :: auth-header('login')}"></div>
 
 <!-- 2. Main Login Frame -->
-<main class="auth-wrapper">
-    <div class="auth-panel-container">
-        <div class="row g-0">
+<main class="auth-wrapper flex-column">
+    <div style="width: 100%; max-width: 1040px;">
 
-            <!-- CỘT TRÁI: SLIDESHOW LOOKBOOK (tự đổi ảnh mỗi 5 giây) -->
-            <div class="col-lg-6 d-none d-lg-flex auth-editorial-col">
-                <!-- Lớp ảnh -->
-                <div class="auth-slides" aria-hidden="true">
-                    <img class="auth-slide" src="https://res.cloudinary.com/dxk6xlsre/image/upload/v1792256020/login1.jpg" alt="">
-                    <img class="auth-slide" src="https://res.cloudinary.com/dxk6xlsre/image/upload/f_auto,q_auto,w_1200/v1792252478/login2.png" alt="" loading="lazy">
-                    <img class="auth-slide" src="https://res.cloudinary.com/dxk6xlsre/image/upload/v1792254398/login3.png" alt="" loading="lazy">
+        <!-- THANH THÔNG BÁO MÀU ĐỎ KHI KHÔNG KẾT NỐI ĐƯỢC DATABASE -->
+        <div th:if="${dbConnected == false or (param.error != null and param.error[0] == 'db_error')}"
+             class="alert alert-danger border-2 border-danger shadow-sm rounded-4 p-3 p-md-4 mb-3 text-start">
+            <div class="d-flex align-items-start gap-3">
+                <div class="rounded-circle bg-danger bg-opacity-10 text-danger d-flex align-items-center justify-content-center p-3 flex-shrink-0"
+                     style="width: 52px; height: 52px; font-size: 1.75rem;">
+                    <i class="bi bi-database-fill-x"></i>
                 </div>
-                <div class="auth-slides-overlay"></div>
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                        <h5 class="alert-heading fw-bold text-danger mb-0">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> KHÔNG THỂ KẾT NỐI ĐẾN CƠ SỞ DỮ LIỆU (DATABASE)!
+                        </h5>
+                        <span class="badge bg-danger text-uppercase px-2 py-1" style="font-size: 0.7rem;">MẤT KẾT NỐI CSDL</span>
+                    </div>
+                    <p class="mb-2 text-dark small">
+                        Hệ thống phát hiện hiện tại <strong>không kết nối được với cơ sở dữ liệu</strong>. Người dùng sẽ không thể đăng nhập hoặc lưu trữ thông tin.
+                    </p>
 
-                <div class="auth-editorial-content">
-                    <!-- Top Pills -->
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="pill-badge"><i class="bi bi-circle-fill text-danger me-1" style="font-size: 0.4rem;"></i> BỘ SƯU TẬP MỚI 2026 • STUDIO & ATELIER</span>
-                        <span class="pill-badge">LOOKBOOK Nº 04</span>
+                    <!-- Khung hiển thị chi tiết lỗi kỹ thuật -->
+                    <div class="bg-dark text-white p-2 p-md-3 rounded-3 small font-monospace mb-3 overflow-auto"
+                         style="max-height: 120px; font-size: 0.78rem;">
+                        <span class="text-danger fw-bold">[Chi tiết lỗi Exception]: </span>
+                        <span th:text="${dbErrorMessage != null ? dbErrorMessage : 'Không kết nối được tới máy chủ cơ sở dữ liệu (Connection refused / Communications link failure).'}">
+                            Communications link failure / Connection refused
+                        </span>
                     </div>
 
-                    <!-- Bottom: 3 thanh chuyển ảnh + Edition -->
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="auth-slide-dots">
-                            <button type="button" class="auth-slide-dot" aria-label="Ảnh 1"></button>
-                            <button type="button" class="auth-slide-dot" aria-label="Ảnh 2"></button>
-                            <button type="button" class="auth-slide-dot" aria-label="Ảnh 3"></button>
+                    <!-- Ghi chú hướng dẫn sửa lỗi và bổ sung nếu thiếu -->
+                    <div class="bg-white p-3 rounded-3 border border-danger border-opacity-25 small">
+                        <div class="fw-bold text-danger mb-2">
+                            <i class="bi bi-tools me-1"></i> Ghi chú hướng dẫn sửa chữa & bổ sung thông tin:
                         </div>
-                        <span class="tracking-widest text-uppercase text-white-50 font-monospace" style="font-size: 0.65rem;">
-                                HANOI ATELIER • EDITION 25.1
-                            </span>
+                        <ul class="mb-0 ps-3 text-secondary lh-base" style="font-size: 0.82rem;">
+                            <li><strong>1. Khởi động MySQL / MariaDB:</strong> Mở <code>XAMPP</code> hoặc <code>Laragon</code> và bấm <strong>Start MySQL</strong> (đảm bảo dịch vụ đang chạy màu xanh).</li>
+                            <li><strong>2. Kiểm tra Cổng (Port):</strong> Đảm bảo MySQL đang chạy ở cổng <code>3306</code> (hoặc đổi đúng cổng trong cấu hình).</li>
+                            <li><strong>3. Kiểm tra file cấu hình <code>application-local.properties</code>:</strong>
+                                <ul class="mt-1 ps-3">
+                                    <li>URL CSDL: <code th:text="${dbUrl != null ? dbUrl : 'jdbc:mariadb://localhost:3306/fashionshop'}">jdbc:mariadb://localhost:3306/fashionshop</code></li>
+                                    <li>Tài khoản: <code th:text="${dbUser != null ? dbUser : 'root'}">root</code></li>
+                                    <li>Mật khẩu: Đảm bảo mật khẩu khớp với MySQL cục bộ (ví dụ: <code>sapassword</code> hoặc để trống tuỳ máy).</li>
+                                    <li>Database: Đảm bảo đã tạo cơ sở dữ liệu tên <code>fashionshop</code> trong MySQL/MariaDB.</li>
+                                </ul>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- CỘT PHẢI: FORM ĐĂNG NHẬP (Ảnh 2) -->
-            <div class="col-lg-6 auth-form-col">
-                <div>
-                    <!-- Top Status & Help Link -->
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="auth-form-badge"><i class="bi bi-shield-check"></i> CỔNG THÀNH VIÊN CHÍNH THỨC</span>
-                        <a href="#" class="auth-help-link">HỖ TRỢ</a>
-                    </div>
+        <div class="auth-panel-container">
+            <div class="row g-0">
 
-                    <!-- Lock Icon Circle -->
-                    <div class="auth-icon-circle">
-                        <i class="bi bi-lock"></i>
+                <!-- CỘT TRÁI: SLIDESHOW LOOKBOOK (tự đổi ảnh mỗi 5 giây) -->
+                <div class="col-lg-6 d-none d-lg-flex auth-editorial-col">
+                    <!-- Lớp ảnh -->
+                    <div class="auth-slides" aria-hidden="true">
+                        <img class="auth-slide" src="https://res.cloudinary.com/dxk6xlsre/image/upload/v1792256020/login1.jpg" alt="">
+                        <img class="auth-slide" src="https://res.cloudinary.com/dxk6xlsre/image/upload/f_auto,q_auto,w_1200/v1792252478/login2.png" alt="" loading="lazy">
+                        <img class="auth-slide" src="https://res.cloudinary.com/dxk6xlsre/image/upload/v1792254398/login3.png" alt="" loading="lazy">
                     </div>
+                    <div class="auth-slides-overlay"></div>
 
-                    <!-- Title & Subtitle -->
-                    <h2 class="auth-title">ĐĂNG NHẬP</h2>
-                    <p class="auth-subtitle">
-                        Chào mừng bạn quay lại với Fashion Shop. Vui lòng nhập thông tin để tiếp tục trải nghiệm may đo & mua sắm.
-                    </p>
+                    <div class="auth-editorial-content">
+                        <!-- Top Pills -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="pill-badge"><i class="bi bi-circle-fill text-danger me-1" style="font-size: 0.4rem;"></i> BỘ SƯU TẬP MỚI 2026 • STUDIO & ATELIER</span>
+                            <span class="pill-badge">LOOKBOOK Nº 04</span>
+                        </div>
 
-                    <!-- Thông báo lỗi khi đăng nhập sai -->
-                    <!-- Lỗi sai email / sai mật khẩu hiển thị ngay dưới từng ô; khung này chỉ cho tài khoản bị khóa hoặc lỗi khác -->
-                    <div class="alert alert-danger py-2 small rounded-3 mb-2"
-                         th:if="${param.error != null and (param.error[0] == 'locked' or param.error[0] == 'unknown' or param.error[0] == 'true')}">
-                        <i class="bi bi-exclamation-circle-fill me-1"></i>
-                        <span th:text="${param.error[0] == 'locked'} ? 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.' : 'Đăng nhập không thành công, vui lòng thử lại!'"></span>
+                        <!-- Bottom: 3 thanh chuyển ảnh + Edition -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="auth-slide-dots">
+                                <button type="button" class="auth-slide-dot" aria-label="Ảnh 1"></button>
+                                <button type="button" class="auth-slide-dot" aria-label="Ảnh 2"></button>
+                                <button type="button" class="auth-slide-dot" aria-label="Ảnh 3"></button>
+                            </div>
+                            <span class="tracking-widest text-uppercase text-white-50 font-monospace" style="font-size: 0.65rem;">
+                                    HANOI ATELIER • EDITION 25.1
+                                </span>
+                        </div>
                     </div>
-                    <div class="alert alert-info py-2 small rounded-3 mb-2" th:if="${param.logout}">
-                        <i class="bi bi-info-circle-fill me-1"></i> Bạn đã đăng xuất thành công.
-                    </div>
+                </div>
+
+                <!-- CỘT PHẢI: FORM ĐĂNG NHẬP (Ảnh 2) -->
+                <div class="col-lg-6 auth-form-col">
+                    <div>
+                        <!-- Top Status & Help Link -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="auth-form-badge"><i class="bi bi-shield-check"></i> CỔNG THÀNH VIÊN CHÍNH THỨC</span>
+                            <a th:href="@{/terms#support}" target="_blank" class="auth-help-link">HỖ TRỢ</a>
+                        </div>
+
+                        <!-- Lock Icon Circle -->
+                        <div class="auth-icon-circle">
+                            <i class="bi bi-lock"></i>
+                        </div>
+
+                        <!-- Title & Subtitle -->
+                        <h2 class="auth-title">ĐĂNG NHẬP</h2>
+                        <p class="auth-subtitle">
+                            Chào mừng bạn quay lại với Fashion Shop. Vui lòng nhập thông tin để tiếp tục trải nghiệm may đo & mua sắm.
+                        </p>
+
+                        <!-- Thông báo lỗi khi đăng nhập sai -->
+                        <!-- Lỗi sai email / sai mật khẩu hiển thị ngay dưới từng ô; khung này chỉ cho tài khoản bị khóa hoặc lỗi khác -->
+                        <div class="alert alert-danger py-2 small rounded-3 mb-2"
+                             th:if="${param.error != null and (param.error[0] == 'locked' or param.error[0] == 'unverified' or param.error[0] == 'unknown' or param.error[0] == 'true' or param.error[0] == 'db_error')}">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i>
+                            <span th:if="${param.error[0] == 'locked'}">Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.</span>
+                            <span th:if="${param.error[0] == 'unverified'}">Tài khoản chưa được kích hoạt qua email. Vui lòng kiểm tra mã xác thực!</span>
+                            <span th:if="${param.error[0] == 'db_error'}">Lỗi kết nối CSDL: Không thể kết nối tới cơ sở dữ liệu! Vui lòng xem hướng dẫn chi tiết phía trên.</span>
+                            <span th:if="${param.error[0] != 'locked' and param.error[0] != 'unverified' and param.error[0] != 'db_error'}">Đăng nhập không thành công, vui lòng thử lại!</span>
+                        </div>
+                        <div class="alert alert-info py-2 small rounded-3 mb-2" th:if="${param.logout}">
+                            <i class="bi bi-info-circle-fill me-1"></i> Bạn đã đăng xuất thành công.
+                        </div>
                     <div class="alert alert-success py-2 small rounded-3 mb-2" th:if="${param.registered}">
                         <i class="bi bi-check-circle-fill me-1"></i> Đăng ký tài khoản thành công! Quý khách vui lòng đăng nhập.
                     </div>
@@ -184,6 +239,7 @@
             </div>
 
         </div>
+    </div>
     </div>
 </main>
 
