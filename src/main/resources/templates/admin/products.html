@@ -3,6 +3,8 @@
 <head><title>Quản lý sản phẩm | Fashion Shop Admin</title></head>
 <body>
 <div id="admin-content" class="catalog-page">
+    <link rel="stylesheet" th:href="@{/css/admin/catalog.css}">
+
     <div class="catalog-heading">
         <div><div class="breadcrumb-line"><i class="bi bi-house"></i> TRANG CHỦ <span>/</span> SẢN PHẨM</div><h1>Quản lý Sản phẩm</h1><p>Quản lý toàn bộ sản phẩm và tồn kho trên hệ thống.</p></div>
         <div class="catalog-actions"><button class="btn catalog-light"><i class="bi bi-download"></i> Xuất Excel</button><button class="btn catalog-light"><i class="bi bi-upload"></i> Nhập dữ liệu</button><a th:href="@{/admin/categories}" class="btn catalog-light"><i class="bi bi-folder-plus"></i> Thêm Danh mục</a><button class="btn catalog-primary"><i class="bi bi-plus-lg"></i> Thêm sản phẩm mới</button></div>
