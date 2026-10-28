@@ -1,23 +1,166 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{layouts/admin-base :: adminLayout(
-          ~{::title},
-          ~{::#admin-content},
-          'coupons'
-      )}">
+      th:replace="~{layouts/admin-base :: adminLayout(~{::title}, ~{::#admin-content}, 'coupons')}">
 <head>
-    <title>Mã giảm giá | Fashion Shop Admin</title>
+    <title>Quản lý khuyến mãi | Fashion Shop Admin</title>
 </head>
 <body>
+<div id="admin-content" class="coupon-page">
+    <link rel="stylesheet" th:href="@{/css/admin/coupons.css}">
 
-    <div id="admin-content">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-4">
-                <h4 class="fw-bold mb-2">Đây là trang Mã giảm giá</h4>
-                <p class="text-muted mb-0">Giao diện trang này chưa được xây dựng.</p>
+    <div class="coupon-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <div class="eyebrow"><i class="bi bi-ticket-perforated-fill"></i> MÃ KHUYẾN MÃI & ƯU ĐÃI</div>
+            <h1>Quản lý mã khuyến mãi</h1>
+            <p>Thiết lập, theo dõi và quản lý các chiến dịch khuyến mãi trên toàn hệ thống.</p>
+        </div>
+        <div class="coupon-actions d-flex flex-wrap gap-2">
+            <button type="button" class="btn coupon-secondary-btn"><i class="bi bi-download"></i> Xuất danh sách</button>
+            <button type="button" class="btn coupon-secondary-btn"><i class="bi bi-clock-history"></i> Lịch sử khuyến mãi</button>
+            <a href="#create-coupon-form" class="btn coupon-primary-btn"><i class="bi bi-plus-lg"></i> Tạo mã mới</a>
+        </div>
+    </div>
+
+    <section id="create-coupon-form" class="create-coupon-form">
+        <div class="create-form-heading"><div><h2>Tạo mã khuyến mãi mới</h2><p>Thiết lập nhanh một mã ưu đãi cho khách hàng.</p></div></div>
+        <form method="post" th:action="@{/admin/coupons}">
+            <div class="row g-3">
+                <div class="col-md-3"><label class="form-label">Mã code</label><input class="form-control" name="code" required maxlength="50" placeholder="VD: GIAM20"></div>
+                <div class="col-md-5"><label class="form-label">Tên chương trình</label><input class="form-control" name="name" required maxlength="150" placeholder="Giảm giá mùa hè"></div>
+                <div class="col-md-2"><label class="form-label">Hình thức</label><select class="form-select" name="discountType" required><option value="PERCENT">Phần trăm</option><option value="FIXED_AMOUNT">Tiền cố định</option></select></div>
+                <div class="col-md-2"><label class="form-label">Giá trị giảm</label><input class="form-control" name="discountValue" type="number" min="0" step="0.01" required></div>
+                <div class="col-md-3"><label class="form-label">Giảm tối đa</label><input class="form-control" name="maxDiscount" type="number" min="0" step="0.01"></div>
+                <div class="col-md-3"><label class="form-label">Đơn tối thiểu</label><input class="form-control" name="minOrderValue" type="number" min="0" step="0.01"></div>
+                <div class="col-md-2"><label class="form-label">Số lượt dùng</label><input class="form-control" name="quantity" type="number" min="1" required></div>
+                <div class="col-md-2"><label class="form-label">Bắt đầu</label><input class="form-control" name="startDate" type="datetime-local" required></div>
+                <div class="col-md-2"><label class="form-label">Kết thúc</label><input class="form-control" name="endDate" type="datetime-local" required></div>
+                <div class="col-md-12 text-end"><button type="submit" class="btn coupon-primary-btn">Lưu mã khuyến mãi</button></div>
+            </div>
+        </form>
+    </section>
+
+    <div class="coupon-stats row g-3 mb-4">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="stat-card">
+                <div class="stat-heading"><span>Tổng mã đang chạy</span><i class="bi bi-ticket-perforated"></i></div>
+                <div class="stat-value" th:text="${activeCoupons}">0</div>
+                <div class="stat-note"><span class="trend">↑</span> mã khuyến mãi hoạt động</div>
+                <div class="stat-line purple"></div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="stat-card">
+                <div class="stat-heading"><span>Lượt đã sử dụng</span><i class="bi bi-bag-check"></i></div>
+                <div class="stat-value" th:text="${totalUses}">0</div>
+                <div class="stat-note"><span class="trend">↑</span> lượt dùng mã giảm giá</div>
+                <div class="stat-line teal"></div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="stat-card">
+                <div class="stat-heading"><span>Mã còn khả dụng</span><i class="bi bi-stars"></i></div>
+                <div class="stat-value" th:text="${totalQuota - totalUses}">0</div>
+                <div class="stat-note">lượt sử dụng còn lại trên hệ thống</div>
+                <div class="stat-line purple"></div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="stat-card">
+                <div class="stat-heading"><span>Tổng số chiến dịch</span><i class="bi bi-megaphone"></i></div>
+                <div class="stat-value" th:text="${totalCoupons}">0</div>
+                <div class="stat-note">mã ưu đãi đã được thiết lập</div>
+                <div class="stat-line slate"></div>
             </div>
         </div>
     </div>
 
+    <section class="coupon-table-card">
+        <div class="coupon-toolbar">
+            <div class="coupon-tabs">
+                <button class="coupon-tab active" type="button" data-filter="all">Tất cả mã <b th:text="${totalCoupons}">0</b></button>
+                <button class="coupon-tab" type="button" data-filter="active">Đang hoạt động <b th:text="${activeCoupons}">0</b></button>
+                <button class="coupon-tab" type="button" data-filter="inactive">Đã tắt</button>
+            </div>
+            <div class="coupon-filters">
+                <label class="coupon-search"><i class="bi bi-search"></i><input id="couponSearch" type="search" placeholder="Tìm mã..." aria-label="Tìm mã giảm giá"></label>
+                <select id="couponType" class="coupon-select" aria-label="Lọc hình thức">
+                    <option value="">Tất cả hình thức</option>
+                    <option value="PERCENT">Giảm theo phần trăm</option>
+                    <option value="FIXED_AMOUNT">Giảm tiền cố định</option>
+                </select>
+                <button class="icon-btn" type="button" title="Làm mới" onclick="window.location.reload()"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="coupon-table">
+                <thead>
+                <tr>
+                    <th class="check-col"><input type="checkbox" aria-label="Chọn tất cả"></th>
+                    <th>MÃ CODE</th>
+                    <th>CHƯƠNG TRÌNH ƯU ĐÃI</th>
+                    <th>LOẠI & GIÁ TRỊ</th>
+                    <th>ĐƠN TỐI THIỂU</th>
+                    <th>ĐÃ DÙNG / GIỚI HẠN</th>
+                    <th>THỜI GIAN HIỆU LỰC</th>
+                    <th>TRẠNG THÁI</th>
+                    <th>THAO TÁC</th>
+                </tr>
+                </thead>
+                <tbody id="couponRows">
+                <tr th:each="coupon : ${coupons}"
+                    class="coupon-row"
+                    th:attr="data-status=${coupon.status},data-type=${coupon.discountType},data-search=${coupon.code + ' ' + coupon.name}">
+                    <td><input type="checkbox" aria-label="Chọn mã"></td>
+                    <td><span class="code-badge" th:text="${coupon.code}">WELCOME20</span><button class="copy-code" type="button" th:attr="data-code=${coupon.code}" title="Sao chép mã"><i class="bi bi-copy"></i></button></td>
+                    <td>
+                        <strong th:text="${coupon.name}">Ưu đãi thời trang</strong>
+                        <small>Áp dụng cho khách hàng trên toàn hệ thống</small>
+                    </td>
+                    <td>
+                        <span class="discount-value" th:text="${coupon.discountText}">Giảm 20%</span>
+                        <small th:text="${coupon.maxDiscountText}">Tối đa 300.000 đ</small>
+                    </td>
+                    <td th:text="${coupon.minOrderText}">500.000 đ</td>
+                    <td>
+                        <div class="usage-count"><b th:text="${coupon.usedCount}">0</b> / <span th:text="${coupon.quantity}">100</span></div>
+                        <div class="usage-bar"><span th:style="${'width:' + coupon.usagePercent + '%'}"></span></div>
+                    </td>
+                    <td><span th:text="${coupon.startDateText}">01/11/2024</span><br><span th:text="${coupon.endDateText}">30/11/2024</span></td>
+                    <td><span class="status-pill" th:classappend="${coupon.status == 'ACTIVE' ? ' status-active' : ' status-inactive'}" th:text="${coupon.status == 'ACTIVE' ? 'Đang áp dụng' : 'Đã tắt'}">Đang áp dụng</span></td>
+                    <td class="action-cell"><button type="button" title="Chỉnh sửa"><i class="bi bi-pencil"></i></button><button type="button" title="Tạm dừng"><i class="bi bi-pause-circle"></i></button><button type="button" title="Xóa"><i class="bi bi-trash3"></i></button></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(coupons)}"><td colspan="9" class="empty-state"><i class="bi bi-ticket-perforated"></i><strong>Chưa có mã khuyến mãi</strong><span>Hãy tạo mã mới để bắt đầu chương trình ưu đãi.</span></td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="coupon-footer">
+            <span>Hiển thị <strong th:text="${totalCoupons}">0</strong> mã ưu đãi</span>
+            <div class="pagination"><button type="button" disabled><i class="bi bi-chevron-left"></i></button><button class="current" type="button">1</button><button type="button"><i class="bi bi-chevron-right"></i></button></div>
+        </div>
+    </section>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tabs = document.querySelectorAll('.coupon-tab');
+        const search = document.getElementById('couponSearch');
+        const type = document.getElementById('couponType');
+        const rows = document.querySelectorAll('.coupon-row');
+        function filterRows() {
+            const activeTab = document.querySelector('.coupon-tab.active').dataset.filter;
+            const query = search.value.toLowerCase().trim();
+            rows.forEach(function (row) {
+                const matchesTab = activeTab === 'all' || row.dataset.status.toLowerCase() === activeTab;
+                const matchesSearch = row.dataset.search.toLowerCase().includes(query);
+                const matchesType = !type.value || row.dataset.type === type.value;
+                row.hidden = !(matchesTab && matchesSearch && matchesType);
+            });
+        }
+        tabs.forEach(function (tab) { tab.addEventListener('click', function () { tabs.forEach(t => t.classList.remove('active')); tab.classList.add('active'); filterRows(); }); });
+        search.addEventListener('input', filterRows);
+        type.addEventListener('change', filterRows);
+        document.querySelectorAll('.copy-code').forEach(function (button) { button.addEventListener('click', function () { navigator.clipboard.writeText(button.dataset.code); }); });
+    });
+</script>
 </body>
 </html>
