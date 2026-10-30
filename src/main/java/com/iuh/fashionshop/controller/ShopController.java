@@ -24,6 +24,9 @@ public class ShopController {
     @GetMapping
     public String list(@RequestParam(required = false) String keyword, Model model) {
         model.addAttribute("keyword", keyword);
+        model.addAttribute("products", keyword == null || keyword.isBlank()
+                ? productService.getLatestProducts(30)
+                : productService.searchByName(keyword.trim(), 30));
         return "user/shop";
     }
 
@@ -38,4 +41,3 @@ public class ShopController {
         return "user/detail";
     }
 }
-

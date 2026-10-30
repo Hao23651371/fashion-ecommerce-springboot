@@ -1,19 +1,11 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{layouts/user-base :: layout(
-          ~{::title},
-          ~{::#customer-content}
-      )}">
-<head>
-    <title>Sản phẩm | Fashion Shop</title>
-</head>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/user-base :: layout(~{::title}, ~{::#customer-content})}">
+<head><title>Sản phẩm | Fashion Shop</title></head>
 <body>
-
 <div id="customer-content">
-    <div class="custom-card p-4">
-        <h3 class="m-0">Đây là trang Sản phẩm</h3>
-    </div>
+    <div class="shop-heading"><div><span class="shop-eyebrow">FASHION COLLECTION</span><h1>Sản phẩm</h1><p th:if="${keyword != null and !keyword.isBlank()}" th:text="'Kết quả tìm kiếm cho: ' + ${keyword}">Kết quả tìm kiếm</p><p th:unless="${keyword != null and !keyword.isBlank()}">Khám phá những thiết kế mới nhất từ Fashion Shop.</p></div><span class="shop-count" th:text="${#lists.size(products)} + ' sản phẩm'">0 sản phẩm</span></div>
+    <div class="home-empty" th:if="${#lists.isEmpty(products)}">Chưa có sản phẩm nào để hiển thị.</div>
+    <div class="product-grid" th:unless="${#lists.isEmpty(products)}"><th:block th:each="product : ${products}"><div th:replace="~{fragments/product-card :: card(${product})}"></div></th:block></div>
 </div>
-
 </body>
 </html>

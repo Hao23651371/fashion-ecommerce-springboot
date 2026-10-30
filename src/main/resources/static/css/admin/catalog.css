@@ -1,4 +1,5 @@
 .catalog-page{max-width:1540px;margin:0 auto;color:#272936}
+.catalog-success{border:0;border-left:4px solid #0f9f8f;border-radius:8px;background:#dff8f2;color:#087f75;font-size:.8rem;font-weight:600}
 .catalog-heading{display:flex;justify-content:space-between;align-items:end;gap:24px;padding:8px 0 25px}
 .breadcrumb-line{font-size:.72rem;color:#596070;font-weight:700;letter-spacing:.03em}
 .breadcrumb-line span{margin:0 10px;color:#a6aab5}

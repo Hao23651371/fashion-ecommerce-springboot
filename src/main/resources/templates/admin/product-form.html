@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/admin-base :: adminLayout(~{::title}, ~{::#admin-content}, 'products')}">
+<head><title>Thêm sản phẩm mới | Fashion Shop Admin</title></head>
+<body>
+<div id="admin-content" class="product-form-page">
+    <div class="form-breadcrumb"><a th:href="@{/admin/products}"><i class="bi bi-arrow-left"></i> SẢN PHẨM</a> <span>/</span> THÊM MỚI</div>
+    <div class="form-heading"><div><h1>Thêm sản phẩm mới</h1><p>Tạo sản phẩm, tự sinh biến thể và hiển thị ngay trên cửa hàng.</p></div></div>
+    <form method="post" th:action="@{/admin/products/new}" id="productForm">
+        <div class="form-layout">
+            <main>
+                <section class="form-card"><div class="form-card-title"><i class="bi bi-person-badge"></i><div><h2>Thông tin chi tiết sản phẩm</h2><p>Tên hiển thị, phân loại danh mục thời trang và đối tượng sử dụng</p></div></div>
+                    <label class="field-label">Tên sản phẩm <b>*</b><input name="name" required maxlength="200" placeholder="Ví dụ: Áo Blazer lụa tơ tằm cổ notch"></label>
+                    <div class="field-grid"><label class="field-label">Danh mục sản phẩm <b>*</b><select name="categoryId" required><option value="">-- Chọn danh mục sản phẩm --</option><option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}">Danh mục</option></select></label><div class="field-label">Giới tính <b>*</b><div class="gender-options"><label><input type="radio" name="gender" value="FEMALE" checked>Nữ</label><label><input type="radio" name="gender" value="MALE">Nam</label><label><input type="radio" name="gender" value="UNISEX">Unisex</label></div></div></div>
+                    <label class="field-label">Mô tả chi tiết<textarea name="description" rows="5" maxlength="2000" placeholder="Nhập thông số chất liệu, đường kim mũi chỉ, cấu trúc và đặc điểm sản phẩm..."></textarea></label>
+                </section>
+                <section class="form-card"><div class="form-card-title"><i class="bi bi-cash-coin mint"></i><div><h2>Thiết lập giá bán & khuyến mãi</h2><p>Cơ cấu giá niêm yết bán lẻ và mức chiết khấu thương mại</p></div></div><div class="field-grid"><label class="field-label">Giá gốc / Giá niêm yết <b>*</b><div class="money-input"><input name="price" type="number" min="0" step="1000" required placeholder="0"><span>VNĐ</span></div></label><label class="field-label">Giá khuyến mãi <small>Tùy chọn</small><div class="money-input"><input name="salePrice" type="number" min="0" step="1000" placeholder="0"><span>VNĐ</span></div></label></div></section>
+                <section class="form-card"><div class="form-card-title"><i class="bi bi-box-seam"></i><div><h2>Khởi tạo biến thể & kho vận</h2><p>Hệ thống tự sinh tổ hợp size và màu sau khi tạo sản phẩm</p></div></div><div class="variant-help"><i class="bi bi-tags"></i><div><b>Chọn size và màu bên phải</b><p>Mỗi tổ hợp size × màu sẽ tạo một biến thể riêng, cùng số lượng tồn kho ban đầu.</p></div></div></section>
+            </main>
+            <aside>
+                <section class="form-card"><div class="form-card-title"><i class="bi bi-image"></i><div><h2>Ảnh đại diện sản phẩm</h2><p>Dùng URL ảnh trực tiếp ở phiên bản 1</p></div></div><label class="field-label">URL ảnh sản phẩm<input name="imageUrl" id="imageUrl" type="url" placeholder="https://..."></label><div class="image-preview" id="imagePreview"><i class="bi bi-image"></i><span>Chưa có ảnh được chọn</span></div></section>
+                <section class="form-card"><div class="form-card-title"><i class="bi bi-sliders mint"></i><div><h2>Biến thể & tồn kho</h2><p>Chọn nhiều size, màu và tồn kho khởi tạo</p></div></div><label class="field-label">Size <b>*</b><div class="choice-list"><label th:each="size : ${sizes}"><input type="checkbox" name="sizes" th:value="${size}" th:checked="${size == 'M'}"><span th:text="${size}">M</span></label></div></label><label class="field-label">Màu sắc <b>*</b><div class="choice-list"><label th:each="color : ${colors}"><input type="checkbox" name="colors" th:value="${color}" th:checked="${color == 'Đen'}"><span th:text="${color}">Đen</span></label></div></label><label class="field-label">Tồn kho mỗi biến thể<input name="stockQuantity" type="number" min="0" value="10" required></label><div class="variant-count">Dự kiến tạo <b id="variantCount">1</b> biến thể</div></section>
+            </aside>
+        </div>
+        <div class="form-footer"><a th:href="@{/admin/products}"><i class="bi bi-arrow-left"></i> Quay lại danh sách sản phẩm</a><div><a class="btn form-cancel" th:href="@{/admin/products}">Hủy thay đổi</a><button class="btn catalog-primary" type="submit"><i class="bi bi-save"></i> Lưu sản phẩm mới</button></div></div>
+    </form>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded',function(){const checks=document.querySelectorAll('input[name="sizes"],input[name="colors"]'), count=document.getElementById('variantCount');function update(){const s=document.querySelectorAll('input[name="sizes"]:checked').length,c=document.querySelectorAll('input[name="colors"]:checked').length;count.textContent=s*c}checks.forEach(x=>x.addEventListener('change',update));update();const url=document.getElementById('imageUrl'), preview=document.getElementById('imagePreview');url.addEventListener('input',function(){preview.innerHTML=this.value?'<img src="'+this.value+'" alt="Ảnh sản phẩm">':'<i class="bi bi-image"></i><span>Chưa có ảnh được chọn</span>'})});
+</script>
+</body>
+</html>
