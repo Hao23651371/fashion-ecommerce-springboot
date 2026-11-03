@@ -20,6 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.iuh.fashionshop.service.ai.SpringAiGeminiChatClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,12 +35,10 @@ import com.iuh.fashionshop.model.Coupon;
 import com.iuh.fashionshop.model.enums.CouponStatus;
 import com.iuh.fashionshop.model.enums.DiscountType;
 import com.iuh.fashionshop.repository.CouponRepository;
-import com.iuh.fashionshop.service.ai.GeminiChatClient;
 import com.iuh.fashionshop.service.ai.OllamaChatClient;
 
 @Service
 public class ChatbotService {
-
     private static final Logger log = LoggerFactory.getLogger(ChatbotService.class);
 
     /** Ngưỡng khoảng cách cosine: càng nhỏ càng khắt khe. */
@@ -64,26 +63,27 @@ public class ChatbotService {
         - Tuyệt đối không dùng tiếng Trung hay ký tự Hán. Không trả lời các chủ đề ngoài phạm vi thời trang và cửa hàng.
         """;
 
-    private final ProductSearchService searchService;
-    private final ProductService productService;
-    private final CouponRepository couponRepository;
-    private final OllamaChatClient ollamaChatClient;
-    private final GeminiChatClient geminiChatClient;
-    private final String provider;
-    private final boolean fallbackToOllama;
+    // --- Các dependency nghiệp vụ & AI Client ---
+    private final ProductSearchService searchService;       // Tìm kiếm sản phẩm bằng vector embedding
+    private final ProductService productService;           // Lấy chi tiết thông tin, biến thể và tồn kho sản phẩm
+    private final CouponRepository couponRepository;       // Tra cứu mã giảm giá đang hoạt động
+    private final OllamaChatClient ollamaChatClient;       // Client AI local qua Ollama (chạy offline / fallback)
+    private final SpringAiGeminiChatClient springAiGeminiChatClient; // Client AI chính kết nối Gemini qua Spring AI
+    private final String provider;                         // Bộ xử lý AI được chọn: "gemini" hoặc "ollama"
+    private final boolean fallbackToOllama;                // Cờ cho phép tự động fallback sang Ollama khi Gemini lỗi
 
     public ChatbotService(ProductSearchService searchService,
                           ProductService productService,
                           CouponRepository couponRepository,
                           OllamaChatClient ollamaChatClient,
-                          GeminiChatClient geminiChatClient,
+                          SpringAiGeminiChatClient springAiGeminiChatClient,
                           @Value("${chatbot.provider:ollama}") String provider,
                           @Value("${chatbot.fallback-to-ollama:false}") boolean fallbackToOllama) {
         this.searchService = searchService;
         this.productService = productService;
         this.couponRepository = couponRepository;
         this.ollamaChatClient = ollamaChatClient;
-        this.geminiChatClient = geminiChatClient;
+        this.springAiGeminiChatClient = springAiGeminiChatClient;
         this.provider = (provider == null) ? "ollama" : provider.trim().toLowerCase();
         this.fallbackToOllama = fallbackToOllama;
     }
@@ -104,7 +104,6 @@ public class ChatbotService {
             }
         });
     }
-
     // ============================== API CHÍNH ==============================
 
     /** Endpoint không streaming. */
@@ -148,17 +147,15 @@ public class ChatbotService {
         };
 
         boolean success = false;
-        if ("gemini".equalsIgnoreCase(provider)) {
+        if ("gemini".equalsIgnoreCase(provider) || "spring-ai-gemini".equalsIgnoreCase(provider)) {
             try {
-                geminiChatClient.stream(SYSTEM_PROMPT, userContent, streamConsumer);
+                // Gọi thẳng Spring AI Gemini
+                springAiGeminiChatClient.stream(SYSTEM_PROMPT, userContent, streamConsumer);
                 success = true;
-                log.info("Chatbot (Gemini) hoàn tất sau {}ms", System.currentTimeMillis() - t0);
+                log.info("Chatbot (Spring AI Gemini) hoàn tất sau {}ms", System.currentTimeMillis() - t0);
             } catch (Exception e) {
-                log.warn("Chatbot: Gemini gặp sự cố ({}), kiểm tra phương án dự phòng", e.getMessage());
-                if (sent.get()) {
-                    return;
-                }
-                if (fallbackToOllama) {
+                log.warn("Chatbot: Spring AI Gemini gặp sự cố ({}), kiểm tra phương án dự phòng", e.getMessage());
+                if (!sent.get() && fallbackToOllama) {
                     try {
                         log.info("Chatbot: Đang thử fallback sang Ollama...");
                         ollamaChatClient.stream(SYSTEM_PROMPT, userContent, streamConsumer);
