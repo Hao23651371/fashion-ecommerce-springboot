@@ -48,6 +48,7 @@ Dự án Model Context Protocol (MCP) Server độc lập dành cho **Admin / Ch
 | :--- | :--- | :--- |
 | `check_low_stock` | `threshold` (mặc định 5) | Quét danh sách các biến thể sản phẩm (size, màu) có tồn kho $\le$ ngưỡng. |
 | `get_revenue_summary` | `days` (mặc định 7) | Thống kê doanh thu thực tế (chỉ đơn hàng `COMPLETED`) và phân bổ trạng thái đơn trong $N$ ngày. |
+| `get_recent_sales` | `days` (mặc định 30), `limit` (mặc định 20), `status` | Liệt kê chi tiết các mặt hàng vừa được mua gần đây (kèm size, màu, số lượng, đơn giá, mã đơn) và tổng hợp top sản phẩm bán chạy nhất. |
 | `create_promotional_coupon` | `code`, `name`, `discountType`, `discountValue`, `maxDiscount`, `minOrderValue`, `quantity`, `durationDays` | Tạo mã giảm giá mới với các quy tắc kiểm tra nghiêm ngặt (chống trùng, % từ 1-50%, giới hạn số tiền). |
 | `search_products` | `keyword`, `limit` | Tìm kiếm sản phẩm theo tên hoặc danh mục kèm giá, sale và tổng tồn kho. |
 

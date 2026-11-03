@@ -428,6 +428,124 @@ server.tool(
 );
 
 // =========================================================================
+// TOOL 5: get_recent_sales
+// Liệt kê chi tiết các sản phẩm vừa bán gần đây và top sản phẩm bán chạy
+// =========================================================================
+server.tool(
+  "get_recent_sales",
+  "Liệt kê chi tiết các mặt hàng/sản phẩm đã được khách hàng đặt mua gần đây (kèm size, màu, số lượng, đơn giá, mã đơn) và tổng hợp top sản phẩm bán chạy nhất trong N ngày.",
+  {
+    days: z
+      .number()
+      .int()
+      .min(1)
+      .max(365)
+      .default(30)
+      .describe("Số ngày cần lấy lịch sử bán hàng tính ngược từ hiện tại (mặc định 30 ngày)"),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .default(20)
+      .describe("Số lượng dòng giao dịch tối đa cần trả về (mặc định 20)"),
+    status: z
+      .enum(["ALL", "EXCLUDE_CANCELLED", "COMPLETED", "SHIPPING", "PENDING"])
+      .default("EXCLUDE_CANCELLED")
+      .describe("Bộ lọc trạng thái đơn: EXCLUDE_CANCELLED (bỏ qua đơn hủy - mặc định), ALL (tất cả), COMPLETED (hoàn thành), SHIPPING, PENDING")
+  },
+  async ({ days, limit, status }) => {
+    try {
+      let statusCondition = "";
+      const params = [days];
+
+      if (status === "EXCLUDE_CANCELLED") {
+        statusCondition = "AND o.status != 'CANCELLED'";
+      } else if (status !== "ALL") {
+        statusCondition = "AND o.status = ?";
+        params.push(status);
+      }
+
+      // 1. Chi tiết các món hàng vừa bán gần nhất
+      const detailQuery = `
+        SELECT 
+          o.order_code,
+          o.status AS order_status,
+          o.created_at,
+          oi.product_name,
+          oi.size,
+          oi.color,
+          oi.quantity,
+          oi.unit_price,
+          (oi.unit_price * oi.quantity) AS subtotal
+        FROM order_item oi
+        JOIN orders o ON oi.order_id = o.id
+        WHERE o.created_at >= NOW() - INTERVAL ? DAY
+          ${statusCondition}
+        ORDER BY o.created_at DESC
+        LIMIT ?
+      `;
+      const [recentItems] = await pool.query(detailQuery, [...params, limit]);
+
+      // 2. Tổng hợp các sản phẩm bán chạy nhất trong khoảng thời gian này
+      const topSellingQuery = `
+        SELECT 
+          oi.product_name,
+          oi.size,
+          oi.color,
+          SUM(oi.quantity) AS total_quantity_sold,
+          SUM(oi.unit_price * oi.quantity) AS total_revenue
+        FROM order_item oi
+        JOIN orders o ON oi.order_id = o.id
+        WHERE o.created_at >= NOW() - INTERVAL ? DAY
+          ${statusCondition}
+        GROUP BY oi.product_name, oi.size, oi.color
+        ORDER BY total_quantity_sold DESC, total_revenue DESC
+        LIMIT 10
+      `;
+      const [topSelling] = await pool.query(topSellingQuery, params);
+
+      const formatter = new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND"
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                period_days: days,
+                filter_status: status,
+                recent_sales_count: recentItems.length,
+                recent_sales: recentItems.map((item) => ({
+                  ...item,
+                  unit_price_formatted: formatter.format(item.unit_price),
+                  subtotal_formatted: formatter.format(item.subtotal)
+                })),
+                top_selling_products: topSelling.map((item) => ({
+                  ...item,
+                  total_revenue_formatted: formatter.format(item.total_revenue)
+                }))
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    } catch (error) {
+      console.error("Lỗi khi gọi tool get_recent_sales:", error);
+      return {
+        content: [{ type: "text", text: `Lỗi truy vấn CSDL lịch sử bán hàng: ${error.message}` }],
+        isError: true
+      };
+    }
+  }
+);
+
+// =========================================================================
 // 4. KẾT NỐI TRANSPORT STDIO (CHỐNG VỠ GIAO THỨC)
 // Lưu ý: Chỉ dùng console.error để ghi log, TUYỆT ĐỐI KHÔNG DÙNG console.log!
 // =========================================================================
