@@ -5,7 +5,6 @@ import java.io.OutputStreamWriter;
 import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,23 +27,18 @@ public class ChatbotController {
     public ChatbotController(ChatbotService chatbotService) {
         this.chatbotService = chatbotService;
     }
-
+// cái này thì xem có null hoặc rông kô, nếu quá 500 kí tự chỉ lấy đúng 500 kí tự đọc
     private static String clean(ChatRequest req) {
         String msg = (req == null || req.message() == null) ? "" : req.message().trim();
         return msg.length() > 500 ? msg.substring(0, 500) : msg;
     }
 
-    /** Endpoint cũ (không streaming), giữ lại để không hỏng chỗ nào đang gọi. */
-    @PostMapping
-    public Map<String, String> chat(@RequestBody ChatRequest req) {
-        String msg = clean(req);
-        if (msg.isEmpty()) {
-            return Map.of("reply", "Bạn muốn hỏi gì về sản phẩm nào ạ?");
-        }
-        return Map.of("reply", chatbotService.reply(msg));
-    }
-
-    /** Endpoint mới: trả chữ về dần dần (text/plain, chunked). */
+    /**
+     * ENDPOINT CHAT STREAMING (POST /api/chatbot/stream):
+     * - Trả chữ về màn hình theo thời gian thực, tức là trả lời cố gắng nhanh ko bắt người dùng đợi
+     * - Cơ chế: Mở luồng StreamingResponseBody để đẩy từng từ (chunk) về trình duyệt ngay lập tức.
+     * - Tối ưu: Tự động dừng gọi AI ngay nếu người dùng tắt trình duyệt hoặc đóng khung chat.
+     */
     @PostMapping("/stream")
     public ResponseEntity<StreamingResponseBody> stream(@RequestBody ChatRequest req) {
         String msg = clean(req);
@@ -55,12 +49,13 @@ public class ChatbotController {
                 w.flush();
                 return;
             }
+            // chổ này đẩy tưng chữ ra màn hình này còn if trên nếu nó rổng thì nó tự đẩy câu kia á
             chatbotService.streamReply(msg, chunk -> {
                 try {
                     w.write(chunk);
-                    w.flush();   // đẩy ngay về trình duyệt
+                    w.flush();   // Đẩy ngay từng chữ về màn hình khách hàng
                 } catch (IOException e) {
-                    throw new UncheckedIOException(e);   // người dùng đóng chat thì dừng
+                    throw new UncheckedIOException(e);   // Khách đóng khung chat thì dừng AI lại
                 }
             });
         };
