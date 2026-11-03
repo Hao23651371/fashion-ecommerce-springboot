@@ -11,7 +11,7 @@ Dự án Model Context Protocol (MCP) Server độc lập dành cho **Admin / Ch
 1. Mở **HeidiSQL** hoặc **DBeaver**, đăng nhập bằng tài khoản `root`.
 2. Mở file `init-mcp-user.sql` và bấm **F9** để thực thi:
    ```sql
-   CREATE USER IF NOT EXISTS 'fashionshop_mcp'@'localhost' IDENTIFIED BY 'mcp_secret_pass_2026';
+   CREATE USER IF NOT EXISTS 'fashionshop_mcp'@'localhost' IDENTIFIED BY 'CHANGE_ME';
    GRANT SELECT ON fashionshop.* TO 'fashionshop_mcp'@'localhost';
    GRANT INSERT ON fashionshop.coupon TO 'fashionshop_mcp'@'localhost';
    FLUSH PRIVILEGES;
@@ -37,7 +37,7 @@ Dự án Model Context Protocol (MCP) Server độc lập dành cho **Admin / Ch
    DB_PORT=3306
    DB_NAME=fashionshop
    DB_USER=fashionshop_mcp
-   DB_PASSWORD=mcp_secret_pass_2026
+   DB_PASSWORD=CHANGE_ME
    ```
 
 ---
