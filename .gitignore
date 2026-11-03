@@ -46,3 +46,4 @@ out/
 !.env.example
 node_modules/
 uploads/
+*.docx
