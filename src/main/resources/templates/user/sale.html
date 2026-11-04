@@ -5,14 +5,462 @@
           ~{::#customer-content}
       )}">
 <head>
-    <title>Sale | Fashion Shop</title>
+    <title>Ưu Đãi Đặc Quyền - Sale | Fashion Shop Studio & Atelier</title>
 </head>
 <body>
 
 <div id="customer-content">
-    <div class="custom-card p-4">
-        <h3 class="m-0">Đây là trang Sale</h3>
+
+    <style>
+        /* Typography & Helper */
+        .font-serif { font-family: 'Playfair Display', Georgia, serif; }
+        .letter-spacing-1 { letter-spacing: 0.1em; }
+        .letter-spacing-2 { letter-spacing: 0.15em; }
+        .fs-7 { font-size: 0.78rem; }
+        .fs-8 { font-size: 0.7rem; }
+
+        /* Hero Sale Banner */
+        .sale-hero-banner {
+            background: linear-gradient(135deg, #18181b 0%, #27272a 60%, #1f1b24 100%);
+            border-radius: 16px;
+            padding: 3.2rem 2.5rem;
+            color: #ffffff;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        }
+        .sale-hero-banner::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.22) 0%, rgba(220, 38, 38, 0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .sale-tag-top {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(220, 38, 38, 0.2);
+            border: 1px solid rgba(220, 38, 38, 0.45);
+            color: #fca5a5;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+        .sale-hero-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 0.8rem;
+            color: #ffffff;
+        }
+        .sale-hero-desc {
+            color: #d4d4d8;
+            font-size: 0.95rem;
+            max-width: 620px;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+        .sale-stat-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #f4f4f5;
+        }
+        .sale-stat-pill strong {
+            color: #ef4444;
+            font-size: 0.95rem;
+        }
+
+        /* Voucher / Coupon Section */
+        .coupon-card {
+            background: #ffffff;
+            border: 1px dashed #d1c7bc;
+            border-radius: 12px;
+            padding: 1.1rem 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            position: relative;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+        .coupon-card:hover {
+            border-color: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(220, 38, 38, 0.08);
+        }
+        .coupon-badge-code {
+            font-family: monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #b91c1c;
+            background: #fef2f2;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+        .btn-copy-code {
+            background: #18181b;
+            color: #ffffff;
+            border: 1px solid #18181b;
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 6px 14px;
+            border-radius: 6px;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .btn-copy-code:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+            color: #ffffff;
+        }
+        .btn-copy-code.copied {
+            background: #15803d;
+            border-color: #15803d;
+            color: #ffffff;
+        }
+
+        /* Filter Toolbar */
+        .sale-toolbar {
+            background: #ffffff;
+            border: 1px solid #ede8e1;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .sale-filter-tabs {
+            display: flex;
+            gap: 6px;
+            background: #f4f1eb;
+            padding: 4px;
+            border-radius: 8px;
+        }
+        .sale-tab-btn {
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 6px 14px;
+            border-radius: 6px;
+            color: #555555;
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+        .sale-tab-btn:hover {
+            color: #111111;
+        }
+        .sale-tab-btn.active {
+            background: #ffffff;
+            color: #111111;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* Sort select */
+        .sale-sort-select {
+            font-size: 0.78rem;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #dcd6cd;
+            background-color: #ffffff;
+            color: #333333;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* Benefits Row */
+        .sale-benefits-row {
+            background: #ffffff;
+            border: 1px solid #ede8e1;
+            border-radius: 14px;
+            padding: 1.8rem 1.5rem;
+            margin-top: 3rem;
+        }
+        .benefit-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .benefit-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #fbf7f2;
+            color: #b91c1c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            flex-shrink: 0;
+        }
+
+        /* Empty state */
+        .sale-empty-box {
+            text-align: center;
+            padding: 4rem 1.5rem;
+            background: #ffffff;
+            border: 1px dashed #dcd6cd;
+            border-radius: 14px;
+            margin-bottom: 2rem;
+        }
+
+        /* Toast */
+        .sale-toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #18181b;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1080;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: transform .3s cubic-bezier(0.16, 1, 0.3, 1), opacity .3s ease;
+        }
+        .sale-toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+
+    <!-- 1. Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb fs-7 mb-0">
+            <li class="breadcrumb-item"><a th:href="@{/}" class="text-decoration-none text-muted">Trang chủ</a></li>
+            <li class="breadcrumb-item active text-danger fw-semibold" aria-current="page">Ưu Đãi Đặc Quyền (Sale)</li>
+        </ol>
+    </nav>
+
+    <!-- 2. Hero Sale Banner -->
+    <div class="sale-hero-banner">
+        <div class="sale-tag-top">
+            <i class="bi bi-fire text-danger"></i>
+            <span>Ưu Đãi Theo Mùa • Giới Hạn Số Lượng</span>
+        </div>
+        <h1 class="sale-hero-title font-serif">Atelier Seasonal Sale</h1>
+        <p class="sale-hero-desc">
+            Khám phá những thiết kế may đo cao cấp với mức ưu đãi đặc biệt lên đến
+            <span class="text-danger fw-bold" th:text="${maxDiscount > 0 ? maxDiscount + '%' : '50%'}">50%</span>.
+            Phom dáng chuẩn mực, chất liệu tuyển chọn và cơ hội bổ sung những món đồ biểu tượng vào tủ đồ của bạn.
+        </p>
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="sale-stat-pill">
+                <i class="bi bi-tag-fill text-danger"></i>
+                <span><strong th:text="${totalCount}">0</strong> sản phẩm đang giảm giá</span>
+            </div>
+            <div class="sale-stat-pill" th:if="${maxDiscount > 0}">
+                <i class="bi bi-percent text-danger"></i>
+                <span>Giảm tối đa lên đến <strong th:text="${maxDiscount} + '%'">50%</strong></span>
+            </div>
+            <div class="sale-stat-pill">
+                <i class="bi bi-truck text-danger"></i>
+                <span>Miễn phí giao hàng cho đơn từ <strong>1.000.000 ₫</strong></span>
+            </div>
+        </div>
     </div>
+
+    <!-- 3. Khu vực Mã Ưu Đãi / Coupon (Chỉ hiện khi có coupon kích hoạt) -->
+    <div class="mb-4" th:if="${!#lists.isEmpty(coupons)}">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-ticket-perforated fs-5 text-danger"></i>
+                <h2 class="font-serif fs-5 fw-bold mb-0">Mã Giảm Giá Đang Áp Dụng</h2>
+            </div>
+            <span class="fs-8 text-muted">Bấm sao chép và nhập tại bước thanh toán</span>
+        </div>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+            <div class="col" th:each="c : ${coupons}">
+                <div class="coupon-card">
+                    <div>
+                        <span class="coupon-badge-code" th:text="${c.code}">ATELIER10</span>
+                        <h4 class="fs-7 fw-bold mb-1 text-dark" th:text="${c.name}">Giảm 10% đơn từ 500k</h4>
+                        <div class="fs-8 text-muted">
+                            <span th:if="${c.minOrderValue != null and c.minOrderValue > 0}"
+                                  th:text="'Đơn từ ' + ${#numbers.formatDecimal(c.minOrderValue, 0, 'POINT', 0, 'COMMA')} + ' ₫ • '">Đơn từ 500.000 ₫ • </span>
+                            <span th:text="'HSD: ' + ${#temporals.format(c.endDate, 'dd/MM/yyyy')}">HSD: 31/12/2026</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-copy-code"
+                            th:data-code="${c.code}"
+                            onclick="copyCouponCode(this)">
+                        <i class="bi bi-copy me-1"></i> Sao chép
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Thanh Công Cụ Lọc & Sắp Xếp -->
+    <div class="sale-toolbar">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="fs-7 text-muted fw-semibold">
+                Hiển thị: <span class="text-dark fw-bold" th:text="${totalCount}">0</span> sản phẩm
+            </div>
+            <!-- Bộ lọc Giới tính -->
+            <div class="sale-filter-tabs">
+                <a th:href="@{/sale(gender='ALL', sort=${currentSort})}"
+                   class="sale-tab-btn"
+                   th:classappend="${currentGender == 'ALL'} ? 'active'">Tất cả</a>
+                <a th:href="@{/sale(gender='FEMALE', sort=${currentSort})}"
+                   class="sale-tab-btn"
+                   th:classappend="${currentGender == 'FEMALE'} ? 'active'">Thời trang Nữ</a>
+                <a th:href="@{/sale(gender='MALE', sort=${currentSort})}"
+                   class="sale-tab-btn"
+                   th:classappend="${currentGender == 'MALE'} ? 'active'">Thời trang Nam</a>
+            </div>
+        </div>
+
+        <!-- Bộ chọn Sắp xếp -->
+        <div class="d-flex align-items-center gap-2">
+            <label for="saleSortSelect" class="fs-8 text-muted text-uppercase fw-semibold mb-0">Sắp xếp theo:</label>
+            <select id="saleSortSelect" class="sale-sort-select" onchange="onSortChange(this.value)">
+                <option value="discount-desc" th:selected="${currentSort == 'discount-desc'}">Giảm giá nhiều nhất</option>
+                <option value="price-asc" th:selected="${currentSort == 'price-asc'}">Giá: Thấp đến Cao</option>
+                <option value="price-desc" th:selected="${currentSort == 'price-desc'}">Giá: Cao đến Thấp</option>
+                <option value="newest" th:selected="${currentSort == 'newest'}">Mới nhất</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 5. Lưới Sản Phẩm Sale -->
+    <div class="product-grid" th:if="${totalCount > 0}">
+        <th:block th:each="p : ${products}">
+            <div th:replace="~{fragments/product-card :: card(${p})}"></div>
+        </th:block>
+    </div>
+
+    <!-- 6. Trạng Thái Trống Khi Không Có Sản Phẩm -->
+    <div class="sale-empty-box" th:if="${totalCount == 0}">
+        <div class="mb-3 text-muted" style="font-size: 2.5rem;">
+            <i class="bi bi-tag"></i>
+        </div>
+        <h3 class="font-serif fs-4 mb-2">Hiện chưa có sản phẩm giảm giá</h3>
+        <p class="text-muted fs-7 mb-4 mx-auto" style="max-width: 420px;">
+            Bộ sưu tập trong danh mục này hiện chưa có ưu đãi mới. Bạn vui lòng quay lại sau hoặc khám phá toàn bộ các thiết kế tại cửa hàng nhé.
+        </p>
+        <a th:href="@{/shop}" class="btn btn-dark px-4 py-2 fs-7 letter-spacing-1 text-uppercase">
+            <i class="bi bi-bag me-1"></i> Xem tất cả sản phẩm
+        </a>
+    </div>
+
+    <!-- 7. Cam Kết Dịch Vụ Atelier -->
+    <div class="sale-benefits-row">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="benefit-item">
+                    <div class="benefit-icon">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </div>
+                    <div>
+                        <h4 class="fs-7 fw-bold mb-1 text-uppercase letter-spacing-1">Đổi trả 30 ngày</h4>
+                        <p class="fs-8 text-muted mb-0">Đổi hàng miễn phí tận nơi nếu sản phẩm không vừa vặn.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="benefit-item">
+                    <div class="benefit-icon">
+                        <i class="bi bi-patch-check"></i>
+                    </div>
+                    <div>
+                        <h4 class="fs-7 fw-bold mb-1 text-uppercase letter-spacing-1">100% Chính hãng</h4>
+                        <p class="fs-8 text-muted mb-0">Chất liệu cao cấp được hoàn thiện tỉ mỉ chuẩn Atelier.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="benefit-item">
+                    <div class="benefit-icon">
+                        <i class="bi bi-chat-heart"></i>
+                    </div>
+                    <div>
+                        <h4 class="fs-7 fw-bold mb-1 text-uppercase letter-spacing-1">Trợ lý AI 24/7</h4>
+                        <p class="fs-8 text-muted mb-0">Tư vấn phối đồ và gợi ý kích cỡ vừa vặn ngay lập tức.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast thông báo chép mã -->
+    <div id="saleToast" class="sale-toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <i class="bi bi-check-circle-fill text-success fs-5"></i>
+        <span id="saleToastMsg">Đã sao chép mã giảm giá!</span>
+    </div>
+
+    <!-- Script sao chép mã & sắp xếp -->
+    <script>
+        // Chuyển sort
+        function onSortChange(sortVal) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentGender = urlParams.get('gender') || 'ALL';
+            window.location.href = '/sale?gender=' + encodeURIComponent(currentGender) + '&sort=' + encodeURIComponent(sortVal);
+        }
+
+        // Sao chép coupon
+        let saleToastTimer = null;
+        function copyCouponCode(btn) {
+            const code = btn.getAttribute('data-code');
+            if (!code) return;
+
+            navigator.clipboard.writeText(code).then(() => {
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-check2"></i> Đã chép';
+                btn.classList.add('copied');
+
+                const toast = document.getElementById('saleToast');
+                const toastMsg = document.getElementById('saleToastMsg');
+                if (toast && toastMsg) {
+                    toastMsg.textContent = `Đã sao chép mã "${code}" thành công!`;
+                    toast.classList.add('show');
+                    clearTimeout(saleToastTimer);
+                    saleToastTimer = setTimeout(() => {
+                        toast.classList.remove('show');
+                    }, 2500);
+                }
+
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Không thể chép mã:', err);
+            });
+        }
+    </script>
+
 </div>
 
 </body>
