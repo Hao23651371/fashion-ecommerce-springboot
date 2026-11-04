@@ -3,6 +3,7 @@
 <head><title>Thêm sản phẩm mới | Fashion Shop Admin</title></head>
 <body>
 <div id="admin-content" class="product-form-page">
+    <link rel="stylesheet" th:href="@{/css/admin/product-form.css}">
     <div class="form-breadcrumb"><a th:href="@{/admin/products}"><i class="bi bi-arrow-left"></i> SẢN PHẨM</a> <span>/</span> THÊM MỚI</div>
     <div class="form-heading"><div><h1>Thêm sản phẩm mới</h1><p>Tạo sản phẩm, tự sinh biến thể và hiển thị ngay trên cửa hàng.</p></div></div>
     <form method="post" th:action="@{/admin/products/new}" id="productForm">
