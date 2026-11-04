@@ -124,18 +124,13 @@ h1, h2, h3, .brand-font {
 }
 
 .sale-hot-badge {
-    background: #dc2626;
+    background: var(--header-badge-bg);
     color: #ffffff;
     font-size: 0.6rem;
     font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 2px 7px;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
     border-radius: var(--radius-pill);
-    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
-    display: inline-flex;
-    align-items: center;
-    line-height: 1.2;
-    vertical-align: middle;
 }
 
 /* Ô tìm kiếm */

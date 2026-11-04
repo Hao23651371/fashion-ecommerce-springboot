@@ -4,10 +4,9 @@ import com.iuh.fashionshop.dto.ProductCardDto;
 import com.iuh.fashionshop.model.Category;
 import com.iuh.fashionshop.model.enums.CategoryStatus;
 import com.iuh.fashionshop.model.enums.Gender;
-import com.iuh.fashionshop.model.enums.ProductStatus;
 import com.iuh.fashionshop.repository.CategoryRepository;
 import com.iuh.fashionshop.service.ProductService;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.iuh.fashionshop.service.WishlistService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -29,14 +28,14 @@ public class ShopController {
 
     private final ProductService productService;
     private final CategoryRepository categoryRepository;
-    private final JdbcTemplate jdbc;
+    private final WishlistService wishlistService;
 
     public ShopController(ProductService productService,
                           CategoryRepository categoryRepository,
-                          JdbcTemplate jdbc) {
+                          WishlistService wishlistService) {
         this.productService = productService;
         this.categoryRepository = categoryRepository;
-        this.jdbc = jdbc;
+        this.wishlistService = wishlistService;
     }
 
     @GetMapping
@@ -129,15 +128,6 @@ public class ShopController {
         // 7. Danh mục visible để hiển thị sidebar
         List<Category> categories = categoryRepository.findByStatusOrderByNameAsc(CategoryStatus.VISIBLE);
 
-        // Tính số sản phẩm theo từng danh mục (từ danh sách đầy đủ chưa lọc cat)
-        List<ProductCardDto> allForCount;
-        if (keyword != null && !keyword.isBlank()) {
-            allForCount = productService.searchByName(keyword.trim(), 500);
-        } else {
-            allForCount = productService.getLatestProducts(500);
-        }
-        final List<ProductCardDto> allProducts = allForCount;
-
         model.addAttribute("products", sorted);
         model.addAttribute("totalCount", sorted.size());
         model.addAttribute("categories", categories);
@@ -164,20 +154,8 @@ public class ShopController {
         model.addAttribute("product", product);
         model.addAttribute("relatedProducts", productService.getRelatedProducts(product.categoryId(), product.id(), 4));
 
-        boolean isWishlisted = false;
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
-            try {
-                Integer count = jdbc.queryForObject("""
-                    SELECT COUNT(*) FROM wishlist_item wi
-                    JOIN user_profile up ON up.id = wi.user_profile_id
-                    JOIN account a ON a.id = up.account_id
-                    WHERE a.email = ? AND wi.product_id = ?
-                """, Integer.class, auth.getName(), id);
-                isWishlisted = count != null && count > 0;
-            } catch (Exception ignored) {
-            }
-        }
+        boolean isWishlisted = wishlistService.isWishlisted(id, auth);
         model.addAttribute("isWishlisted", isWishlisted);
 
         return "user/detail";
