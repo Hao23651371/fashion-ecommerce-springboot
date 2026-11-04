@@ -1,0 +1,101 @@
+/* Customer - Thanh toán */
+.checkout-page { max-width: 1100px; margin: 0 auto; }
+.checkout-header { margin-bottom: 28px; }
+.checkout-eyebrow {
+    font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; color: #8a8a8a; margin: 0 0 4px;
+}
+.checkout-title {
+    font-family: 'Playfair Display', serif; font-size: 2rem; margin: 0 0 6px; color: #1a1a1a;
+}
+.checkout-sub { color: #777; margin: 0; font-size: .9rem; }
+
+.checkout-block {
+    background: #fff; border: 1px solid #ece5d8; padding: 22px 20px; margin-bottom: 16px;
+}
+.checkout-block h2 {
+    font-family: 'Playfair Display', serif; font-size: 1.15rem; margin: 0 0 16px;
+    display: flex; align-items: center; gap: 10px;
+}
+.checkout-block .step {
+    width: 26px; height: 26px; border-radius: 50%; background: #121212; color: #fff;
+    font-size: .75rem; font-weight: 700; display: inline-grid; place-items: center;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.checkout-form .form-label {
+    font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: #666; font-weight: 600;
+}
+.checkout-form .form-control {
+    border-radius: 0; border-color: #e5e0d6; font-size: .9rem; padding: 10px 12px;
+}
+.checkout-form .form-control:focus {
+    border-color: #121212; box-shadow: none;
+}
+
+.pay-options { display: grid; gap: 10px; }
+.pay-option { cursor: pointer; margin: 0; }
+.pay-option input { position: absolute; opacity: 0; pointer-events: none; }
+.pay-card {
+    display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+    border: 1px solid #e5e0d6; background: #faf8f5; transition: .15s ease;
+}
+.pay-card i { font-size: 1.35rem; color: #555; }
+.pay-card strong { display: block; font-size: .9rem; color: #1a1a1a; }
+.pay-card small { color: #888; font-size: .78rem; }
+.pay-option input:checked + .pay-card {
+    border-color: #121212; background: #fff; box-shadow: inset 0 0 0 1px #121212;
+}
+
+.coupon-row { display: flex; gap: 8px; }
+.coupon-row .form-control { flex: 1; }
+.coupon-apply-btn {
+    border-radius: 0; border: 1px solid #121212; background: #fff; color: #121212;
+    padding: 0 18px; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 600;
+}
+.coupon-apply-btn:hover { background: #121212; color: #fff; }
+.coupon-hint { margin: 8px 0 0; font-size: .8rem; color: #087f75; }
+
+.checkout-actions { margin-top: 8px; }
+.checkout-back {
+    font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: #555; text-decoration: none;
+}
+.checkout-back:hover { color: #111; }
+.checkout-submit-btn {
+    background: #121212; color: #fff; border: none; border-radius: 0;
+    padding: 12px 28px; font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 600;
+}
+.checkout-submit-btn:hover { background: #2d2d2d; color: #fff; }
+
+.checkout-summary {
+    background: #fff; border: 1px solid #ece5d8; padding: 22px 20px; position: sticky; top: 90px;
+}
+.checkout-summary h2 {
+    font-family: 'Playfair Display', serif; font-size: 1.2rem; margin: 0 0 16px;
+}
+.summary-item {
+    display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid #f1ece3;
+}
+.sum-thumb {
+    width: 56px; height: 70px; background: #f3efe8; display: grid; place-items: center;
+    overflow: hidden; color: #b0a595; font-size: .9rem;
+}
+.sum-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.sum-name { font-size: .88rem; font-weight: 600; color: #1a1a1a; }
+.sum-meta { font-size: .75rem; color: #8a8a8a; margin-top: 2px; }
+.sum-price { font-size: .88rem; font-weight: 600; white-space: nowrap; }
+.summary-empty { font-size: .9rem; color: #777; padding: 12px 0; }
+.summary-empty a { color: #121212; }
+
+.sum-lines { margin-top: 14px; padding-top: 8px; }
+.sum-line {
+    display: flex; justify-content: space-between; gap: 12px;
+    font-size: .88rem; color: #555; margin-bottom: 8px;
+}
+.sum-grand {
+    margin-top: 10px; padding-top: 12px; border-top: 1px solid #ece5d8;
+    font-size: 1.05rem; font-weight: 700; color: #111;
+}
+
+@media (max-width: 991px) {
+    .checkout-summary { position: static; }
+}

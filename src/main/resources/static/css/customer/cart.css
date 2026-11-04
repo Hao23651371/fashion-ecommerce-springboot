@@ -1,0 +1,102 @@
+/* Customer - Giỏ hàng */
+.cart-page { max-width: 1100px; margin: 0 auto; }
+.cart-header {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end;
+    gap: 12px; margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid #ece5d8;
+}
+.cart-eyebrow {
+    font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; color: #8a8a8a; margin: 0 0 4px;
+}
+.cart-title {
+    font-family: 'Playfair Display', serif; font-size: 2rem; margin: 0; color: #1a1a1a;
+}
+.cart-continue {
+    font-size: .75rem; letter-spacing: .08em; text-transform: uppercase;
+    color: #444; text-decoration: none;
+}
+.cart-continue:hover { color: #111; }
+
+.cart-list { background: #fff; border: 1px solid #ece5d8; }
+.cart-item {
+    display: grid;
+    grid-template-columns: 88px 1fr auto auto auto;
+    gap: 16px; align-items: center;
+    padding: 18px 16px; border-bottom: 1px solid #f1ece3;
+}
+.cart-item:last-child { border-bottom: none; }
+.cart-thumb {
+    width: 88px; height: 110px; background: #f3efe8; display: grid; place-items: center;
+    overflow: hidden; color: #b0a595;
+}
+.cart-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cart-name {
+    font-family: 'Playfair Display', serif; font-size: 1.05rem; color: #1a1a1a; text-decoration: none;
+}
+.cart-name:hover { text-decoration: underline; }
+.cart-meta { font-size: .78rem; color: #8a8a8a; margin: 4px 0 8px; display: flex; gap: 6px; }
+.cart-price { font-size: .9rem; font-weight: 600; }
+
+.cart-qty { display: inline-flex; align-items: center; border: 1px solid #e5e0d6; }
+.qty-btn {
+    width: 32px; height: 34px; border: none; background: #faf8f5; font-size: 1rem; cursor: pointer;
+}
+.qty-input {
+    width: 42px; height: 34px; border: none; border-left: 1px solid #e5e0d6; border-right: 1px solid #e5e0d6;
+    text-align: center; font-size: .9rem; background: #fff;
+}
+.cart-line-total { min-width: 100px; text-align: right; }
+.cart-remove {
+    border: none; background: transparent; color: #999; cursor: pointer; padding: 6px;
+}
+.cart-remove:hover { color: #a1141b; }
+
+.cart-summary {
+    background: #fff; border: 1px solid #ece5d8; padding: 22px 20px; position: sticky; top: 90px;
+}
+.cart-summary h2 {
+    font-family: 'Playfair Display', serif; font-size: 1.25rem; margin: 0 0 16px;
+}
+.sum-row {
+    display: flex; justify-content: space-between; gap: 12px;
+    font-size: .88rem; color: #555; margin-bottom: 10px;
+}
+.sum-total {
+    margin-top: 12px; padding-top: 12px; border-top: 1px solid #ece5d8;
+    font-size: 1.05rem; font-weight: 700; color: #111;
+}
+.cart-checkout-btn {
+    margin-top: 16px; background: #121212; color: #fff; border: none; border-radius: 0;
+    padding: 12px 18px; font-size: .78rem; letter-spacing: .1em; text-transform: uppercase;
+    font-weight: 600; text-decoration: none; display: inline-flex; align-items: center;
+    justify-content: center; gap: 8px;
+}
+.cart-checkout-btn:hover { background: #2d2d2d; color: #fff; }
+.cart-note {
+    margin: 14px 0 0; font-size: .75rem; color: #8a8a8a; display: flex; align-items: center; gap: 6px;
+}
+
+.cart-empty {
+    text-align: center; padding: 64px 20px; background: #fff; border: 1px solid #ece5d8;
+}
+.cart-empty-icon {
+    width: 72px; height: 72px; margin: 0 auto 16px; border-radius: 50%;
+    background: #f3efe8; display: grid; place-items: center; font-size: 1.6rem; color: #a89a85;
+}
+.cart-empty h2 { font-family: 'Playfair Display', serif; font-size: 1.5rem; margin-bottom: 8px; }
+.cart-empty p { color: #777; margin-bottom: 20px; }
+
+@media (max-width: 768px) {
+    .cart-item {
+        grid-template-columns: 72px 1fr;
+        grid-template-areas:
+            "thumb info"
+            "thumb qty"
+            "total total"
+            "remove remove";
+    }
+    .cart-thumb { grid-area: thumb; width: 72px; height: 90px; }
+    .cart-info { grid-area: info; }
+    .cart-qty { grid-area: qty; }
+    .cart-line-total { grid-area: total; text-align: left; }
+    .cart-remove { grid-area: remove; justify-self: start; }
+}

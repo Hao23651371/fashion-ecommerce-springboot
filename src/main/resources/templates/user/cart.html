@@ -9,12 +9,81 @@
 </head>
 <body>
 
-    <div id="customer-content">
-        <div class="custom-card p-4">
-            <h3 class="mb-2">Đây là trang Giỏ hàng</h3>
-            <p class="text-muted mb-0">Giao diện trang này chưa được xây dựng.</p>
+<div id="customer-content" class="cart-page">
+    <link rel="stylesheet" th:href="@{/css/customer/cart.css}">
+
+    <div class="cart-header">
+        <div>
+            <p class="cart-eyebrow">Shopping bag</p>
+            <h1 class="cart-title">Giỏ hàng</h1>
+        </div>
+        <a th:href="@{/shop}" class="cart-continue"><i class="bi bi-arrow-left"></i> Tiếp tục mua sắm</a>
+    </div>
+
+    <div class="row g-4" th:if="${cartItems != null and !#lists.isEmpty(cartItems)}">
+        <div class="col-lg-8">
+            <div class="cart-list">
+                <div class="cart-item" th:each="item : ${cartItems}">
+                    <div class="cart-thumb">
+                        <img th:if="${item.variant != null and item.variant.product != null and item.variant.product.imageUrl != null}"
+                             th:src="${item.variant.product.imageUrl}" alt="">
+                        <i class="bi bi-image" th:unless="${item.variant != null and item.variant.product != null and item.variant.product.imageUrl != null}"></i>
+                    </div>
+                    <div class="cart-info">
+                        <a class="cart-name"
+                           th:href="@{/shop/{id}(id=${item.variant.product.id})}"
+                           th:text="${item.variant.product.name}">Tên sản phẩm</a>
+                        <div class="cart-meta">
+                            <span th:text="${item.variant.color}">Màu</span>
+                            <span>·</span>
+                            <span th:text="'Size ' + ${item.variant.size}">Size M</span>
+                        </div>
+                        <div class="cart-price"
+                             th:text="${#numbers.formatDecimal(item.variant.product.currentPrice, 0, 'COMMA', 0, 'POINT') + ' ₫'}">0 ₫</div>
+                    </div>
+                    <div class="cart-qty">
+                        <button type="button" class="qty-btn" aria-label="Giảm">−</button>
+                        <input type="number" class="qty-input" min="1" th:value="${item.quantity}" readonly>
+                        <button type="button" class="qty-btn" aria-label="Tăng">+</button>
+                    </div>
+                    <div class="cart-line-total fw-semibold"
+                         th:text="${#numbers.formatDecimal(item.calculateSubtotal(), 0, 'COMMA', 0, 'POINT') + ' ₫'}">0 ₫</div>
+                    <button type="button" class="cart-remove" title="Xóa"><i class="bi bi-trash3"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <aside class="cart-summary">
+                <h2>Tóm tắt đơn</h2>
+                <div class="sum-row">
+                    <span>Tạm tính</span>
+                    <span th:text="${cartSubtotal != null ? #numbers.formatDecimal(cartSubtotal, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0 ₫</span>
+                </div>
+                <div class="sum-row">
+                    <span>Phí vận chuyển</span>
+                    <span>Tính ở bước thanh toán</span>
+                </div>
+                <div class="sum-row sum-total">
+                    <span>Tổng</span>
+                    <span th:text="${cartSubtotal != null ? #numbers.formatDecimal(cartSubtotal, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0 ₫</span>
+                </div>
+                <a th:href="@{/checkout}" class="btn cart-checkout-btn w-100">
+                    Thanh toán <i class="bi bi-arrow-right"></i>
+                </a>
+                <p class="cart-note"><i class="bi bi-shield-check"></i> Thanh toán an toàn · Đổi trả trong 7 ngày</p>
+            </aside>
         </div>
     </div>
+
+    <!-- Empty cart -->
+    <div class="cart-empty" th:if="${cartItems == null or #lists.isEmpty(cartItems)}">
+        <div class="cart-empty-icon"><i class="bi bi-bag"></i></div>
+        <h2>Giỏ hàng đang trống</h2>
+        <p>Khám phá bộ sưu tập mới và thêm sản phẩm bạn yêu thích.</p>
+        <a th:href="@{/shop}" class="btn cart-checkout-btn">Mua sắm ngay</a>
+    </div>
+</div>
 
 </body>
 </html>
