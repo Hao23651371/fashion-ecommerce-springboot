@@ -9,9 +9,29 @@
 </head>
 <body>
 
-<div id="customer-content">
+<div id="customer-content" class="home-page">
+    <link rel="stylesheet" th:href="@{/css/customer/home.css}">
 
-    <!-- ===== SẢN PHẨM MỚI ===== -->
+    <!-- Hero -->
+    <section class="home-hero">
+        <div class="home-hero-content">
+            <p class="home-hero-eyebrow">Studio &amp; Atelier</p>
+            <h1>Thời trang tối giản,<br>chất liệu chọn lọc</h1>
+            <p class="home-hero-lead">
+                Bộ sưu tập mới cho tủ đồ hiện đại — form dáng tinh gọn, màu sắc trung tính, dễ phối mỗi ngày.
+            </p>
+            <div class="home-hero-actions">
+                <a th:href="@{/shop}" class="btn home-btn-primary">Khám phá cửa hàng</a>
+                <a th:href="@{/sale}" class="btn home-btn-ghost">Xem khuyến mãi</a>
+            </div>
+        </div>
+        <div class="home-hero-panel" aria-hidden="true">
+            <div class="home-hero-badge">SS26</div>
+            <p>Lookbook · Essentials</p>
+        </div>
+    </section>
+
+    <!-- Sản phẩm mới (giữ logic có sẵn từ UserController) -->
     <div class="home-section-head">
         <h2 class="home-section-title">Sản phẩm mới</h2>
         <a th:href="@{/shop}" class="home-section-link">Xem tất cả sản phẩm <i class="bi bi-arrow-right"></i></a>
@@ -27,6 +47,14 @@
         </th:block>
     </div>
 
+    <!-- Band CTA -->
+    <section class="home-band">
+        <div>
+            <h3>Miễn phí vận chuyển đơn từ 499.000₫</h3>
+            <p>Đổi trả trong 7 ngày · Hỗ trợ tư vấn stylist qua chatbot AI</p>
+        </div>
+        <a th:href="@{/shop}" class="btn home-btn-primary">Mua ngay</a>
+    </section>
 </div>
 
 </body>
