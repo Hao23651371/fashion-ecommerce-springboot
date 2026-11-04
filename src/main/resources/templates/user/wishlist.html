@@ -1,20 +1,195 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{layouts/user-base :: layout(
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/user-base :: layout(
           ~{::title},
           ~{::#customer-content}
       )}">
+
 <head>
-    <title>Danh sách yêu thích | Fashion Shop</title>
+    <title>Sản phẩm yêu thích | Fashion Shop Studio & Atelier</title>
 </head>
+
 <body>
 
-    <div id="customer-content">
-        <div class="custom-card p-4">
-            <h3 class="mb-2">Đây là trang Danh sách yêu thích</h3>
-            <p class="text-muted mb-0">Giao diện trang này chưa được xây dựng.</p>
+    <div id="customer-content" class="wishlist-page">
+        <link rel="stylesheet" th:href="@{/css/customer/wishlist.css}">
+
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb fs-7 mb-0">
+                <li class="breadcrumb-item"><a th:href="@{/}" class="text-decoration-none text-muted">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a th:href="@{/account}" class="text-decoration-none text-muted">Tài
+                        khoản</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Sản phẩm yêu thích</li>
+            </ol>
+        </nav>
+
+        <div class="row g-4">
+
+            <!-- ===== MENU TRÁI ===== -->
+            <div class="col-lg-3">
+                <div class="acc-card acc-menu">
+                    <div class="acc-label mb-2 pb-2 border-bottom">Danh mục tài khoản</div>
+                    <a th:href="@{/account}">
+                        <i class="bi bi-person"></i> Thông tin cá nhân
+                    </a>
+                    <a th:href="@{/orders}">
+                        <i class="bi bi-bag-check"></i> Đơn hàng của tôi
+                        <span class="count" th:if="${orderCount > 0}" th:text="${orderCount}">0</span>
+                    </a>
+                    <a href="#"><i class="bi bi-geo-alt"></i> Sổ địa chỉ</a>
+                    <a th:href="@{/wishlist}" class="active">
+                        <i class="bi bi-heart"></i> Sản phẩm yêu thích
+                        <span class="count" id="sidebarWishlistCount" th:if="${wishlistCount > 0}"
+                            th:text="${wishlistCount}">0</span>
+                        <span class="acc-dot"></span>
+                    </a>
+                    <a href="#"><i class="bi bi-lock"></i> Cài đặt bảo mật</a>
+                    <hr class="my-2">
+                    <a th:href="@{/logout}" class="text-danger">
+                        <i class="bi bi-box-arrow-right"></i> Đăng xuất
+                    </a>
+                </div>
+
+                <!-- Box hướng dẫn / quyền lợi thành viên -->
+                <div class="acc-card mt-3 p-3 bg-light border-0">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="bi bi-bell text-warning"></i>
+                        <span class="fs-8 fw-bold letter-spacing-1 text-uppercase text-dark">Mẹo mua sắm</span>
+                    </div>
+                    <p class="fs-8 text-muted mb-0">
+                        Sản phẩm yêu thích được lưu vĩnh viễn trên tài khoản của bạn. Bạn sẽ nhận được thông báo khi sản
+                        phẩm có ưu đãi giảm giá hoặc sắp hết hàng!
+                    </p>
+                </div>
+            </div>
+
+            <!-- ===== NỘI DUNG PHẢI ===== -->
+            <div class="col-lg-9">
+
+                <!-- Thanh tiêu đề & Nút thao tác -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4 pb-2 border-bottom">
+                    <div>
+                        <h1 class="acc-title mb-1">
+                            Sản phẩm yêu thích
+                            <small class="text-muted fs-6" id="titleWishlistCount"
+                                th:text="'(' + ${totalCount} + ' món)'">(0 món)</small>
+                        </h1>
+                        <p class="acc-subtitle mb-0">Những mẫu thiết kế thời trang bạn đã lưu để xem lại hoặc mua sắm
+                            sau.</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2" th:classappend="${totalCount == 0} ? 'd-none' : ''"
+                        id="wishlistActions">
+                        <button type="button"
+                            class="btn btn-outline-danger btn-sm px-3 fs-8 letter-spacing-1 text-uppercase"
+                            id="btnClearWishlist">
+                            <i class="bi bi-trash3 me-1"></i> Xóa tất cả
+                        </button>
+                        <a th:href="@{/shop}" class="btn btn-dark btn-sm px-3 fs-8 letter-spacing-1 text-uppercase">
+                            <i class="bi bi-bag-plus me-1"></i> Mua sắm thêm
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Danh sách sản phẩm dạng Grid -->
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3 g-lg-4" id="wishlistGrid"
+                    th:if="${totalCount > 0}">
+                    <div class="col" th:each="p : ${products}" th:id="'wishlist-card-' + ${p.id()}">
+                        <div class="wishlist-item-card">
+
+                            <!-- Khung ảnh đại diện -->
+                            <div class="wishlist-thumb-wrapper">
+                                <a th:href="@{/shop/{id}(id=${p.id()})}" class="wishlist-thumb-link">
+                                    <div class="wishlist-thumb">
+                                        <i class="bi bi-image"></i>
+                                        <img th:if="${p.imageUrl() != null and !#strings.isEmpty(p.imageUrl())}"
+                                            th:src="${p.imageUrl()}" th:alt="${p.name()}" loading="lazy"
+                                            onerror="this.remove()">
+                                    </div>
+                                </a>
+
+                                <!-- Badges Sale / Hết hàng -->
+                                <span class="wishlist-badge soldout" th:if="${p.soldOut()}">HẾT HÀNG</span>
+                                <span class="wishlist-badge" th:if="${!p.soldOut() and p.onSale()}"
+                                    th:text="'-' + ${p.discountPercent()} + '%'">-15%</span>
+
+                                <!-- Nút xóa nhanh sản phẩm khỏi danh sách yêu thích -->
+                                <button type="button" class="btn-wishlist-del" th:data-id="${p.id()}"
+                                    th:data-name="${p.name()}" title="Bỏ khỏi yêu thích" aria-label="Bỏ khỏi yêu thích">
+                                    <i class="bi bi-heart-fill"></i>
+                                </button>
+                            </div>
+
+                            <!-- Thông tin sản phẩm -->
+                            <div class="wishlist-info">
+                                <span class="wishlist-cat" th:text="${p.categoryName()}">Danh mục</span>
+                                <h3 class="wishlist-name">
+                                    <a th:href="@{/shop/{id}(id=${p.id()})}" th:text="${p.name()}">Tên sản phẩm</a>
+                                </h3>
+
+                                <!-- Đơn giá -->
+                                <div class="wishlist-price">
+                                    <span class="price-now" th:classappend="${p.onSale()} ? 'sale'"
+                                        th:text="${#numbers.formatDecimal(p.onSale() ? p.salePrice() : p.price(), 0, 'POINT', 0, 'COMMA')} + ' ₫'">0
+                                        ₫</span>
+                                    <span class="price-old" th:if="${p.onSale()}"
+                                        th:text="${#numbers.formatDecimal(p.price(), 0, 'POINT', 0, 'COMMA')} + ' ₫'">0
+                                        ₫</span>
+                                </div>
+
+                                <!-- Bảng màu chấm -->
+                                <div class="product-colors" th:if="${!#lists.isEmpty(p.colors())}">
+                                    <span class="color-dot" th:each="c : ${p.colors()}"
+                                        th:style="'background:' + ${c.hex()}" th:title="${c.name()}"></span>
+                                </div>
+
+                                <!-- Nút hành động -->
+                                <div class="mt-auto pt-2 border-top">
+                                    <a th:if="${!p.soldOut()}" th:href="@{/shop/{id}(id=${p.id()})}"
+                                        class="btn-wishlist-action">
+                                        <span>Chọn size & màu</span>
+                                        <i class="bi bi-arrow-right"></i>
+                                    </a>
+                                    <button th:if="${p.soldOut()}" class="btn-wishlist-action disabled" disabled>
+                                        <span>Tạm hết hàng</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Giao diện trống khi không có sản phẩm yêu thích nào -->
+                <div class="acc-card text-center py-5" id="wishlistEmpty"
+                    th:classappend="${totalCount > 0} ? 'd-none' : ''">
+                    <div class="empty-icon-circle mb-3 mx-auto">
+                        <i class="bi bi-heart"></i>
+                    </div>
+                    <h3 class="font-serif mb-2 fs-4">Danh sách yêu thích đang trống</h3>
+                    <p class="text-muted fs-7 mb-4 mx-auto" style="max-width: 440px;">
+                        Bạn chưa lưu sản phẩm nào vào danh sách yêu thích. Hãy khám phá những bộ sưu tập thời trang mới
+                        nhất của Atelier và thả tim món đồ bạn yêu thích nhé!
+                    </p>
+                    <a th:href="@{/shop}" class="btn btn-dark px-4 py-2 text-uppercase fs-7 letter-spacing-1">
+                        <i class="bi bi-bag-heart me-2"></i> Khám phá bộ sưu tập ngay
+                    </a>
+                </div>
+
+            </div>
+
         </div>
+
+        <!-- Toast thông báo nhanh -->
+        <div id="wishlistToast" class="wishlist-toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <i class="bi bi-check2-circle fs-5 text-success"></i>
+            <span id="toastMessage">Đã cập nhật danh sách yêu thích</span>
+        </div>
+
+        <!-- JavaScript xử lý tương tác AJAX -->
+        <script th:src="@{/js/customer/wishlist.js}"></script>
+
     </div>
 
 </body>
+
 </html>

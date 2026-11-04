@@ -1,19 +1,212 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{layouts/user-base :: layout(
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/user-base :: layout(
           ~{::title},
           ~{::#customer-content}
       )}">
+
 <head>
     <title>Sản phẩm | Fashion Shop</title>
 </head>
+
 <body>
 
-<div id="customer-content">
-    <div class="custom-card p-4">
-        <h3 class="m-0">Đây là trang Sản phẩm</h3>
+    <div id="customer-content" class="shop-page">
+        <link rel="stylesheet" th:href="@{/css/customer/shop.css}">
+
+        <section class="shop-page">
+
+            <!-- Breadcrumb -->
+            <nav class="shop-breadcrumb" aria-label="breadcrumb">
+                <a th:href="@{/}">Trang chủ</a>
+                <span class="mx-1">/</span>
+                <span th:if="${selectedCategoryId == null}">Tất cả sản phẩm</span>
+                <th:block th:if="${selectedCategoryId != null}">
+                    <a th:href="@{/shop}">Sản phẩm</a>
+                    <span class="mx-1">/</span>
+                    <span th:each="cat : ${categories}" th:if="${cat.id == selectedCategoryId}"
+                        th:text="${cat.name}"></span>
+                </th:block>
+            </nav>
+
+            <!-- Page Header -->
+            <div class="shop-header d-flex align-items-end justify-content-between">
+                <div>
+                    <h1 class="shop-title"
+                        th:text="${keyword != null and !#strings.isEmpty(keyword)} ? ('Kết quả: ' + keyword) : 'Cửa hàng Atelier'">
+                        Cửa hàng Atelier</h1>
+                    <p class="shop-subtitle mb-0">Khám phá bộ sưu tập thời trang cao cấp từ Atelier</p>
+                </div>
+                <span class="shop-count" th:text="${totalCount} + ' sản phẩm'">0 sản phẩm</span>
+            </div>
+
+            <div class="row g-4">
+
+                <!-- ===== SIDEBAR FILTER ===== -->
+                <div class="col-lg-3 col-md-4">
+                    <aside class="shop-sidebar">
+
+                        <!-- Danh mục -->
+                        <div class="filter-group">
+                            <div class="filter-group-title">Danh mục</div>
+                            <a th:href="@{/shop(gender=${currentGender != 'ALL' ? currentGender : null},sort=${currentSort},priceRange=${currentPriceRange},keyword=${keyword},onSaleOnly=${onSaleOnly})}"
+                                class="filter-cat-item mb-1" th:classappend="${selectedCategoryId == null} ? ' active'">
+                                <span>Tất cả</span>
+                                <span class="filter-cat-count" th:text="${#lists.size(products)}">0</span>
+                            </a>
+                            <th:block th:each="cat : ${categories}">
+                                <a th:href="@{/shop(categoryId=${cat.id},gender=${currentGender != 'ALL' ? currentGender : null},sort=${currentSort},priceRange=${currentPriceRange},keyword=${keyword},onSaleOnly=${onSaleOnly})}"
+                                    class="filter-cat-item mb-1"
+                                    th:classappend="${selectedCategoryId == cat.id} ? ' active'"
+                                    th:text="${cat.name}">Danh mục</a>
+                            </th:block>
+                        </div>
+
+                        <!-- Giới tính -->
+                        <div class="filter-group">
+                            <div class="filter-group-title">Giới tính</div>
+                            <div class="gender-pills">
+                                <a th:href="@{/shop(categoryId=${selectedCategoryId},sort=${currentSort},priceRange=${currentPriceRange},keyword=${keyword},onSaleOnly=${onSaleOnly})}"
+                                    class="gender-pill" th:classappend="${currentGender == 'ALL'} ? ' active'">Tất
+                                    cả</a>
+                                <a th:href="@{/shop(categoryId=${selectedCategoryId},gender='FEMALE',sort=${currentSort},priceRange=${currentPriceRange},keyword=${keyword},onSaleOnly=${onSaleOnly})}"
+                                    class="gender-pill" th:classappend="${currentGender == 'FEMALE'} ? ' active'">Nữ</a>
+                                <a th:href="@{/shop(categoryId=${selectedCategoryId},gender='MALE',sort=${currentSort},priceRange=${currentPriceRange},keyword=${keyword},onSaleOnly=${onSaleOnly})}"
+                                    class="gender-pill" th:classappend="${currentGender == 'MALE'} ? ' active'">Nam</a>
+                                <a th:href="@{/shop(categoryId=${selectedCategoryId},gender='UNISEX',sort=${currentSort},priceRange=${currentPriceRange},keyword=${keyword},onSaleOnly=${onSaleOnly})}"
+                                    class="gender-pill"
+                                    th:classappend="${currentGender == 'UNISEX'} ? ' active'">Unisex</a>
+                            </div>
+                        </div>
+
+                        <!-- Khoảng giá -->
+                        <div class="filter-group">
+                            <div class="filter-group-title">Khoảng giá</div>
+                            <a th:href="@{/shop(categoryId=${selectedCategoryId},gender=${currentGender != 'ALL' ? currentGender : null},sort=${currentSort},keyword=${keyword},onSaleOnly=${onSaleOnly})}"
+                                class="price-option"
+                                th:classappend="${#strings.isEmpty(currentPriceRange)} ? ' active'">Tất cả mức giá</a>
+                            <a th:href="@{/shop(categoryId=${selectedCategoryId},gender=${currentGender != 'ALL' ? currentGender : null},sort=${currentSort},priceRange='under500',keyword=${keyword},onSaleOnly=${onSaleOnly})}"
+                                class="price-option"
+                                th:classappend="${currentPriceRange == 'under500'} ? ' active'">Dưới 500.000 ₫</a>
+                            <a th:href="@{/shop(categoryId=${selectedCategoryId},gender=${currentGender != 'ALL' ? currentGender : null},sort=${currentSort},priceRange='500to1m',keyword=${keyword},onSaleOnly=${onSaleOnly})}"
+                                class="price-option"
+                                th:classappend="${currentPriceRange == '500to1m'} ? ' active'">500.000 – 1.000.000 ₫</a>
+                            <a th:href="@{/shop(categoryId=${selectedCategoryId},gender=${currentGender != 'ALL' ? currentGender : null},sort=${currentSort},priceRange='1mto2m',keyword=${keyword},onSaleOnly=${onSaleOnly})}"
+                                class="price-option"
+                                th:classappend="${currentPriceRange == '1mto2m'} ? ' active'">1.000.000 – 2.000.000
+                                ₫</a>
+                            <a th:href="@{/shop(categoryId=${selectedCategoryId},gender=${currentGender != 'ALL' ? currentGender : null},sort=${currentSort},priceRange='above2m',keyword=${keyword},onSaleOnly=${onSaleOnly})}"
+                                class="price-option" th:classappend="${currentPriceRange == 'above2m'} ? ' active'">Trên
+                                2.000.000 ₫</a>
+                        </div>
+
+                        <!-- Chỉ đang giảm giá -->
+                        <div class="filter-group">
+                            <div class="filter-group-title">Tình trạng</div>
+                            <a th:href="@{/shop(categoryId=${selectedCategoryId},gender=${currentGender != 'ALL' ? currentGender : null},sort=${currentSort},priceRange=${currentPriceRange},keyword=${keyword},onSaleOnly=${!onSaleOnly})}"
+                                class="sale-toggle" th:classappend="${onSaleOnly} ? ' active'">
+                                <span th:text="${onSaleOnly} ? 'Đang lọc giảm giá' : 'Chỉ sản phẩm giảm giá'">Chỉ sản
+                                    phẩm giảm giá</span>
+                                <span class="toggle-badge">SALE</span>
+                            </a>
+                        </div>
+
+                        <!-- Nút đặt lại -->
+                        <a th:href="@{/shop}" class="btn-reset-filter">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                            Đặt lại bộ lọc
+                        </a>
+
+                    </aside>
+                </div>
+
+                <!-- ===== MAIN CONTENT ===== -->
+                <div class="col-lg-9 col-md-8">
+
+                    <!-- Toolbar: chips lọc + sort -->
+                    <div class="shop-toolbar">
+                        <!-- Active filter chips -->
+                        <div class="active-filters">
+                            <th:block th:if="${currentGender != 'ALL'}">
+                                <a th:href="@{/shop(categoryId=${selectedCategoryId},sort=${currentSort},priceRange=${currentPriceRange},keyword=${keyword},onSaleOnly=${onSaleOnly})}"
+                                    class="filter-chip">
+                                    <span
+                                        th:text="${currentGender == 'FEMALE'} ? 'Nữ' : (${currentGender == 'MALE'} ? 'Nam' : 'Unisex')">Giới
+                                        tính</span>
+                                    <span class="remove"><i class="bi bi-x"></i></span>
+                                </a>
+                            </th:block>
+                            <th:block th:if="${!#strings.isEmpty(currentPriceRange)}">
+                                <a th:href="@{/shop(categoryId=${selectedCategoryId},gender=${currentGender != 'ALL' ? currentGender : null},sort=${currentSort},keyword=${keyword},onSaleOnly=${onSaleOnly})}"
+                                    class="filter-chip">
+                                    <span th:text="${currentPriceRange == 'under500'} ? 'Dưới 500k'
+                                      : (${currentPriceRange == '500to1m'} ? '500k – 1tr'
+                                      : (${currentPriceRange == '1mto2m'} ? '1tr – 2tr' : 'Trên 2tr'))">Giá</span>
+                                    <span class="remove"><i class="bi bi-x"></i></span>
+                                </a>
+                            </th:block>
+                            <th:block th:if="${onSaleOnly}">
+                                <a th:href="@{/shop(categoryId=${selectedCategoryId},gender=${currentGender != 'ALL' ? currentGender : null},sort=${currentSort},priceRange=${currentPriceRange},keyword=${keyword})}"
+                                    class="filter-chip">
+                                    <span>Đang giảm giá</span>
+                                    <span class="remove"><i class="bi bi-x"></i></span>
+                                </a>
+                            </th:block>
+                            <th:block th:if="${keyword != null and !#strings.isEmpty(keyword)}">
+                                <a th:href="@{/shop(categoryId=${selectedCategoryId},gender=${currentGender != 'ALL' ? currentGender : null},sort=${currentSort},priceRange=${currentPriceRange},onSaleOnly=${onSaleOnly})}"
+                                    class="filter-chip">
+                                    <span>Tìm: <em th:text="${keyword}"></em></span>
+                                    <span class="remove"><i class="bi bi-x"></i></span>
+                                </a>
+                            </th:block>
+                        </div>
+
+                        <!-- Sort dropdown -->
+                        <form method="get" th:action="@{/shop}" id="sortForm">
+                            <input type="hidden" name="categoryId" th:value="${selectedCategoryId}">
+                            <input type="hidden" name="gender"
+                                th:value="${currentGender != 'ALL' ? currentGender : ''}">
+                            <input type="hidden" name="priceRange" th:value="${currentPriceRange}">
+                            <input type="hidden" name="keyword" th:value="${keyword}">
+                            <input type="hidden" name="onSaleOnly" th:value="${onSaleOnly}">
+                            <select class="sort-select" name="sort"
+                                onchange="document.getElementById('sortForm').submit()">
+                                <option value="newest" th:selected="${currentSort == 'newest'}">Mới nhất</option>
+                                <option value="price-asc" th:selected="${currentSort == 'price-asc'}">Giá: Thấp → Cao
+                                </option>
+                                <option value="price-desc" th:selected="${currentSort == 'price-desc'}">Giá: Cao → Thấp
+                                </option>
+                                <option value="name-asc" th:selected="${currentSort == 'name-asc'}">Tên A → Z</option>
+                                <option value="discount-desc" th:selected="${currentSort == 'discount-desc'}">Giảm nhiều
+                                    nhất</option>
+                            </select>
+                        </form>
+                    </div>
+
+                    <!-- Product grid -->
+                    <div class="products-grid" th:if="${!#lists.isEmpty(products)}">
+                        <div th:each="p : ${products}">
+                            <div th:replace="~{fragments/product-card :: card(${p})}"></div>
+                        </div>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div class="empty-shop" th:if="${#lists.isEmpty(products)}">
+                        <i class="bi bi-bag-x empty-shop-icon"></i>
+                        <h3>Không tìm thấy sản phẩm</h3>
+                        <p>Thử thay đổi bộ lọc hoặc từ khoá tìm kiếm của bạn.</p>
+                        <a th:href="@{/shop}" class="btn btn-dark px-4 py-2 rounded-pill">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>
+                            Xem tất cả sản phẩm
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+
+        </section>
+
     </div>
-</div>
 
 </body>
+
 </html>
