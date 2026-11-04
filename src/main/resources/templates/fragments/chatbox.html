@@ -5,6 +5,8 @@
 <div th:fragment="chatbox">
     <meta name="_csrf" th:content="${_csrf?.token}">
     <meta name="_csrf_header" th:content="${_csrf?.headerName}">
+    <meta name="chat_user" th:content="${loggedIn ? currentEmail : ''}">
+    <meta name="is_logged_in" th:content="${loggedIn ? 'true' : 'false'}">
 
     <style>
         /* ===== Nút mở chat tròn nổi góc phải ===== */
@@ -129,21 +131,86 @@
             border-bottom-left-radius: 4px; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
         }
 
-        /* Nút link xem sản phẩm trong tin nhắn */
-        .chat-product-btn {
-            display: inline-flex; align-items: center; gap: 6px;
-            margin: 6px 0; padding: 6px 14px;
-            border-radius: 999px; background: #0f172a; color: #ffffff !important;
-            font-size: 0.85rem; font-weight: 500; text-decoration: none;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
-            transition: all 0.2s ease;
+
+        /* ===== THẺ SẢN PHẨM TRONG KHUNG CHAT (ẢNH TRÁI, THÔNG TIN PHẢI, LINK DƯỚI) ===== */
+        .chat-product-card {
+            display: flex; gap: 12px; background: #ffffff;
+            border: 1.5px solid #e2e8f0; border-radius: 14px;
+            padding: 10px 12px; margin: 10px 0;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            align-items: stretch; text-decoration: none !important;
+            color: inherit !important; cursor: pointer;
         }
-        .chat-product-btn:hover {
-            background: #334155; transform: translateY(-1px);
-            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.3);
-            color: #ffffff !important;
+        .chat-product-card:hover {
+            border-color: #0f172a;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+            transform: translateY(-2px);
         }
-        .chat-product-btn i { font-size: 0.95rem; }
+        .chat-product-card-img-wrap {
+            width: 76px; height: 96px; border-radius: 10px;
+            overflow: hidden; flex-shrink: 0; background: #f1f5f9;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .chat-product-card-img {
+            width: 100%; height: 100%; object-fit: cover;
+            display: block; transition: transform 0.3s ease;
+        }
+        .chat-product-card:hover .chat-product-card-img {
+            transform: scale(1.06);
+        }
+        .chat-product-card-body {
+            flex: 1; min-width: 0; display: flex;
+            flex-direction: column; justify-content: space-between;
+        }
+        .chat-product-card-title {
+            font-weight: 700; font-size: 0.92rem; color: #0f172a;
+            line-height: 1.35; margin-bottom: 3px;
+            display: -webkit-box; -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .chat-product-card-meta {
+            font-size: 0.78rem; color: #64748b; margin-bottom: 5px;
+        }
+        .chat-product-card-prices {
+            display: flex; align-items: baseline; gap: 6px;
+            flex-wrap: wrap; margin-bottom: 6px;
+        }
+        .chat-product-card-price-now {
+            color: #ef4444; font-weight: 700; font-size: 0.96rem;
+        }
+        .chat-product-card-price-old {
+            color: #94a3b8; text-decoration: line-through; font-size: 0.8rem;
+        }
+        .chat-product-card-badge {
+            background: #fee2e2; color: #ef4444; font-size: 0.72rem;
+            font-weight: 700; padding: 2px 6px; border-radius: 4px;
+        }
+        .chat-product-card-btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 12px; background: #0f172a; color: #ffffff !important;
+            border-radius: 8px; font-size: 0.8rem; font-weight: 500;
+            text-decoration: none !important; width: fit-content;
+            transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(15, 23, 42, 0.2);
+        }
+        .chat-product-card-btn:hover {
+            background: #334155; transform: translateX(2px);
+        }
+
+        /* ===== HỘP CÂU HỎI GỢI MỞ CUỐI CÂU TRẢ LỜI ===== */
+        .chat-followup-box {
+            margin-top: 12px; padding: 10px 14px;
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            border-left: 4px solid #f59e0b; border-radius: 10px;
+            font-size: 0.89rem; font-weight: 500; color: #1e293b;
+            line-height: 1.5; display: flex; align-items: flex-start;
+            gap: 8px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+        }
+        .chat-followup-icon {
+            font-size: 1.15rem; color: #f59e0b; flex-shrink: 0;
+            line-height: 1; margin-top: 2px;
+        }
+
 
         /* ===== Đang gõ (Typing Indicator) ===== */
         .typing { display: inline-flex; gap: 5px; align-items: center; padding: 6px 4px; }
@@ -278,7 +345,7 @@
 
     <script>
         (function () {
-            const STORAGE_KEY = 'fashionshop_chat_history_v2';
+
             const DEFAULT_WELCOME = "👋 Xin chào bạn! Mình là trợ lý **FashionShop** ✨\n\n"
                 + "Mình có thể hỗ trợ bạn:\n"
                 + "• 🎟️ Tra cứu **Mã giảm giá** & Ưu đãi hôm nay\n"
@@ -297,20 +364,89 @@
             const closeBtn = document.getElementById('chat-close');
             const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
             const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+            const chatUserMeta = document.querySelector('meta[name="chat_user"]')?.content || '';
+            const isLoggedInMeta = document.querySelector('meta[name="is_logged_in"]')?.content === 'true';
 
             let sending = false;
-            let history = [];
+            let chatHistory = [];
+            const STORAGE_KEY = 'fashionshop_chat_history_v3';
+            const USER_TRACK_KEY = 'fashionshop_active_chat_user';
 
-            // Không lưu trữ lịch sử ra localStorage (thoát trang hoặc tải lại sẽ bắt đầu mới hoàn toàn)
+            // XỬ LÝ ĐĂNG XUẤT VÀ CHUYỂN ĐỔI TÀI KHOẢN:
+            // 1. Nếu URL có param logout=true (vừa bấm đăng xuất)
+            // 2. Hoặc nếu tài khoản trước đó khác với tài khoản hiện tại
+            // 3. Hoặc nếu trước đó đã đăng nhập mà giờ là khách (đã đăng xuất)
+            const previousUser = localStorage.getItem(USER_TRACK_KEY);
+            const isLogoutUrl = window.location.search.includes('logout=true');
+
+            if (isLogoutUrl || (previousUser !== null && previousUser !== chatUserMeta)) {
+                // XÓA SẠCH LỊCH SỬ CHAT CỦA TÀI KHOẢN CŨ KHI ĐĂNG XUẤT HOẶC ĐỔI TÀI KHOẢN
+                try {
+                    localStorage.removeItem(STORAGE_KEY);
+                } catch (e) {}
+            }
+
+            // Lưu lại tài khoản hiện tại đang duyệt web
             try {
-                localStorage.removeItem('fashionshop_chat_history_v2');
-                localStorage.removeItem('fashionshop_chat_history');
+                if (isLoggedInMeta && chatUserMeta) {
+                    localStorage.setItem(USER_TRACK_KEY, chatUserMeta);
+                } else {
+                    localStorage.removeItem(USER_TRACK_KEY);
+                }
             } catch (e) {}
 
+            // Lắng nghe sự kiện bấm vào bất kỳ link Đăng xuất nào trên trang
+            document.querySelectorAll('a[href*="/logout"]').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    try {
+                        localStorage.removeItem(STORAGE_KEY);
+                        localStorage.removeItem(USER_TRACK_KEY);
+                    } catch (e) {}
+                });
+            });
+
+            // Quản lý lưu trữ lịch sử chat vào localStorage
+            function loadChatHistory() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (!raw) return null;
+                    const parsed = JSON.parse(raw);
+                    return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function saveChatHistory() {
+                try {
+                    // Giữ tối đa 40 tin nhắn gần nhất để tối ưu dung lượng bộ nhớ
+                    const toSave = chatHistory.slice(-40);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+                } catch (e) {}
+            }
+
+            function clearChatHistory() {
+                try {
+                    localStorage.removeItem(STORAGE_KEY);
+                } catch (e) {}
+                chatHistory = [];
+            }
+
             function resetChat() {
+                clearChatHistory();
                 msgs.innerHTML = '';
                 renderMessageBubble(DEFAULT_WELCOME, 'bot');
                 scrollDown();
+            }
+
+            // Phát hiện ID sản phẩm khi đang mở trang chi tiết (/shop/{id})
+            function getCurrentProductId() {
+                const match = window.location.pathname.match(/\/shop\/(\d+)/);
+                if (match) {
+                    const id = parseInt(match[1], 10);
+                    return (!isNaN(id) && id > 0) ? id : null;
+                }
+                return null;
             }
 
             // ================= HIỂN THỊ TIN NHẮN VÀ FORMAT LINK/MARKDOWN =================
@@ -318,22 +454,126 @@
                 msgs.scrollTop = msgs.scrollHeight;
             }
 
+            const productCache = {};
+            const productPromises = {};
+
+            function fetchProductInfo(id) {
+                if (productCache[id]) return Promise.resolve(productCache[id]);
+                if (productPromises[id]) return productPromises[id];
+                productPromises[id] = fetch('/api/chatbot/product/' + id)
+                    .then(function (res) { return res.ok ? res.json() : null; })
+                    .then(function (data) {
+                        if (data) productCache[id] = data;
+                        return data;
+                    })
+                    .catch(function () { return null; });
+                return productPromises[id];
+            }
+
+            function renderCardInner(container, id, data) {
+                const imgUrl = data.imageUrl || '/images/placeholder.jpg';
+                let priceHtml = '';
+                if (data.onSale && data.priceFormatted) {
+                    priceHtml = '<span class="chat-product-card-price-now">' + data.currentPriceFormatted + '</span>'
+                        + '<span class="chat-product-card-price-old">' + data.priceFormatted + '</span>'
+                        + '<span class="chat-product-card-badge">-' + data.discountPercent + '%</span>';
+                } else {
+                    priceHtml = '<span class="chat-product-card-price-now">' + data.currentPriceFormatted + '</span>';
+                }
+
+                const stockText = (data.totalStock && data.totalStock > 0) ? ('Còn ' + data.totalStock + ' sp') : 'Sẵn sàng giao';
+                const categoryText = data.categoryName ? (data.categoryName + ' • ') : '';
+
+                container.innerHTML = '<div class="chat-product-card-img-wrap">'
+                    + '<img src="' + imgUrl + '" alt="' + (data.name || '') + '" class="chat-product-card-img" onerror="this.onerror=null;this.src=\'/images/placeholder.jpg\';" />'
+                    + '</div>'
+                    + '<div class="chat-product-card-body">'
+                    + '  <div>'
+                    + '    <div class="chat-product-card-title" title="' + (data.name || '') + '">' + (data.name || '') + '</div>'
+                    + '    <div class="chat-product-card-meta">' + categoryText + stockText + '</div>'
+                    + '    <div class="chat-product-card-prices">' + priceHtml + '</div>'
+                    + '  </div>'
+                    + '  <div class="chat-product-card-btn">'
+                    + '    <span>Xem chi tiết sản phẩm</span> <i class="bi bi-arrow-right-short" style="font-size:1.1rem;"></i>'
+                    + '  </div>'
+                    + '</div>';
+            }
+
+            function createProductCard(id) {
+                const a = document.createElement('a');
+                a.href = '/shop/' + id;
+                a.className = 'chat-product-card';
+                a.setAttribute('data-product-id', id);
+
+                const cached = productCache[id];
+                if (cached) {
+                    renderCardInner(a, id, cached);
+                } else {
+                    a.innerHTML = '<div class="chat-product-card-img-wrap">'
+                        + '<i class="bi bi-image text-muted" style="font-size: 1.5rem;"></i>'
+                        + '</div>'
+                        + '<div class="chat-product-card-body">'
+                        + '  <div class="chat-product-card-title">Đang tải sản phẩm...</div>'
+                        + '  <div class="chat-product-card-btn"><span>Xem sản phẩm</span> <i class="bi bi-arrow-right"></i></div>'
+                        + '</div>';
+                    fetchProductInfo(id).then(function (data) {
+                        if (data) {
+                            renderCardInner(a, id, data);
+                        } else {
+                            a.innerHTML = '<div class="chat-product-card-img-wrap">'
+                                + '<i class="bi bi-bag-check-fill text-muted" style="font-size: 1.5rem;"></i>'
+                                + '</div>'
+                                + '<div class="chat-product-card-body">'
+                                + '  <div class="chat-product-card-title">Xem sản phẩm #' + id + '</div>'
+                                + '  <div class="chat-product-card-btn"><span>Xem chi tiết</span> <i class="bi bi-arrow-right"></i></div>'
+                                + '</div>';
+                        }
+                    });
+                }
+                return a;
+            }
+
             function fillContent(el, text) {
                 el.innerHTML = '';
                 if (!text) return;
 
-                // Tách theo đường link /shop/{id}
-                const parts = text.split(/(\/shop\/\d+)/g);
-                parts.forEach(function (part) {
-                    if (/^\/shop\/\d+$/.test(part)) {
-                        const a = document.createElement('a');
-                        a.href = part;
-                        a.className = 'chat-product-btn';
-                        a.innerHTML = '<i class="bi bi-bag-check-fill"></i> Xem sản phẩm <i class="bi bi-arrow-up-right"></i>';
-                        el.appendChild(a);
-                    } else if (part) {
-                        // Hỗ trợ in đậm **chữ** đơn giản và an toàn XSS
-                        renderFormattedText(el, part);
+                // Tách đoạn văn bản theo dòng để phát hiện dòng câu hỏi gợi mở cuối cùng
+                const lines = text.split('\n');
+                lines.forEach(function (line, lineIdx) {
+                    const trimmedLine = line.trim();
+
+                    // Nếu dòng bắt đầu bằng biểu tượng 💬 hoặc câu hỏi gợi mở của bot
+                    if (trimmedLine.startsWith('💬') || (lineIdx === lines.length - 1 && (trimmedLine.startsWith('Bạn có muốn') || trimmedLine.startsWith('Bạn có cần')))) {
+                        const box = document.createElement('div');
+                        box.className = 'chat-followup-box';
+                        const icon = document.createElement('i');
+                        icon.className = 'bi bi-chat-heart-fill chat-followup-icon';
+                        box.appendChild(icon);
+
+                        const txtWrap = document.createElement('div');
+                        const cleanQuestion = trimmedLine.replace(/^💬\s*/, '');
+                        renderFormattedText(txtWrap, cleanQuestion);
+                        box.appendChild(txtWrap);
+
+                        el.appendChild(box);
+                        return;
+                    }
+
+                    // Tách theo đường link /shop/{id}
+                    const parts = line.split(/(\/shop\/\d+)/g);
+                    parts.forEach(function (part) {
+                        const match = part.match(/^\/shop\/(\d+)$/);
+                        if (match) {
+                            const productId = match[1];
+                            el.appendChild(createProductCard(productId));
+                        } else if (part) {
+                            renderFormattedText(el, part);
+                        }
+                    });
+
+                    // Xuống dòng nếu chưa phải dòng cuối
+                    if (lineIdx < lines.length - 1 && !trimmedLine.startsWith('💬')) {
+                        el.appendChild(document.createElement('br'));
                     }
                 });
             }
@@ -431,10 +671,16 @@
                 const headers = { 'Content-Type': 'application/json' };
                 if (csrfToken && csrfHeader) headers[csrfHeader] = csrfToken;
 
+                const currentProductId = getCurrentProductId();
+                const payload = {
+                    message: text,
+                    productId: currentProductId
+                };
+
                 const res = await fetch('/api/chatbot/stream', {
                     method: 'POST',
                     headers: headers,
-                    body: JSON.stringify({ message: text }),
+                    body: JSON.stringify(payload),
                     signal: signal
                 });
                 if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -466,8 +712,10 @@
                 input.value = '';
                 sendBtn.disabled = true;
 
-                // Thêm tin nhắn của User vào giao diện
+                // Thêm tin nhắn của User vào giao diện & lưu vào lịch sử
                 renderMessageBubble(text, 'user');
+                chatHistory.push({ who: 'user', text: text });
+                saveChatHistory();
                 scrollDown();
 
                 // Hiện typing animation
@@ -494,6 +742,8 @@
                         finalBotText = 'Dạ FashionShop rất tiếc hiện chưa tìm thấy thông tin phù hợp. Bạn thử hỏi câu khác xem sao nhé! 🥰';
                         fillContent(typingBubble, finalBotText);
                     }
+                    chatHistory.push({ who: 'bot', text: finalBotText });
+                    saveChatHistory();
                 } catch (e) {
                     if (!gotFirstChunk) {
                         finalBotText = e.name === 'AbortError'
@@ -519,16 +769,44 @@
                 }
             });
 
-            // Gán sự kiện chip gợi ý (KHÔNG BỊ ẨN MẤT)
-            chips.querySelectorAll('button').forEach(function (b) {
-                b.onclick = function () {
-                    const q = b.getAttribute('data-query') || b.textContent;
-                    send(q);
-                };
-            });
+            // Cấu hình thanh chip gợi ý (thay đổi linh hoạt nếu đang ở trang chi tiết sản phẩm)
+            function initChips() {
+                const currentProductId = getCurrentProductId();
+                const chipsLabel = document.querySelector('.chat-chips-label');
+                if (currentProductId) {
+                    if (chipsLabel) {
+                        chipsLabel.innerHTML = '<i class="bi bi-tag-fill me-1 text-primary"></i>Hỏi nhanh về sản phẩm đang xem:';
+                    }
+                    chips.innerHTML = '<button type="button" data-query="Mẫu này còn những size và số lượng tồn kho thế nào ạ?">📏 Size & Tồn kho</button>'
+                        + '<button type="button" data-query="Mẫu này có những màu sắc nào vậy shop?">🎨 Màu sắc</button>'
+                        + '<button type="button" data-query="Mẫu này làm từ chất liệu vải gì và form dáng ra sao?">🧵 Chất liệu & Form</button>'
+                        + '<button type="button" data-query="Mẫu này có thể phối với trang phục nào thì đẹp?">👗 Gợi ý phối đồ</button>'
+                        + '<button type="button" data-query="Mẫu này giá bao nhiêu và có ưu đãi gì không?">💰 Giá & Khuyến mãi</button>'
+                        + '<button type="button" data-query="Shop có mã giảm giá nào áp dụng được không?">🎟️ Mã giảm giá</button>';
+                }
 
-            // Hiển thị lời chào khởi đầu (không lưu lịch sử)
-            resetChat();
+                chips.querySelectorAll('button').forEach(function (b) {
+                    b.onclick = function () {
+                        const q = b.getAttribute('data-query') || b.textContent;
+                        send(q);
+                    };
+                });
+            }
+
+            initChips();
+
+            // Phục hồi lịch sử trò chuyện từ localStorage (nếu có)
+            const saved = loadChatHistory();
+            if (saved && saved.length > 0) {
+                chatHistory = saved;
+                msgs.innerHTML = '';
+                chatHistory.forEach(function (m) {
+                    renderMessageBubble(m.text, m.who);
+                });
+                scrollDown();
+            } else {
+                resetChat();
+            }
         })();
     </script>
 </div>
