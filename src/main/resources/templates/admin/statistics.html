@@ -6,15 +6,324 @@
           'statistics'
       )}">
 <head>
-    <title>Thống kê | Fashion Shop Admin</title>
+    <title th:text="${pageTitle != null ? pageTitle + ' | Fashion Shop Admin' : 'Thống kê | Fashion Shop Admin'}">Thống kê | Fashion Shop Admin</title>
 </head>
 <body>
 
 <div id="admin-content">
-    <div class="bg-white rounded-3 shadow-sm p-4" style="font-family: 'Plus Jakarta Sans', sans-serif;">
-        <h3 class="fw-bold mb-2">Đây là trang Thống kê</h3>
-        <p class="text-muted fs-5 mb-0">Giao diện trang này chưa được xây dựng.</p>
-    </div>
+    <link rel="stylesheet" th:href="@{/css/admin/statistics.css}">
+
+    <section class="stats-page">
+        <!-- Top Toolbar -->
+        <div class="stats-toolbar card border-0 shadow-sm">
+            <div class="card-body d-flex flex-column flex-xl-row gap-3 align-items-xl-center justify-content-between">
+                <div class="stats-search-wrap">
+                    <i class="bi bi-search stats-search-icon"></i>
+                    <label for="statsSearchInput" class="visually-hidden">Tìm kiếm đơn hàng, sản phẩm</label>
+                    <input id="statsSearchInput" type="text" class="form-control stats-search-input" placeholder="Tìm kiếm đơn hàng, sản phẩm... (Ctrl+K)">
+                </div>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div class="stats-date-pill">
+                        <i class="bi bi-calendar3"></i>
+                        <span th:text="'Hôm nay: ' + ${#temporals.format(#temporals.createNow(), 'EEEE, dd MMMM, yyyy')}">Hôm nay</span>
+                    </div>
+                    <div class="stats-toolbar-icons">
+                        <button type="button" class="btn btn-light"><i class="bi bi-lightning-charge"></i></button>
+                        <button type="button" class="btn btn-light"><i class="bi bi-brightness-high"></i></button>
+                        <button type="button" class="btn btn-light position-relative">
+                            <i class="bi bi-bell"></i>
+                            <span class="stats-noti-dot">3</span>
+                        </button>
+                    </div>
+                    <div class="stats-admin-identity">
+                        <strong th:text="${currentUserName != null ? currentUserName : 'Nguyễn Quản Trị'}">Nguyễn Quản Trị</strong>
+                        <small th:text="${isAdmin != null and isAdmin ? 'Quản trị viên cấp cao' : 'Nhân viên quản trị'}">Quản trị viên cấp cao</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Heading -->
+        <div class="stats-heading d-flex flex-column flex-lg-row gap-3 justify-content-between align-items-lg-center">
+            <div>
+                <div class="stats-breadcrumb">Bảng điều khiển <span>•</span> Thống kê</div>
+                <h2>Thống kê bán hàng</h2>
+                <p>Theo dõi hiệu quả kinh doanh và khám phá động lực tăng trưởng.</p>
+            </div>
+            <button type="button" class="btn stats-export-btn" onclick="window.print()">
+                <i class="bi bi-download me-2"></i>Xuất báo cáo
+            </button>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="stats-filter card border-0 shadow-sm">
+            <div class="card-body d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
+                <form id="statsFilterForm" th:action="@{/admin/statistics}" method="get" class="d-flex flex-wrap gap-2 align-items-center">
+                    <div class="stats-segment" data-toggle-group="range">
+                        <button type="button" data-preset="today">Hôm nay</button>
+                        <button type="button" data-preset="7days">7 ngày</button>
+                        <button type="button" data-preset="thisMonth">Tháng này</button>
+                        <button type="button" data-preset="custom" class="active">Tùy chọn</button>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="date" name="startDate" id="startDateInput" class="form-control form-control-sm stats-date-input"
+                               th:value="${stats != null ? stats.startDate : ''}">
+                        <span class="text-muted">–</span>
+                        <input type="date" name="endDate" id="endDateInput" class="form-control form-control-sm stats-date-input"
+                               th:value="${stats != null ? stats.endDate : ''}">
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="bi bi-filter"></i> Lọc
+                        </button>
+                    </div>
+                </form>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <button type="button" class="btn stats-outline-btn">
+                        <i class="bi bi-funnel me-2"></i>Tất cả kênh bán
+                    </button>
+                    <span class="stats-compare-note" th:if="${stats != null}" th:text="'So với ' + ${stats.previousMonthLabel}">So với tháng trước</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="row g-3" th:if="${stats != null}">
+            <!-- Doanh thu -->
+            <div class="col-12 col-md-6 col-xxl-3">
+                <div class="stats-kpi card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="stats-kpi-head">
+                            <span>Tổng doanh thu</span>
+                            <i class="bi bi-cash-coin"></i>
+                        </div>
+                        <h3 th:text="${#numbers.formatDecimal(stats.revenueKpi.value, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</h3>
+                        <div class="stats-kpi-trend" th:classappend="${stats.revenueKpi.growthRate >= 0 ? 'up' : 'down'}">
+                            <span th:text="${stats.revenueKpi.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(stats.revenueKpi.growthRate, 1, 1)} + '%'">0%</span>
+                            <small th:text="'so với ' + ${stats.previousMonthLabel}">so với tháng trước</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Đơn hàng thành công -->
+            <div class="col-12 col-md-6 col-xxl-3">
+                <div class="stats-kpi card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="stats-kpi-head">
+                            <span>Đơn hàng thành công</span>
+                            <i class="bi bi-bag-check"></i>
+                        </div>
+                        <h3 th:text="${#numbers.formatInteger(stats.ordersKpi.value, 0, 'COMMA')}">0</h3>
+                        <div class="stats-kpi-trend" th:classappend="${stats.ordersKpi.growthRate >= 0 ? 'up' : 'down'}">
+                            <span th:text="${stats.ordersKpi.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(stats.ordersKpi.growthRate, 1, 1)} + '%'">0%</span>
+                            <small th:text="'so với ' + ${stats.previousMonthLabel}">so với tháng trước</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AOV -->
+            <div class="col-12 col-md-6 col-xxl-3">
+                <div class="stats-kpi card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="stats-kpi-head">
+                            <span>Giá trị đơn trung bình</span>
+                            <i class="bi bi-receipt"></i>
+                        </div>
+                        <h3 th:text="${#numbers.formatDecimal(stats.aovKpi.value, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</h3>
+                        <div class="stats-kpi-trend" th:classappend="${stats.aovKpi.growthRate >= 0 ? 'up' : 'down'}">
+                            <span th:text="${stats.aovKpi.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(stats.aovKpi.growthRate, 1, 1)} + '%'">0%</span>
+                            <small th:text="'so với ' + ${stats.previousMonthLabel}">so với tháng trước</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sản phẩm đã bán -->
+            <div class="col-12 col-md-6 col-xxl-3">
+                <div class="stats-kpi card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="stats-kpi-head">
+                            <span>Sản phẩm đã bán</span>
+                            <i class="bi bi-box-seam"></i>
+                        </div>
+                        <h3 th:text="${#numbers.formatInteger(stats.soldProductsKpi.value, 0, 'COMMA')}">0</h3>
+                        <div class="stats-kpi-trend" th:classappend="${stats.soldProductsKpi.growthRate >= 0 ? 'up' : 'down'}">
+                            <span th:text="${stats.soldProductsKpi.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(stats.soldProductsKpi.growthRate, 1, 1)} + '%'">0%</span>
+                            <small th:text="'so với ' + ${stats.previousMonthLabel}">so với tháng trước</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekly Chart Section -->
+        <div class="card border-0 shadow-sm mt-3" th:if="${stats != null}">
+            <div class="card-body">
+                <div class="d-flex flex-column flex-lg-row gap-3 justify-content-between align-items-lg-center mb-3">
+                    <div>
+                        <h5 class="stats-card-title mb-1">Doanh thu & đơn hàng theo khoảng thời gian</h5>
+                        <p class="stats-card-subtitle mb-0" th:text="'Tổng hợp chi tiết • ' + ${stats.dateRangeLabel}">Thời gian</p>
+                    </div>
+                    <div class="stats-segment" data-toggle-group="chart-grain">
+                        <button type="button" class="active">Kỳ báo cáo</button>
+                    </div>
+                </div>
+
+                <div class="stats-chart-legend mb-2">
+                    <span><i class="bi bi-circle-fill text-primary"></i> Doanh thu</span>
+                    <span><i class="bi bi-circle-fill text-success"></i> Số lượng đơn hàng</span>
+                </div>
+
+                <div class="stats-chart" id="weeklyStatsChart">
+                    <div class="stats-chart-grid"></div>
+                    <div class="stats-chart-bars">
+                        <div th:each="w : ${stats.weeklyData}" class="stats-bar-col">
+                            <div class="stats-bar" th:style="'height: ' + ${stats.totalRevenue.doubleValue() > 0 ? (w.revenue.doubleValue() / stats.totalRevenue.doubleValue() * 100) : 0} + '%'">
+                                <span th:text="${w.orderCount}">0</span>
+                            </div>
+                            <label th:text="${w.label}">Tuần</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-chart-note mt-3" th:if="${stats.bestPeriodLabel != 'N/A' and (stats.bestPeriodOrders > 0 or stats.totalRevenue.doubleValue() > 0)}">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    Giai đoạn <strong th:text="${stats.bestPeriodLabel}">N/A</strong> dẫn đầu với
+                    <strong th:text="${#numbers.formatDecimal(stats.bestPeriodShare, 1, 1)} + '% doanh thu'">0%</strong>
+                    và <strong th:text="${stats.bestPeriodOrders}">0</strong> đơn hàng thành công.
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories & Channels Breakdown -->
+        <div class="row g-3 mt-0" th:if="${stats != null}">
+            <!-- Category Breakdown -->
+            <div class="col-12 col-xl-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="stats-card-title mb-1">Doanh thu theo danh mục</h5>
+                        <p class="stats-card-subtitle">Tỷ trọng đóng góp vào tổng doanh thu</p>
+
+                        <div class="stats-category-list">
+                            <div th:each="cat : ${stats.categoryRevenues}" class="stats-category-item">
+                                <div class="d-flex justify-content-between">
+                                    <span th:text="${cat.name}">Danh mục</span>
+                                    <strong th:text="${#numbers.formatDecimal(cat.revenue, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</strong>
+                                </div>
+                                <div class="stats-progress">
+                                    <i th:style="'width:' + ${cat.share} + '%'"></i>
+                                </div>
+                            </div>
+                            <div th:if="${#lists.isEmpty(stats.categoryRevenues)}" class="text-muted py-3 text-center">
+                                Chưa có dữ liệu danh mục trong khoảng thời gian này.
+                            </div>
+                        </div>
+
+                        <div class="stats-info-strip" th:if="${!#lists.isEmpty(stats.categoryRevenues)}">
+                            <span th:text="${stats.categoryRevenues[0].name} + ' dẫn đầu với ' + ${#numbers.formatDecimal(stats.categoryRevenues[0].share, 1, 1)} + '% doanh thu.'">Danh mục top 1</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Channel Breakdown -->
+            <div class="col-12 col-xl-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="stats-card-title mb-1">Doanh thu theo phương thức thanh toán</h5>
+                        <p class="stats-card-subtitle">Hiệu quả phân bổ kênh thanh toán</p>
+
+                        <div class="stats-channel">
+                            <div class="stats-donut-wrap">
+                                <div class="stats-donut" th:style="${stats.channelDonutGradient != null ? 'background: ' + stats.channelDonutGradient : ''}">
+                                    <div>
+                                        <strong th:text="${#numbers.formatDecimal(stats.totalRevenue, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</strong>
+                                        <small>Tổng doanh thu</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <ul class="stats-channel-list">
+                                <li th:each="ch : ${stats.channelRevenues}">
+                                    <i class="dot" th:classappend="${ch.dotClass}"></i>
+                                    <span th:text="${ch.channelName}">Kênh</span>
+                                    <strong th:text="${#numbers.formatDecimal(ch.revenue, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</strong>
+                                    <span th:text="${#numbers.formatDecimal(ch.share, 1, 1)} + '%'">0%</span>
+                                </li>
+                                <li th:if="${#lists.isEmpty(stats.channelRevenues)}" class="text-muted text-center py-2">
+                                    Chưa có dữ liệu kênh bán.
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="stats-info-strip alt" th:if="${!#lists.isEmpty(stats.channelRevenues)}">
+                            <span th:text="${stats.channelRevenues[0].channelName} + ' chiếm tỷ trọng cao nhất với ' + ${#numbers.formatDecimal(stats.channelRevenues[0].share, 1, 1)} + '%.'">Kênh top 1</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Products Table -->
+        <div class="card border-0 shadow-sm mt-3" th:if="${stats != null}">
+            <div class="card-body">
+                <div class="d-flex flex-column flex-lg-row justify-content-between gap-2 mb-3">
+                    <div>
+                        <h5 class="stats-card-title mb-1">Top 5 sản phẩm bán chạy</h5>
+                        <p class="stats-card-subtitle mb-0" th:text="'Xếp hạng theo doanh thu • ' + ${stats.dateRangeLabel}">Top sản phẩm</p>
+                    </div>
+                    <span class="stats-chip" th:text="${#numbers.formatDecimal(stats.topProductsShare, 1, 1)} + '% doanh thu toàn sàn'">0% doanh thu</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table align-middle stats-table mb-0" id="topProductsTable">
+                        <thead>
+                        <tr>
+                            <th>Hạng</th>
+                            <th>Sản phẩm</th>
+                            <th class="text-end">Đã bán</th>
+                            <th class="text-end">Doanh thu</th>
+                            <th class="text-end">Tỷ trọng</th>
+                            <th class="text-end">Tăng trưởng</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="p : ${stats.topProducts}">
+                            <td>
+                                <span class="stats-rank" th:text="${p.rank < 10 ? '0' + p.rank : p.rank}">01</span>
+                            </td>
+                            <td>
+                                <div class="stats-product">
+                                    <i class="bi bi-bag-check-fill text-secondary"></i>
+                                    <div>
+                                        <strong th:text="${p.productName}">Tên sản phẩm</strong>
+                                        <small th:text="${p.categoryName}">Danh mục</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-end" th:text="${#numbers.formatInteger(p.soldQuantity, 0, 'COMMA')}">0</td>
+                            <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(p.revenue, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</td>
+                            <td class="text-end"><span class="stats-weight" th:text="${#numbers.formatDecimal(p.share, 1, 1)} + '%'">0%</span></td>
+                            <td class="text-end" th:classappend="${p.growthRate >= 0 ? 'text-success' : 'text-danger'}">
+                                <span th:text="${p.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(p.growthRate, 1, 1)} + '%'">0%</span>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(stats.topProducts)}">
+                            <td colspan="6" class="text-center text-muted py-4">Không có sản phẩm nào được bán trong khoảng thời gian này.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="stats-table-footer mt-3" th:if="${!#lists.isEmpty(stats.topProducts)}">
+                    <span>Tổng top 5: <strong th:text="${#numbers.formatInteger(stats.topProductsSold, 0, 'COMMA')} + ' sản phẩm'">0 sản phẩm</strong> • <strong th:text="${#numbers.formatDecimal(stats.topProductsRevenue, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</strong></span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script th:src="@{/js/admin/statistics.js}"></script>
 </div>
 
 </body>

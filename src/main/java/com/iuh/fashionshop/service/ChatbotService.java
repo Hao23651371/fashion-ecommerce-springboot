@@ -20,6 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.iuh.fashionshop.service.ai.SpringAiGeminiChatClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,12 +35,10 @@ import com.iuh.fashionshop.model.Coupon;
 import com.iuh.fashionshop.model.enums.CouponStatus;
 import com.iuh.fashionshop.model.enums.DiscountType;
 import com.iuh.fashionshop.repository.CouponRepository;
-import com.iuh.fashionshop.service.ai.GeminiChatClient;
 import com.iuh.fashionshop.service.ai.OllamaChatClient;
 
 @Service
 public class ChatbotService {
-
     private static final Logger log = LoggerFactory.getLogger(ChatbotService.class);
 
     /** Ngưỡng khoảng cách cosine: càng nhỏ càng khắt khe. */
@@ -62,28 +61,30 @@ public class ChatbotService {
         - Nếu khách hỏi về size, màu hoặc số lượng còn hàng, hãy trả lời chính xác dựa theo mục Tồn kho của từng sản phẩm trong dữ liệu.
         - Nếu dữ liệu không có sản phẩm khách cần, hãy thành thật báo hiện shop chưa có mẫu đó và gợi ý các mẫu tương tự đang có sẵn.
         - Tuyệt đối không dùng tiếng Trung hay ký tự Hán. Không trả lời các chủ đề ngoài phạm vi thời trang và cửa hàng.
+        - DÒNG CUỐI CÙNG CỦA CÂU TRẢ LỜI: Luôn luôn kết thúc bằng một câu hỏi gợi mở thân thiện đặt ở dòng cuối cùng riêng biệt bắt đầu bằng biểu tượng 💬 để hỏi xem khách hàng có cần tư vấn thêm gì không (Ví dụ: "💬 Bạn có muốn mình tư vấn thêm về kích cỡ (size), chất liệu hay gợi ý cách phối đồ không ạ? 🥰" hoặc "💬 Bạn có muốn xem thêm mẫu nào khác nữa không nè? ✨").
         """;
 
-    private final ProductSearchService searchService;
-    private final ProductService productService;
-    private final CouponRepository couponRepository;
-    private final OllamaChatClient ollamaChatClient;
-    private final GeminiChatClient geminiChatClient;
-    private final String provider;
-    private final boolean fallbackToOllama;
+    // --- Các dependency nghiệp vụ & AI Client ---
+    private final ProductSearchService searchService;       // Tìm kiếm sản phẩm bằng vector embedding
+    private final ProductService productService;           // Lấy chi tiết thông tin, biến thể và tồn kho sản phẩm
+    private final CouponRepository couponRepository;       // Tra cứu mã giảm giá đang hoạt động
+    private final OllamaChatClient ollamaChatClient;       // Client AI local qua Ollama (chạy offline / fallback)
+    private final SpringAiGeminiChatClient springAiGeminiChatClient; // Client AI chính kết nối Gemini qua Spring AI
+    private final String provider;                         // Bộ xử lý AI được chọn: "gemini" hoặc "ollama"
+    private final boolean fallbackToOllama;                // Cờ cho phép tự động fallback sang Ollama khi Gemini lỗi
 
     public ChatbotService(ProductSearchService searchService,
                           ProductService productService,
                           CouponRepository couponRepository,
                           OllamaChatClient ollamaChatClient,
-                          GeminiChatClient geminiChatClient,
+                          SpringAiGeminiChatClient springAiGeminiChatClient,
                           @Value("${chatbot.provider:ollama}") String provider,
                           @Value("${chatbot.fallback-to-ollama:false}") boolean fallbackToOllama) {
         this.searchService = searchService;
         this.productService = productService;
         this.couponRepository = couponRepository;
         this.ollamaChatClient = ollamaChatClient;
-        this.geminiChatClient = geminiChatClient;
+        this.springAiGeminiChatClient = springAiGeminiChatClient;
         this.provider = (provider == null) ? "ollama" : provider.trim().toLowerCase();
         this.fallbackToOllama = fallbackToOllama;
     }
@@ -104,7 +105,6 @@ public class ChatbotService {
             }
         });
     }
-
     // ============================== API CHÍNH ==============================
 
     /** Endpoint không streaming. */
@@ -114,11 +114,36 @@ public class ChatbotService {
         return sb.toString().trim();
     }
 
-    /** Bản streaming: trả lời trực tiếp hoặc qua Ollama. */
+    /** Bản streaming tương thích ngược khi không truyền productId. */
     public void streamReply(String userMessage, Consumer<String> out) {
+        streamReply(userMessage, null, out);
+    }
+
+    /** Bản streaming chính thức: Hỗ trợ ngữ cảnh sản phẩm trang chi tiết (/shop/{id}). */
+    public void streamReply(String userMessage, Long currentProductId, Consumer<String> out) {
         long t0 = System.currentTimeMillis();
 
-        // 1. NHÓM 1: CÁC INTENT XỬ LÝ CHÍNH XÁC TUYỆT ĐỐI 100% (KHÔNG LLM)
+        // 0. NẠP DỮ LIỆU SẢN PHẨM NẾU ĐANG Ở TRANG CHI TIẾT SẢN PHẨM (/shop/{id})
+        ProductDetailDto currentProduct = null;
+        if (currentProductId != null && currentProductId > 0) {
+            try {
+                currentProduct = productService.getProductDetail(currentProductId);
+            } catch (Exception e) {
+                log.warn("Không tìm thấy sản phẩm ID {}: {}", currentProductId, e.getMessage());
+            }
+        }
+
+        // 1. NẾU ĐANG XEM SẢN PHẨM CỤ THỂ, KIỂM TRA TRẢ LỜI CHÍNH XÁC (SIZE, MÀU, TỒN KHO, GIÁ, CHẤT LIỆU)
+        if (currentProduct != null) {
+            String quickProductAnswer = tryAnswerForCurrentProduct(userMessage, currentProduct);
+            if (quickProductAnswer != null) {
+                out.accept(quickProductAnswer);
+                log.info("Chatbot trả lời chính xác về sản phẩm đang mở ID {} trong {}ms", currentProductId, System.currentTimeMillis() - t0);
+                return;
+            }
+        }
+
+        // 2. NHÓM 1: CÁC INTENT TOÀN SHOP (CHÀO HỎI, MÃ GIẢM GIÁ, LỌC GIÁ, CHÍNH SÁCH...)
         String exactAnswer = handleGroupOneExact(userMessage);
         if (exactAnswer != null) {
             out.accept(exactAnswer);
@@ -126,12 +151,33 @@ public class ChatbotService {
             return;
         }
 
-        // 2. NHÓM 2: CÂU HỎI MỞ / TƯ VẤN PHONG CÁCH -> DÙNG LLM KÈM FULL CONTEXT
+        // 3. NHÓM 2: CÂU HỎI MỞ / TƯ VẤN PHONG CÁCH / PHỐI ĐỒ -> DÙNG LLM KÈM CONTEXT SẢN PHẨM
         List<ProductDetailDto> products = findProductsWithDetails(userMessage);
         long t1 = System.currentTimeMillis();
 
-        String userContent = "DỮ LIỆU CỬA HÀNG:\n" + formatProducts(products)
-                + "\n\nCÂU HỎI CỦA KHÁCH: " + userMessage;
+        StringBuilder contextBuilder = new StringBuilder();
+        if (currentProduct != null) {
+            contextBuilder.append("=== SẢN PHẨM KHÁCH HÀNG ĐANG MỞ XEM TRÊN TRANG CHI TIẾT (ID: ").append(currentProduct.id()).append(") ===\n")
+                    .append("• Tên sản phẩm: ").append(currentProduct.name()).append("\n")
+                    .append("• Danh mục: ").append(currentProduct.categoryName()).append("\n")
+                    .append("• Đối tượng: ").append(currentProduct.genderLabel()).append("\n")
+                    .append("• Giá bán hiện tại: ").append(money(currentProduct.currentPrice()));
+            if (currentProduct.onSale()) {
+                contextBuilder.append(" (Đang sale giảm ").append(currentProduct.discountPercent()).append("%, giá gốc ").append(money(currentProduct.price())).append(")");
+            }
+            contextBuilder.append("\n• Kích cỡ có sẵn: ").append(String.join(", ", currentProduct.sizes())).append("\n");
+            if (!currentProduct.colors().isEmpty()) {
+                contextBuilder.append("• Màu sắc: ").append(currentProduct.colors().stream().map(ProductDetailDto.ColorDto::name).collect(Collectors.joining(", "))).append("\n");
+            }
+            contextBuilder.append("• Tồn kho: Còn ").append(currentProduct.totalStock()).append(" sản phẩm\n");
+            if (currentProduct.description() != null && !currentProduct.description().isBlank()) {
+                contextBuilder.append("• Mô tả / Chất liệu / Kiểu dáng: ").append(currentProduct.description().trim()).append("\n");
+            }
+            contextBuilder.append("👉 LƯU Ý BẮT BUỘC: Khách hàng đang đứng tại trang chi tiết của sản phẩm trên. Nếu khách hỏi về \"mẫu này\", \"sản phẩm này\", \"cái này\", \"áo này\", \"mặc đi đâu\", \"phối với gì\"... hãy trả lời chính xác dựa theo dữ liệu thực tế trên, TUYỆT ĐỐI KHÔNG BỊA ĐẶT thông tin sai lệch ngoài dữ liệu.\n\n");
+        }
+
+        contextBuilder.append("DỮ LIỆU CÁC SẢN PHẨM KHÁC LIÊN QUAN TRONG KHO:\n").append(formatProducts(products));
+        String userContent = contextBuilder.toString() + "\n\nCÂU HỎI CỦA KHÁCH: " + userMessage;
 
         AtomicBoolean sent = new AtomicBoolean(false);
         AtomicBoolean first = new AtomicBoolean(true);
@@ -148,17 +194,15 @@ public class ChatbotService {
         };
 
         boolean success = false;
-        if ("gemini".equalsIgnoreCase(provider)) {
+        if ("gemini".equalsIgnoreCase(provider) || "spring-ai-gemini".equalsIgnoreCase(provider)) {
             try {
-                geminiChatClient.stream(SYSTEM_PROMPT, userContent, streamConsumer);
+                // Gọi thẳng Spring AI Gemini
+                springAiGeminiChatClient.stream(SYSTEM_PROMPT, userContent, streamConsumer);
                 success = true;
-                log.info("Chatbot (Gemini) hoàn tất sau {}ms", System.currentTimeMillis() - t0);
+                log.info("Chatbot (Spring AI Gemini) hoàn tất sau {}ms", System.currentTimeMillis() - t0);
             } catch (Exception e) {
-                log.warn("Chatbot: Gemini gặp sự cố ({}), kiểm tra phương án dự phòng", e.getMessage());
-                if (sent.get()) {
-                    return;
-                }
-                if (fallbackToOllama) {
+                log.warn("Chatbot: Spring AI Gemini gặp sự cố ({}), kiểm tra phương án dự phòng", e.getMessage());
+                if (!sent.get() && fallbackToOllama) {
                     try {
                         log.info("Chatbot: Đang thử fallback sang Ollama...");
                         ollamaChatClient.stream(SYSTEM_PROMPT, userContent, streamConsumer);
@@ -189,6 +233,113 @@ public class ChatbotService {
     }
 
     // =========================================================================
+    // XỬ LÝ RIÊNG KHI KHÁCH ĐANG Ở TRANG CHI TIẾT SẢN PHẨM (/shop/{id})
+    // =========================================================================
+
+    private String tryAnswerForCurrentProduct(String message, ProductDetailDto product) {
+        if (message == null || product == null) return null;
+        String norm = stripAccents(message).trim();
+
+        // 1. Hỏi về Size / Kích cỡ của sản phẩm đang xem
+        if (norm.contains("size") || norm.contains("kich co") || norm.contains("bang size")
+                || norm.contains("vua khong") || norm.contains("co size")) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("📏 **Kích cỡ & Tồn kho của mẫu \"").append(product.name()).append("\":**\n\n");
+            if (product.soldOut() || product.totalStock() <= 0) {
+                sb.append("Dạ rất tiếc hiện tại mẫu này đang **tạm hết hàng** trên hệ thống ạ.\n");
+            } else {
+                sb.append("• **Các size sẵn có**: ").append(String.join(", ", product.sizes())).append("\n");
+                if (!product.colors().isEmpty()) {
+                    sb.append("• **Màu sắc**: ").append(product.colors().stream().map(ProductDetailDto.ColorDto::name).collect(Collectors.joining(", "))).append("\n");
+                }
+                sb.append("• **Chi tiết tồn kho từng phân loại**:\n");
+                for (ProductDetailDto.VariantDto v : product.variants()) {
+                    sb.append("   - Màu ").append(v.color()).append(" | Size ").append(v.size()).append(": ");
+                    if (v.stockQuantity() > 0) {
+                        sb.append("Còn **").append(v.stockQuantity()).append("** cái (Sẵn hàng)\n");
+                    } else {
+                        sb.append("*Tạm hết size này*\n");
+                    }
+                }
+                sb.append("\n💡 **Gợi ý**: Bạn có thể chọn size và màu yêu thích ngay trên màn hình để thêm vào giỏ hàng nhé!\n");
+            }
+            sb.append("\n💬 Bạn có muốn mình tư vấn chọn size theo chiều cao và cân nặng của bạn không ạ? 🥰");
+            return sb.toString();
+        }
+
+        // 2. Hỏi về Màu sắc
+        if (norm.contains("mau gi") || norm.contains("mau sac") || norm.contains("nhung mau nao")
+                || norm.contains("co mau gi") || norm.contains("co mau nao") || norm.contains("co nhung mau")) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("🎨 **Màu sắc của mẫu \"").append(product.name()).append("\":**\n\n");
+            if (product.colors().isEmpty()) {
+                sb.append("Mẫu này hiện có 1 màu chuẩn như hình hiển thị trên trang chi tiết ạ.\n");
+            } else {
+                sb.append("Mẫu này hiện đang có các màu sắc sau:\n");
+                for (ProductDetailDto.ColorDto c : product.colors()) {
+                    sb.append("• Màu **").append(c.name()).append("**\n");
+                }
+            }
+            sb.append("\n💬 Bạn ưng ý màu sắc nào nhất để mình tư vấn chọn size cho bạn nhé? ✨");
+            return sb.toString();
+        }
+
+        // 3. Hỏi về Tồn kho / Còn hàng không
+        if (norm.contains("con hang khong") || norm.contains("con hang ko") || norm.contains("het hang")
+                || norm.contains("con bao nhieu") || norm.contains("so luong con") || norm.contains("ton kho")) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("📦 **Tình trạng hàng của mẫu \"").append(product.name()).append("\":**\n\n");
+            if (product.soldOut() || product.totalStock() <= 0) {
+                sb.append("Dạ rất tiếc hiện mẫu này đang **tạm hết hàng** ạ. Bạn có thể tham khảo các mẫu tương tự khác trên shop nhé!\n");
+            } else {
+                sb.append("• Hiện shop còn **").append(product.totalStock()).append("** sản phẩm sẵn sàng giao ngay.\n");
+                sb.append("• Các size có thể đặt: **").append(String.join(", ", product.sizes())).append("**\n");
+            }
+            sb.append("\n💬 Bạn có muốn đặt giữ hàng mẫu này ngay trước khi hết size không nè? 🥰");
+            return sb.toString();
+        }
+
+        // 4. Hỏi về Giá bán / Sale / Ưu đãi của sản phẩm này (không phải câu hỏi lọc chung chung kiểu "dưới 500k")
+        if ((norm.contains("gia bao nhieu") || norm.contains("gia nhieu") || norm.contains("bao nhieu tien")
+                || norm.contains("gia cua mau nay") || norm.contains("gia sp nay") || norm.contains("co giam gia khong")
+                || norm.contains("co sale khong") || norm.equals("gia") || norm.equals("gia ban"))
+                && !norm.contains("duoi") && !norm.contains("tren") && !norm.contains("tu")) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("💰 **Giá bán của mẫu \"").append(product.name()).append("\":**\n\n");
+            if (product.onSale()) {
+                sb.append("🔥 Mẫu này đang có ưu đãi **Giảm ").append(product.discountPercent()).append("%**!\n")
+                  .append("• Giá ưu đãi: **").append(money(product.currentPrice())).append("**\n")
+                  .append("• Giá gốc: ~~").append(money(product.price())).append("~~\n");
+            } else {
+                sb.append("• Giá bán niêm yết: **").append(money(product.price())).append("**\n");
+            }
+            sb.append("• Tình trạng: ").append(product.soldOut() ? "Tạm hết hàng" : "Còn " + product.totalStock() + " sp").append("\n\n");
+            sb.append("💡 Bạn nhớ áp dụng thêm mã giảm giá ở trang Thanh toán để được giá tốt nhất nha!\n");
+            sb.append("\n💬 Bạn có cần mình tư vấn thêm về kích cỡ hay hướng dẫn đặt mua mẫu này không ạ? 🥰");
+            return sb.toString();
+        }
+
+        // 5. Hỏi về Chất liệu / Form dáng / Mô tả
+        if (norm.contains("chat lieu") || norm.contains("chat vai") || norm.contains("vai gi")
+                || norm.contains("form dang") || norm.contains("form gi") || norm.contains("dang ao")
+                || norm.contains("dang vay") || norm.contains("dang dam") || norm.contains("thong tin san pham")
+                || norm.contains("mo ta")) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("🧵 **Thông tin Chất liệu & Thiết kế của mẫu \"").append(product.name()).append("\":**\n\n");
+            if (product.description() != null && !product.description().isBlank()) {
+                sb.append(product.description().trim()).append("\n\n");
+            }
+            sb.append("• **Dòng thời trang**: ").append(product.categoryName()).append(" (").append(product.genderLabel()).append(")\n")
+              .append("• **Giá bán**: **").append(money(product.currentPrice())).append("**");
+            if (product.onSale()) sb.append(" (Đang giảm ").append(product.discountPercent()).append("%)");
+            sb.append("\n\n💬 Bạn cần mình tư vấn thêm về cách phối đồ hay cách giặt ủi bảo quản trang phục này không ạ? ✨");
+            return sb.toString();
+        }
+
+        return null;
+    }
+
+    // =========================================================================
     // NHÓM 1: BỘ XỬ LÝ INTENT CHÍNH XÁC TUYỆT ĐỐI (DETERMINISTIC / RULE-BASED)
     // =========================================================================
 
@@ -206,7 +357,7 @@ public class ChatbotService {
                     + "• 💰 **Lọc sản phẩm theo giá** (ví dụ: *\"dưới 500k\"*, *\"từ 300k đến 700k\"*)\n"
                     + "• 👗 Xem sản phẩm đang **Sale** theo loại (ví dụ: *\"đầm nào đang giảm giá?\"*)\n"
                     + "• 📦 Kiểm tra **Size, Màu sắc & Tồn kho** còn hàng\n\n"
-                    + "Bạn đang quan tâm đến món đồ nào để mình tư vấn ngay nhé! 🥰";
+                    + "Bạn đang quan tâm đến món đồ nào để mình tư vấn ngay nhé!\n\n💬 Bạn cần mình tư vấn chọn đồ theo phong cách hay tìm mẫu cụ thể nào không ạ? 🥰";
         }
 
         // 2. MÃ GIẢM GIÁ / COUPON / VOUCHER (BẮT ĐÚNG, KHÔNG BỊ NHẦM SANG SALE)
@@ -307,7 +458,7 @@ public class ChatbotService {
                         .append("   • Đơn tối thiểu: Áp dụng cho đơn từ 200.000đ\n\n");
             }
 
-            sb.append("💡 **Cách áp dụng**: Bạn chỉ cần sao chép mã và nhập vào ô **\"Mã giảm giá\"** tại trang **Thanh toán (Checkout)** để được giảm ngay nha! Chúc bạn chọn được món đồ thật ưng ý! 🥰");
+            sb.append("💡 **Cách áp dụng**: Bạn chỉ cần sao chép mã và nhập vào ô **\"Mã giảm giá\"** tại trang **Thanh toán (Checkout)** để được giảm ngay nha!\n\n💬 Bạn có muốn mình gợi ý một số mẫu đồ đẹp đang được áp dụng các mã giảm giá này để mua sắm ngay không nè? ✨");
             return sb.toString();
         } catch (Exception e) {
             log.warn("Lỗi tra cứu mã giảm giá: {}", e.getMessage());
@@ -321,9 +472,11 @@ public class ChatbotService {
         // - "dưới 500k", "< 500k", "dưới 500.000", "dưới 1 triệu", "dưới 1tr"
         // - "từ 200k đến 500k", "khoảng 300k - 600k"
         // - "trên 1 triệu", "trên 500k", "> 500k"
+        // - "có áo 50k không", "có áo 50.000 không", "áo 50k", "tầm 50k", "giá 50k"
         // - "giá rẻ", "rẻ nhất", "bình dân", "sinh viên"
         BigDecimal minPrice = null;
         BigDecimal maxPrice = null;
+        BigDecimal targetExactPrice = null;
         boolean hasPriceIntent = false;
 
         // 1. Khoảng giá: "từ X đến Y" hoặc "khoảng X - Y"
@@ -369,14 +522,28 @@ public class ChatbotService {
             }
         }
 
-        // 4. Giá rẻ chung: "giá rẻ", "rẻ nhất", "sinh viên", "bình dân"
+        // 4. Mức giá cụ thể / đơn giá: "có áo 50k không", "có áo 50.000 không", "áo 50k", "tầm 50k", "giá 50k"
+        if (!hasPriceIntent) {
+            Pattern exactPat = Pattern.compile("(?:gia|tam|khoang|co|tim|\\b)\\s*(?:ao|quan|dam|vay|do|sp|san pham)?(?:\\s+nao)?\\s*(\\d+[\\d.,]*(?:k|tr|trieu|nghin|ngan|\\.000|000))(?:\\s*(?:d|đ|vnd|dong))?", Pattern.CASE_INSENSITIVE);
+            Matcher mExact = exactPat.matcher(norm);
+            if (mExact.find()) {
+                BigDecimal parsed = parseMoneyString(mExact.group(1));
+                if (parsed != null && parsed.compareTo(BigDecimal.valueOf(10000)) >= 0) {
+                    targetExactPrice = parsed;
+                    maxPrice = parsed;
+                    hasPriceIntent = true;
+                }
+            }
+        }
+
+        // 5. Giá rẻ chung: "giá rẻ", "rẻ nhất", "sinh viên", "bình dân"
         if (!hasPriceIntent && (norm.contains("gia re") || norm.contains("re nhat")
                 || norm.contains("binh dan") || norm.contains("sinh vien") || norm.contains("tiet kiem"))) {
             maxPrice = BigDecimal.valueOf(500000L);
             hasPriceIntent = true;
         }
 
-        if (!hasPriceIntent || (minPrice == null && maxPrice == null)) {
+        if (!hasPriceIntent || (minPrice == null && maxPrice == null && targetExactPrice == null)) {
             return null;
         }
 
@@ -386,18 +553,33 @@ public class ChatbotService {
         List<ProductDetailDto> allProducts = productService.getAllActiveDetails();
         final BigDecimal fMin = minPrice;
         final BigDecimal fMax = maxPrice;
+        final BigDecimal fTarget = targetExactPrice;
 
         // Lọc sản phẩm thỏa mãn điều kiện giá
-        List<ProductDetailDto> matched = allProducts.stream()
-                .filter(p -> catKeyword == null || matchesCategory(p, catKeyword))
-                .filter(p -> {
-                    BigDecimal cur = p.currentPrice();
-                    if (fMax != null && cur.compareTo(fMax) > 0) return false;
-                    if (fMin != null && cur.compareTo(fMin) < 0) return false;
-                    return true;
-                })
-                .sorted(Comparator.comparing(ProductDetailDto::currentPrice))
-                .toList();
+        List<ProductDetailDto> matched;
+        if (fTarget != null) {
+            BigDecimal lower = fTarget.multiply(BigDecimal.valueOf(0.85));
+            BigDecimal upper = fTarget.multiply(BigDecimal.valueOf(1.15));
+            matched = allProducts.stream()
+                    .filter(p -> catKeyword == null || matchesCategory(p, catKeyword))
+                    .filter(p -> {
+                        BigDecimal cur = p.currentPrice();
+                        return (cur.compareTo(lower) >= 0 && cur.compareTo(upper) <= 0) || cur.compareTo(fTarget) <= 0;
+                    })
+                    .sorted(Comparator.comparing(p -> p.currentPrice().subtract(fTarget).abs()))
+                    .toList();
+        } else {
+            matched = allProducts.stream()
+                    .filter(p -> catKeyword == null || matchesCategory(p, catKeyword))
+                    .filter(p -> {
+                        BigDecimal cur = p.currentPrice();
+                        if (fMax != null && cur.compareTo(fMax) > 0) return false;
+                        if (fMin != null && cur.compareTo(fMin) < 0) return false;
+                        return true;
+                    })
+                    .sorted(Comparator.comparing(ProductDetailDto::currentPrice))
+                    .toList();
+        }
 
         // ĐẢM BẢO YÊU CẦU: "KÊ ÍT NHẤT 5 MÓN ĐƯA RA CHO XEM"
         List<ProductDetailDto> displayList = new ArrayList<>(matched);
@@ -408,8 +590,14 @@ public class ChatbotService {
                     .filter(p -> catKeyword == null || matchesCategory(p, catKeyword))
                     .filter(p -> !existingIds.contains(p.id()))
                     .sorted(Comparator.comparing(p -> {
+                        if (fTarget != null) {
+                            return p.currentPrice().subtract(fTarget).abs();
+                        }
                         if (fMax != null) {
                             return p.currentPrice().subtract(fMax).abs();
+                        }
+                        if (fMin != null) {
+                            return p.currentPrice().subtract(fMin).abs();
                         }
                         return p.currentPrice();
                     }))
@@ -425,7 +613,9 @@ public class ChatbotService {
 
         StringBuilder sb = new StringBuilder();
         String priceDesc;
-        if (fMin != null && fMax != null) {
+        if (fTarget != null) {
+            priceDesc = "tầm " + money(fTarget);
+        } else if (fMin != null && fMax != null) {
             priceDesc = "từ " + money(fMin) + " đến " + money(fMax);
         } else if (fMax != null) {
             priceDesc = "dưới " + money(fMax);
@@ -433,41 +623,27 @@ public class ChatbotService {
             priceDesc = "trên " + money(fMin);
         }
 
-        sb.append("💰 **Dạ FashionShop đã tìm thấy các sản phẩm có mức giá ").append(priceDesc);
-        if (catKeyword != null) {
-            sb.append(" (dòng ").append(getCategoryDisplayName(catKeyword)).append(")");
-        }
-        sb.append(":**\n\n");
+        if (matched.isEmpty()) {
+            sb.append("Dạ FashionShop rất tiếc hiện chưa có sản phẩm nào trong tầm giá **").append(priceDesc).append("**");
+            if (catKeyword != null) {
+                sb.append(" (dòng ").append(getCategoryDisplayName(catKeyword)).append(")");
+            }
+            sb.append(" ạ.\n");
 
-        // 1. Liệt kê các món hoàn toàn thỏa mãn khoảng giá
-        for (int i = 0; i < matched.size() && i < finalDisplay.size(); i++) {
-            ProductDetailDto p = matched.get(i);
-            String icon = getCategoryIcon(p.categoryName());
-            sb.append(i + 1).append(". ").append(icon).append(" **").append(p.name()).append("**\n")
-                    .append("   • Giá bán: **").append(money(p.currentPrice())).append("**");
-            if (p.onSale()) {
-                sb.append(" (🔥 Giảm ").append(p.discountPercent()).append("%, giá gốc ").append(money(p.price())).append(")");
+            ProductDetailDto cheapest = allProducts.stream()
+                    .filter(p -> catKeyword == null || matchesCategory(p, catKeyword))
+                    .min(Comparator.comparing(ProductDetailDto::currentPrice))
+                    .orElse(null);
+            if (cheapest != null) {
+                sb.append("💡 Mẫu có giá mềm và tiết kiệm nhất của shop hiện tại là **").append(cheapest.name())
+                        .append("** với giá **").append(money(cheapest.currentPrice())).append("** nè.\n\n");
             }
-            sb.append("\n");
-            if (!p.sizes().isEmpty()) {
-                sb.append("   • Kích cỡ (Size): ").append(String.join(", ", p.sizes())).append("\n");
-            }
-            if (!p.colors().isEmpty()) {
-                sb.append("   • Màu sắc: ").append(p.colors().stream().map(ColorDto::name).collect(Collectors.joining(", "))).append("\n");
-            }
-            sb.append("   • Tồn kho: Còn ").append(p.totalStock()).append(" sản phẩm\n")
-                    .append("   👉 /shop/").append(p.id()).append("\n\n");
-        }
+            sb.append("✨ **Shop gợi ý bạn tham khảo các mẫu có mức giá tốt và gần với yêu cầu của bạn nhất nhé:**\n\n");
 
-        // 2. Nếu các món đúng giá ít hơn 5, gợi ý thêm các món xấp xỉ gần nhất để khách có ít nhất 5 lựa chọn
-        List<ProductDetailDto> nearbyItems = finalDisplay.stream().filter(p -> !matched.contains(p)).toList();
-        if (!nearbyItems.isEmpty()) {
-            sb.append("✨ **Để bạn có thêm nhiều lựa chọn (đủ từ 5 món tham khảo), shop gợi ý thêm các mẫu hot có mức giá xấp xỉ gần nhất nè:**\n\n");
-            for (int i = 0; i < nearbyItems.size(); i++) {
-                ProductDetailDto p = nearbyItems.get(i);
+            for (int i = 0; i < finalDisplay.size(); i++) {
+                ProductDetailDto p = finalDisplay.get(i);
                 String icon = getCategoryIcon(p.categoryName());
-                int itemIndex = matched.size() + i + 1;
-                sb.append(itemIndex).append(". ").append(icon).append(" **").append(p.name()).append("** (Mức giá xấp xỉ)\n")
+                sb.append(i + 1).append(". ").append(icon).append(" **").append(p.name()).append("**\n")
                         .append("   • Giá bán: **").append(money(p.currentPrice())).append("**");
                 if (p.onSale()) {
                     sb.append(" (🔥 Giảm ").append(p.discountPercent()).append("%, giá gốc ").append(money(p.price())).append(")");
@@ -476,12 +652,62 @@ public class ChatbotService {
                 if (!p.sizes().isEmpty()) {
                     sb.append("   • Kích cỡ (Size): ").append(String.join(", ", p.sizes())).append("\n");
                 }
+                if (!p.colors().isEmpty()) {
+                    sb.append("   • Màu sắc: ").append(p.colors().stream().map(ColorDto::name).collect(Collectors.joining(", "))).append("\n");
+                }
                 sb.append("   • Tồn kho: Còn ").append(p.totalStock()).append(" sản phẩm\n")
                         .append("   👉 /shop/").append(p.id()).append("\n\n");
             }
-        }
+        } else {
+            sb.append("💰 **Dạ FashionShop đã tìm thấy các sản phẩm có mức giá ").append(priceDesc);
+            if (catKeyword != null) {
+                sb.append(" (dòng ").append(getCategoryDisplayName(catKeyword)).append(")");
+            }
+            sb.append(":**\n\n");
 
-        sb.append("✨ Bạn có thể bấm vào link từng món để xem ảnh cận chất vải và đặt hàng nhé! 🥰");
+            // 1. Liệt kê các món hoàn toàn thỏa mãn khoảng giá
+            for (int i = 0; i < matched.size() && i < finalDisplay.size(); i++) {
+                ProductDetailDto p = matched.get(i);
+                String icon = getCategoryIcon(p.categoryName());
+                sb.append(i + 1).append(". ").append(icon).append(" **").append(p.name()).append("**\n")
+                        .append("   • Giá bán: **").append(money(p.currentPrice())).append("**");
+                if (p.onSale()) {
+                    sb.append(" (🔥 Giảm ").append(p.discountPercent()).append("%, giá gốc ").append(money(p.price())).append(")");
+                }
+                sb.append("\n");
+                if (!p.sizes().isEmpty()) {
+                    sb.append("   • Kích cỡ (Size): ").append(String.join(", ", p.sizes())).append("\n");
+                }
+                if (!p.colors().isEmpty()) {
+                    sb.append("   • Màu sắc: ").append(p.colors().stream().map(ColorDto::name).collect(Collectors.joining(", "))).append("\n");
+                }
+                sb.append("   • Tồn kho: Còn ").append(p.totalStock()).append(" sản phẩm\n")
+                        .append("   👉 /shop/").append(p.id()).append("\n\n");
+            }
+
+            // 2. Nếu các món đúng giá ít hơn 5, gợi ý thêm các món xấp xỉ gần nhất để khách có ít nhất 5 lựa chọn
+            List<ProductDetailDto> nearbyItems = finalDisplay.stream().filter(p -> !matched.contains(p)).toList();
+            if (!nearbyItems.isEmpty()) {
+                sb.append("✨ **Để bạn có thêm nhiều lựa chọn (đủ từ 5 món tham khảo), shop gợi ý thêm các mẫu hot có mức giá xấp xỉ gần nhất nè:**\n\n");
+                for (int i = 0; i < nearbyItems.size(); i++) {
+                    ProductDetailDto p = nearbyItems.get(i);
+                    String icon = getCategoryIcon(p.categoryName());
+                    int itemIndex = matched.size() + i + 1;
+                    sb.append(itemIndex).append(". ").append(icon).append(" **").append(p.name()).append("** (Mức giá xấp xỉ)\n")
+                            .append("   • Giá bán: **").append(money(p.currentPrice())).append("**");
+                    if (p.onSale()) {
+                        sb.append(" (🔥 Giảm ").append(p.discountPercent()).append("%, giá gốc ").append(money(p.price())).append(")");
+                    }
+                    sb.append("\n");
+                    if (!p.sizes().isEmpty()) {
+                        sb.append("   • Kích cỡ (Size): ").append(String.join(", ", p.sizes())).append("\n");
+                    }
+                    sb.append("   • Tồn kho: Còn ").append(p.totalStock()).append(" sản phẩm\n")
+                            .append("   👉 /shop/").append(p.id()).append("\n\n");
+                }
+            }
+        }
+        sb.append("✨ Bạn có thể bấm vào từng món để xem ảnh chi tiết và đặt hàng nhé!\n\n💬 Bạn có muốn mình tư vấn thêm về bảng size, chất liệu hay muốn xem thêm tầm giá nào khác không ạ? 🥰");
         return sb.toString();
     }
 
@@ -701,8 +927,8 @@ public class ChatbotService {
         if (norm.contains("ao khoac") || norm.contains("trench coat") || norm.contains("blazer")) return "ao khoac";
         if (norm.contains("ao len")) return "ao len";
         if (norm.contains("ao thun") || norm.contains("ao phong") || norm.contains("t-shirt")) return "ao thun";
-        if (norm.contains("quan jean") || norm.contains("quan short") || norm.contains("quan tay") || norm.contains("quan")) return "quan";
-        if (norm.contains("ao")) return "ao";
+        if (norm.contains("quan jean") || norm.contains("quan short") || norm.contains("quan tay") || norm.matches(".*\\bquan\\b.*")) return "quan";
+        if (norm.matches(".*\\bao\\b.*")) return "ao";
         return null;
     }
 
@@ -850,6 +1076,11 @@ public class ChatbotService {
             sb.append(" | Link: /shop/").append(p.id()).append("\n");
         }
         return sb.toString();
+    }
+
+    
+    public ProductDetailDto getProductDetail(Long id) {
+        return productService.getProductDetail(id);
     }
 
     // ============================== TIỆN ÍCH ==============================
