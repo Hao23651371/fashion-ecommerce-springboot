@@ -13,12 +13,35 @@ import java.util.Optional;
 @Repository
 public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long> {
 
-    @Query("SELECT w.product.id FROM WishlistItem w WHERE w.userProfile.id = :profileId ORDER BY w.addedAt DESC")
+    @Query("""
+        SELECT w.product.id FROM WishlistItem w
+        JOIN w.product p
+        JOIN p.category c
+        WHERE w.userProfile.id = :profileId
+          AND p.status = com.iuh.fashionshop.model.enums.ProductStatus.ACTIVE
+          AND c.status = com.iuh.fashionshop.model.enums.CategoryStatus.VISIBLE
+        ORDER BY w.addedAt DESC
+    """)
     List<Long> findProductIdsByProfileId(@Param("profileId") Long profileId);
 
-    int countByUserProfileId(Long profileId);
+    @Query("""
+        SELECT COUNT(w) FROM WishlistItem w
+        JOIN w.product p
+        JOIN p.category c
+        WHERE w.userProfile.id = :profileId
+          AND p.status = com.iuh.fashionshop.model.enums.ProductStatus.ACTIVE
+          AND c.status = com.iuh.fashionshop.model.enums.CategoryStatus.VISIBLE
+    """)
+    int countByUserProfileId(@Param("profileId") Long profileId);
 
-    @Query("SELECT COUNT(w) FROM WishlistItem w WHERE w.userProfile.account.email = :email")
+    @Query("""
+        SELECT COUNT(w) FROM WishlistItem w
+        JOIN w.product p
+        JOIN p.category c
+        WHERE w.userProfile.account.email = :email
+          AND p.status = com.iuh.fashionshop.model.enums.ProductStatus.ACTIVE
+          AND c.status = com.iuh.fashionshop.model.enums.CategoryStatus.VISIBLE
+    """)
     int countByAccountEmail(@Param("email") String email);
 
     boolean existsByUserProfileIdAndProductId(Long profileId, Long productId);
@@ -33,4 +56,3 @@ public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long
     @Query("DELETE FROM WishlistItem w WHERE w.userProfile.id = :profileId")
     void deleteAllByUserProfileId(@Param("profileId") Long profileId);
 }
-

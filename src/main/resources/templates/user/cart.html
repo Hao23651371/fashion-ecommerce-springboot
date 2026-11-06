@@ -20,15 +20,18 @@
         <a th:href="@{/shop}" class="cart-continue"><i class="bi bi-arrow-left"></i> Tiếp tục mua sắm</a>
     </div>
 
-    <div class="row g-4" th:if="${cartItems != null and !#lists.isEmpty(cartItems)}">
+    <!-- KHỐI GIỎ HÀNG CÓ SẢN PHẨM -->
+    <div class="row g-4" id="cartContentWrap" th:if="${cartItems != null and !#lists.isEmpty(cartItems)}">
         <div class="col-lg-8">
             <div class="cart-list">
-                <div class="cart-item" th:each="item : ${cartItems}">
+                <div class="cart-item" th:each="item : ${cartItems}" th:id="'cart-item-' + ${item.id}">
                     <div class="cart-thumb">
                         <img th:if="${item.variant != null and item.variant.product != null and item.variant.product.imageUrl != null}"
-                             th:src="${item.variant.product.imageUrl}" alt="">
+                             th:src="${item.variant.product.imageUrl}" th:alt="${item.variant.product.name}"
+                             loading="lazy" onerror="this.remove()">
                         <i class="bi bi-image" th:unless="${item.variant != null and item.variant.product != null and item.variant.product.imageUrl != null}"></i>
                     </div>
+
                     <div class="cart-info">
                         <a class="cart-name"
                            th:href="@{/shop/{id}(id=${item.variant.product.id})}"
@@ -37,52 +40,125 @@
                             <span th:text="${item.variant.color}">Màu</span>
                             <span>·</span>
                             <span th:text="'Size ' + ${item.variant.size}">Size M</span>
+                            <span class="badge bg-light text-dark border ms-1" th:text="'Kho: ' + ${item.variant.stockQuantity}">Kho: 10</span>
                         </div>
                         <div class="cart-price"
                              th:text="${#numbers.formatDecimal(item.variant.product.currentPrice, 0, 'COMMA', 0, 'POINT') + ' ₫'}">0 ₫</div>
                     </div>
+
                     <div class="cart-qty">
-                        <button type="button" class="qty-btn" aria-label="Giảm">−</button>
-                        <input type="number" class="qty-input" min="1" th:value="${item.quantity}" readonly>
-                        <button type="button" class="qty-btn" aria-label="Tăng">+</button>
+                        <button type="button" class="qty-btn btn-cart-minus" th:data-id="${item.id}" aria-label="Giảm">−</button>
+                        <input type="number" class="qty-input" th:id="'qty-input-' + ${item.id}"
+                               min="1" th:max="${item.variant.stockQuantity}" th:value="${item.quantity}" readonly>
+                        <button type="button" class="qty-btn btn-cart-plus" th:data-id="${item.id}" aria-label="Tăng">+</button>
                     </div>
-                    <div class="cart-line-total fw-semibold"
+
+                    <div class="cart-line-total fw-semibold" th:id="'line-total-' + ${item.id}"
                          th:text="${#numbers.formatDecimal(item.calculateSubtotal(), 0, 'COMMA', 0, 'POINT') + ' ₫'}">0 ₫</div>
-                    <button type="button" class="cart-remove" title="Xóa"><i class="bi bi-trash3"></i></button>
+
+                    <button type="button" class="cart-remove btn-cart-delete" th:data-id="${item.id}" title="Xóa khỏi giỏ hàng">
+                        <i class="bi bi-trash3"></i>
+                    </button>
                 </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <button type="button" id="btnClearCart" class="btn btn-outline-danger btn-sm rounded-0">
+                    <i class="bi bi-trash"></i> Xóa tất cả giỏ hàng
+                </button>
+                <span class="text-muted small">Miễn phí giao hàng cho đơn hàng trên 1.000.000 ₫</span>
             </div>
         </div>
 
         <div class="col-lg-4">
             <aside class="cart-summary">
-                <h2>Tóm tắt đơn</h2>
+                <h2>Tóm tắt đơn hàng</h2>
                 <div class="sum-row">
                     <span>Tạm tính</span>
-                    <span th:text="${cartSubtotal != null ? #numbers.formatDecimal(cartSubtotal, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0 ₫</span>
+                    <span id="summarySubtotal"
+                          th:text="${cartSubtotal != null ? #numbers.formatDecimal(cartSubtotal, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0 ₫</span>
                 </div>
                 <div class="sum-row">
                     <span>Phí vận chuyển</span>
-                    <span>Tính ở bước thanh toán</span>
+                    <span class="text-success">Tính ở bước thanh toán</span>
                 </div>
                 <div class="sum-row sum-total">
-                    <span>Tổng</span>
-                    <span th:text="${cartSubtotal != null ? #numbers.formatDecimal(cartSubtotal, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0 ₫</span>
+                    <span>Tổng cộng</span>
+                    <span id="summaryTotal"
+                          th:text="${cartSubtotal != null ? #numbers.formatDecimal(cartSubtotal, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0 ₫</span>
                 </div>
                 <a th:href="@{/checkout}" class="btn cart-checkout-btn w-100">
-                    Thanh toán <i class="bi bi-arrow-right"></i>
+                    Tiến hành thanh toán <i class="bi bi-arrow-right"></i>
                 </a>
-                <p class="cart-note"><i class="bi bi-shield-check"></i> Thanh toán an toàn · Đổi trả trong 7 ngày</p>
+                <p class="cart-note"><i class="bi bi-shield-check"></i> Đổi trả dễ dàng trong 7 ngày · Thanh toán an toàn</p>
             </aside>
         </div>
     </div>
 
-    <!-- Empty cart -->
-    <div class="cart-empty" th:if="${cartItems == null or #lists.isEmpty(cartItems)}">
+    <!-- KHỐI GIỎ HÀNG TRỐNG -->
+    <div class="cart-empty" id="cartEmptyWrap" th:classappend="${cartItems != null and !#lists.isEmpty(cartItems)} ? 'd-none'">
         <div class="cart-empty-icon"><i class="bi bi-bag"></i></div>
-        <h2>Giỏ hàng đang trống</h2>
-        <p>Khám phá bộ sưu tập mới và thêm sản phẩm bạn yêu thích.</p>
-        <a th:href="@{/shop}" class="btn cart-checkout-btn">Mua sắm ngay</a>
+        <h2>Giỏ hàng của bạn đang trống</h2>
+        <p>Bạn chưa thêm sản phẩm nào vào giỏ. Khám phá các thiết kế mới nhất của chúng tôi ngay hôm nay.</p>
+        <a th:href="@{/shop}" class="btn cart-checkout-btn">Khám phá sản phẩm ngay</a>
     </div>
+
+    <!-- Toast thông báo -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+        <div id="cartActionToast" class="toast align-items-center text-bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-2">
+                    <i id="cartToastIcon" class="bi bi-check-circle-fill text-success fs-6"></i>
+                    <span id="cartToastMessage">Thao tác thành công</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal xác nhận xóa 1 sản phẩm -->
+    <div class="modal fade" id="cartDeleteConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+            <div class="modal-content rounded-0">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title font-serif fs-5 fw-bold text-dark">
+                        <i class="bi bi-trash3 text-danger me-2"></i>Xóa sản phẩm
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-secondary py-3" style="font-size: .92rem;">
+                    Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-0 px-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-danger rounded-0 px-3" id="btnConfirmDelete">Đồng ý xóa</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal xác nhận xóa toàn bộ giỏ hàng -->
+    <div class="modal fade" id="cartClearConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+            <div class="modal-content rounded-0">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title font-serif fs-5 fw-bold text-dark">
+                        <i class="bi bi-exclamation-triangle text-danger me-2"></i>Dọn sạch giỏ hàng
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-secondary py-3" style="font-size: .92rem;">
+                    Bạn có chắc chắn muốn xóa tất cả sản phẩm đang có trong giỏ hàng không?
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-0 px-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-danger rounded-0 px-3" id="btnConfirmClear">Xóa tất cả</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/js/customer/cart.js}"></script>
 </div>
 
 </body>

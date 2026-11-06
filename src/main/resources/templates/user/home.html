@@ -47,6 +47,32 @@
         </th:block>
     </div>
 
+    <!-- Phân trang (Pagination) ở trang chủ -->
+    <nav class="home-pagination my-4" th:if="${totalPages > 1}" aria-label="Phân trang sản phẩm trang chủ">
+        <ul class="pagination justify-content-center">
+            <!-- Nút Trước -->
+            <li class="page-item" th:classappend="${currentPage <= 1} ? 'disabled'">
+                <a class="page-link" th:href="@{/(page=${currentPage - 1})}" aria-label="Trang trước">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+
+            <!-- Các số trang -->
+            <li class="page-item" th:each="i : ${#numbers.sequence(1, totalPages)}"
+                th:classappend="${i == currentPage} ? 'active'"
+                th:if="${totalPages <= 7 or (i >= currentPage - 2 and i <= currentPage + 2) or i == 1 or i == totalPages}">
+                <a class="page-link" th:href="@{/(page=${i})}" th:text="${i}">1</a>
+            </li>
+
+            <!-- Nút Sau -->
+            <li class="page-item" th:classappend="${currentPage >= totalPages} ? 'disabled'">
+                <a class="page-link" th:href="@{/(page=${currentPage + 1})}" aria-label="Trang sau">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
     <!-- Band CTA -->
     <section class="home-band">
         <div>
