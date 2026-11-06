@@ -1,4 +1,4 @@
-﻿// Wishlist customer page script
+// Wishlist customer page script
 document.addEventListener('DOMContentLoaded', function () {
             const grid = document.getElementById('wishlistGrid');
             const emptyBox = document.getElementById('wishlistEmpty');
@@ -48,6 +48,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (grid) grid.style.display = 'none';
                     if (actionsBar) actionsBar.classList.add('d-none');
                     if (emptyBox) emptyBox.classList.remove('d-none');
+                    const dot = document.querySelector('.acc-menu .acc-dot');
+                    if (dot) dot.style.display = 'none';
                 }
             }
 

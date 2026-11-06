@@ -46,6 +46,8 @@ public class ShopController {
             @RequestParam(required = false) String priceRange,
             @RequestParam(required = false, defaultValue = "newest") String sort,
             @RequestParam(required = false, defaultValue = "false") boolean onSaleOnly,
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @RequestParam(required = false, defaultValue = "12") int size,
             Model model) {
 
         // 1. Lấy toàn bộ sản phẩm active
@@ -77,6 +79,10 @@ public class ShopController {
         } else if ("FEMALE".equals(currentGender)) {
             all = all.stream()
                     .filter(p -> p.gender() == Gender.FEMALE || p.gender() == Gender.UNISEX)
+                    .toList();
+        } else if ("UNISEX".equals(currentGender)) {
+            all = all.stream()
+                    .filter(p -> p.gender() == Gender.UNISEX)
                     .toList();
         } else {
             currentGender = "ALL";
@@ -125,11 +131,25 @@ public class ShopController {
             default -> { /* newest = thứ tự mặc định từ query */ }
         }
 
-        // 7. Danh mục visible để hiển thị sidebar
+        // 7. Phân trang (Pagination)
+        int totalItems = sorted.size();
+        int pageSize = Math.max(1, size);
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalItems / pageSize));
+        int currentPage = Math.max(1, Math.min(page, totalPages));
+        int fromIndex = (currentPage - 1) * pageSize;
+        int toIndex = Math.min(fromIndex + pageSize, totalItems);
+        List<ProductCardDto> pagedProducts = totalItems > 0 && fromIndex < totalItems
+                ? sorted.subList(fromIndex, toIndex)
+                : (totalItems == 0 ? List.of() : sorted);
+
+        // 8. Danh mục visible để hiển thị sidebar
         List<Category> categories = categoryRepository.findByStatusOrderByNameAsc(CategoryStatus.VISIBLE);
 
-        model.addAttribute("products", sorted);
-        model.addAttribute("totalCount", sorted.size());
+        model.addAttribute("products", pagedProducts);
+        model.addAttribute("totalCount", totalItems);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("pageSize", pageSize);
         model.addAttribute("categories", categories);
         model.addAttribute("selectedCategoryId", categoryId);
         model.addAttribute("currentGender", currentGender);

@@ -1,5 +1,7 @@
 package com.iuh.fashionshop.config;
 
+import com.iuh.fashionshop.service.CartService;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
@@ -9,9 +11,17 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 @ControllerAdvice
 public class CartModelAdvice {
 
+    private final CartService cartService;
+
+    public CartModelAdvice(CartService cartService) {
+        this.cartService = cartService;
+    }
+
     @ModelAttribute("cartCount")
-    public int populateCartCount() {
-        // TODO: người phụ trách giỏ hàng sẽ thay bằng số lượng thật
-        return 0;
+    public int populateCartCount(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
+            return 0;
+        }
+        return cartService.getCartCount(auth);
     }
 }

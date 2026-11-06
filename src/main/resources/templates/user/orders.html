@@ -12,62 +12,78 @@
 <div id="customer-content">
 
     <style>
-        .acc-card { background:#fff; border:1px solid #eee; padding:24px; }
-        .acc-label { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:#8a8a8a; margin-bottom:2px; }
+        .acc-card { background:#fff; border:1px solid #eee; padding:24px; margin-bottom: 24px; }
+        .acc-label { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:#8a8a8a; margin-bottom:2px; font-weight:600; }
         .acc-title { font-family:'Playfair Display',serif; font-size:1.5rem; margin:0; }
-        .acc-link { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:#222; text-decoration:none; }
-        .acc-menu a { display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:4px;
-            font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:#444; text-decoration:none; }
-        .acc-menu a:hover { background:#f5f5f5; }
-        .acc-menu a.active { background:#eeeeee; font-weight:600; color:#111; }
-        .acc-menu .count { margin-left:auto; color:#888; }
-        .acc-dot { width:6px; height:6px; border-radius:50%; background:#a1141b; margin-left:6px; }
+        .acc-menu a { display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:4px;
+            font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; color:#444; text-decoration:none; transition: all .15s; }
+        .acc-menu a:hover { background:#f9f8f5; color:#111; }
+        .acc-menu a.active { background:#121212; font-weight:600; color:#fff; }
+        .acc-menu .count { margin-left:auto; color:#888; font-size:.72rem; }
+        .acc-menu a.active .count { color:#fff; }
 
-        .ord-tabs { display:flex; gap:28px; border-bottom:1px solid #eee; margin:16px 0 20px; flex-wrap:wrap; }
-        .ord-tabs a { font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#777; text-decoration:none;
-            padding-bottom:10px; border-bottom:2px solid transparent; margin-bottom:-1px; }
-        .ord-tabs a.active { color:#111; font-weight:600; border-bottom-color:#111; }
+        .ord-tabs { display:flex; gap:20px; border-bottom:1px solid #eee; margin:18px 0 24px; flex-wrap:wrap; }
+        .ord-tabs a { font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; color:#777; text-decoration:none;
+            padding-bottom:10px; border-bottom:2px solid transparent; margin-bottom:-1px; transition: all .15s; }
+        .ord-tabs a:hover { color:#111; }
+        .ord-tabs a.active { color:#111; font-weight:700; border-bottom-color:#111; }
 
-        .ord-meta { font-size:.72rem; color:#888; }
-        .ord-meta strong { color:#222; letter-spacing:.05em; }
-        .ord-badge { font-size:.62rem; letter-spacing:.1em; text-transform:uppercase; padding:5px 12px; }
-        .st-processing { background:#fbf1de; color:#8a5a00; }
-        .st-shipping   { background:#f6e3e3; color:#8b1a1a; }
-        .st-completed  { background:#e4efe7; color:#2f6b45; }
-        .st-cancelled  { background:#ececec; color:#666; }
+        .ord-meta { font-size:.78rem; color:#666; }
+        .ord-meta strong { color:#111; letter-spacing:.05em; font-size:.88rem; }
+        .ord-badge { font-size:.65rem; letter-spacing:.08em; text-transform:uppercase; padding:4px 10px; font-weight:600; border-radius:2px; }
+        .st-pending    { background:#fff3cd; color:#856404; }
+        .st-confirmed  { background:#cce5ff; color:#004085; }
+        .st-shipping   { background:#e2e3e5; color:#383d41; }
+        .st-completed  { background:#d4edda; color:#155724; }
+        .st-cancelled  { background:#f8d7da; color:#721c24; }
 
-        .ord-item { display:flex; gap:16px; padding:16px 0; border-bottom:1px solid #f1f1f1; }
-        .ord-thumb { width:52px; height:64px; background:#ece6dc; display:flex; align-items:center;
+        .ord-item { display:flex; gap:16px; padding:16px 0; border-bottom:1px solid #f5f3ef; }
+        .ord-item:last-child { border-bottom: none; }
+        .ord-thumb { width:64px; height:80px; background:#f0ece3; display:flex; align-items:center;
             justify-content:center; color:#a89a85; font-size:1.3rem; overflow:hidden; flex-shrink:0; }
         .ord-thumb img { width:100%; height:100%; object-fit:cover; }
-        .ord-name { font-family:'Playfair Display',serif; font-size:1rem; }
-        .ord-sub { font-size:.72rem; color:#888; }
-        .ord-price { font-weight:600; font-size:.78rem; }
-        .ord-total { font-family:'Playfair Display',serif; font-size:1.5rem; }
-        .ord-btn { font-size:.66rem; letter-spacing:.1em; text-transform:uppercase; padding:9px 18px;
-            border:1px solid #ddd; background:#fff; color:#222; text-decoration:none; }
+        .ord-name { font-family:'Playfair Display',serif; font-size:1.05rem; font-weight:600; color:#111; margin-bottom:2px; }
+        .ord-sub { font-size:.78rem; color:#888; }
+        .ord-price { font-weight:600; font-size:.85rem; color:#333; margin-top:4px; }
+        .ord-total { font-family:'Playfair Display',serif; font-size:1.4rem; font-weight:700; color:#111; }
+        .ord-btn { font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; padding:8px 16px;
+            border:1px solid #ddd; background:#fff; color:#222; text-decoration:none; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+        .ord-btn:hover { background:#f5f5f5; color:#000; border-color:#999; }
         .ord-btn.dark { background:#111; border-color:#111; color:#fff; }
-        .ord-empty { text-align:center; padding:48px 0; color:#999; }
+        .ord-btn.dark:hover { background:#333; color:#fff; }
+        .ord-btn.danger { background:#fff; border-color:#dc3545; color:#dc3545; }
+        .ord-btn.danger:hover { background:#dc3545; color:#fff; }
+        .ord-empty { text-align:center; padding:64px 20px; color:#888; }
+        .ord-shipping-preview { font-size:.82rem; color:#555; background:#faf8f5; padding:10px 14px; border-left:3px solid #111; margin:12px 0; }
     </style>
+
+    <!-- Thông báo Flash message nếu có -->
+    <div th:if="${successMessage != null}" class="alert alert-success alert-dismissible fade show rounded-0 mb-4" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i> <span th:text="${successMessage}">Thao tác thành công</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${errorMessage != null}" class="alert alert-danger alert-dismissible fade show rounded-0 mb-4" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> <span th:text="${errorMessage}">Đã xảy ra lỗi</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
 
     <div class="row g-4">
 
         <!-- ===== MENU TRÁI ===== -->
         <div class="col-lg-3">
             <div class="acc-card acc-menu">
-                <div class="acc-label mb-2 pb-2 border-bottom">Danh mục</div>
-                <a th:href="@{/account}"><i class="bi bi-person"></i> Thông tin cá nhân</a>
+                <div class="acc-label mb-2 pb-2 border-bottom">Tài khoản cá nhân</div>
+                <a th:href="@{/account(tab='profile')}"><i class="bi bi-person"></i> Thông tin cá nhân</a>
                 <a th:href="@{/orders}" class="active">
                     <i class="bi bi-bag-check"></i> Đơn hàng của tôi
-                    <span class="count" th:if="${orderCount > 0}" th:text="${orderCount}">1</span>
-                    <span class="acc-dot"></span>
+                    <span class="count" th:if="${orderCount > 0}" th:text="${orderCount}">0</span>
                 </a>
-                <a href="#"><i class="bi bi-geo-alt"></i> Sổ địa chỉ</a>
+                <a th:href="@{/account(tab='address')}"><i class="bi bi-geo-alt"></i> Sổ địa chỉ</a>
                 <a th:href="@{/wishlist}">
                     <i class="bi bi-heart"></i> Sản phẩm yêu thích
-                    <span class="count" th:if="${wishlistCount > 0}" th:text="${wishlistCount}">1</span>
+                    <span class="count" th:if="${wishlistCount > 0}" th:text="${wishlistCount}">0</span>
                 </a>
-                <a href="#"><i class="bi bi-lock"></i> Cài đặt bảo mật</a>
+                <a th:href="@{/account(tab='security')}"><i class="bi bi-shield-lock"></i> Cài đặt bảo mật</a>
                 <hr>
                 <a th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
             </div>
@@ -78,82 +94,116 @@
 
             <div class="d-flex justify-content-between align-items-baseline flex-wrap">
                 <h1 class="acc-title">Đơn hàng của tôi
-                    <small class="text-muted fs-6" th:text="'(' + ${totalCount} + ' đơn hàng)'">(0 đơn hàng)</small>
+                    <small class="text-muted fs-6" th:text="'(' + ${totalCount} + ' đơn)'">(0 đơn)</small>
                 </h1>
             </div>
 
-            <!-- Tab lọc theo trạng thái (số chỉ hiện khi > 0) -->
+            <!-- Tab lọc theo trạng thái đơn hàng -->
             <div class="ord-tabs">
                 <a th:href="@{/orders}" th:classappend="${currentTab == 'all'} ? 'active'">Tất cả</a>
-                <a th:href="@{/orders(status='processing')}" th:classappend="${currentTab == 'processing'} ? 'active'">
-                    Đang xử lý<span th:if="${tabCounts['processing'] > 0}" th:text="' (' + ${tabCounts['processing']} + ')'"></span></a>
+                <a th:href="@{/orders(status='pending')}" th:classappend="${currentTab == 'pending'} ? 'active'">
+                    Chờ xác nhận<span th:if="${tabCounts['pending'] > 0}" th:text="' (' + ${tabCounts['pending']} + ')'"></span></a>
+                <a th:href="@{/orders(status='confirmed')}" th:classappend="${currentTab == 'confirmed'} ? 'active'">
+                    Đã xác nhận<span th:if="${tabCounts['confirmed'] > 0}" th:text="' (' + ${tabCounts['confirmed']} + ')'"></span></a>
                 <a th:href="@{/orders(status='shipping')}" th:classappend="${currentTab == 'shipping'} ? 'active'">
-                    Đang vận chuyển<span th:if="${tabCounts['shipping'] > 0}" th:text="' (' + ${tabCounts['shipping']} + ')'"></span></a>
+                    Đang giao hàng<span th:if="${tabCounts['shipping'] > 0}" th:text="' (' + ${tabCounts['shipping']} + ')'"></span></a>
                 <a th:href="@{/orders(status='completed')}" th:classappend="${currentTab == 'completed'} ? 'active'">
-                    Đã giao<span th:if="${tabCounts['completed'] > 0}" th:text="' (' + ${tabCounts['completed']} + ')'"></span></a>
+                    Đã hoàn tất<span th:if="${tabCounts['completed'] > 0}" th:text="' (' + ${tabCounts['completed']} + ')'"></span></a>
                 <a th:href="@{/orders(status='cancelled')}" th:classappend="${currentTab == 'cancelled'} ? 'active'">
                     Đã hủy<span th:if="${tabCounts['cancelled'] > 0}" th:text="' (' + ${tabCounts['cancelled']} + ')'"></span></a>
             </div>
 
-            <!-- Chưa có đơn -->
+            <!-- Trạng thái chưa có đơn -->
             <div class="acc-card ord-empty" th:if="${#lists.isEmpty(orders)}">
-                <p class="mb-3">Chưa có đơn hàng nào.</p>
-                <a th:href="@{/shop}" class="ord-btn dark">Tiếp tục mua sắm</a>
+                <i class="bi bi-bag-x text-muted" style="font-size: 3rem;"></i>
+                <h4 class="mt-3 mb-2">Chưa có đơn hàng nào</h4>
+                <p class="text-muted small mb-4">Các đơn hàng bạn đặt sẽ được quản lý và cập nhật tiến độ chi tiết tại đây.</p>
+                <a th:href="@{/shop}" class="ord-btn dark px-4 py-2">Khám phá sản phẩm ngay</a>
             </div>
 
-            <!-- Danh sách đơn -->
+            <!-- Danh sách các đơn hàng -->
             <div class="acc-card mb-4" th:each="o : ${orders}">
 
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pb-3 border-bottom">
                     <div class="ord-meta">
-                        <strong th:text="'#' + ${o.orderCode}">#MÃ</strong>
-                        &nbsp;·&nbsp; <span th:text="${o.createdAt}">01/01/2025</span>
+                        <strong th:text="'#' + ${o.orderCode}">#MÃ_ĐƠN</strong>
+                        &nbsp;·&nbsp; <span th:text="${o.createdAt}">01/01/2026</span>
                         &nbsp;·&nbsp;
                         <span th:switch="${o.paymentMethod}">
-                            <span th:case="'COD'">Thanh toán khi nhận hàng</span>
-                            <span th:case="'BANK_TRANSFER'">Chuyển khoản trực tuyến</span>
-                            <span th:case="'CREDIT_CARD'">Thanh toán thẻ tín dụng</span>
+                            <span th:case="'COD'">Thanh toán khi nhận hàng (COD)</span>
+                            <span th:case="'BANK_TRANSFER'">Chuyển khoản ngân hàng</span>
+                            <span th:case="'E_WALLET'">Ví điện tử</span>
+                            <span th:case="'CREDIT_CARD'">Thẻ tín dụng</span>
                             <span th:case="*" th:text="${o.paymentMethod}">Phương thức</span>
                         </span>
                     </div>
+
+                    <!-- Huy hiệu trạng thái đơn hàng -->
                     <span class="ord-badge" th:switch="${o.status}"
-                          th:classappend="${o.status == 'SHIPPING'} ? 'st-shipping'
-                                     : (${o.status == 'COMPLETED' or o.status == 'DELIVERED'} ? 'st-completed'
-                                     : (${o.status == 'CANCELLED'} ? 'st-cancelled' : 'st-processing'))">
-                        <span th:case="'PENDING'">Chờ xác nhận</span>
-                        <span th:case="'CONFIRMED'">Đã xác nhận</span>
-                        <span th:case="'PROCESSING'">Đang xử lý</span>
-                        <span th:case="'SHIPPING'">Đang vận chuyển</span>
-                        <span th:case="'COMPLETED'">Đã hoàn tất</span>
-                        <span th:case="'DELIVERED'">Đã giao</span>
-                        <span th:case="'CANCELLED'">Đã hủy</span>
+                          th:classappend="${o.status == 'PENDING'} ? 'st-pending'
+                                     : (${o.status == 'CONFIRMED' or o.status == 'PROCESSING'} ? 'st-confirmed'
+                                     : (${o.status == 'SHIPPING'} ? 'st-shipping'
+                                     : (${o.status == 'COMPLETED' or o.status == 'DELIVERED'} ? 'st-completed' : 'st-cancelled')))">
+                        <span th:case="'PENDING'"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận</span>
+                        <span th:case="'CONFIRMED'"><i class="bi bi-check2 me-1"></i>Đã xác nhận</span>
+                        <span th:case="'PROCESSING'"><i class="bi bi-gear me-1"></i>Đang chuẩn bị hàng</span>
+                        <span th:case="'SHIPPING'"><i class="bi bi-truck me-1"></i>Đang giao hàng</span>
+                        <span th:case="'COMPLETED'"><i class="bi bi-check-circle me-1"></i>Hoàn tất</span>
+                        <span th:case="'DELIVERED'"><i class="bi bi-box-seam me-1"></i>Đã giao hàng</span>
+                        <span th:case="'CANCELLED'"><i class="bi bi-x-circle me-1"></i>Đã hủy</span>
                         <span th:case="*" th:text="${o.status}">Trạng thái</span>
                     </span>
                 </div>
 
+                <!-- Địa chỉ giao hàng tóm tắt -->
+                <div class="ord-shipping-preview">
+                    <i class="bi bi-geo-alt-fill text-danger me-1"></i>
+                    <strong>Giao đến:</strong>
+                    <span th:text="${o.recipientName}">Tên người nhận</span>
+                    <span th:if="${o.recipientPhone != null}" th:text="' (' + ${o.recipientPhone} + ')'">(SĐT)</span>
+                    &nbsp;—&nbsp;
+                    <span th:text="${o.shippingAddress}">Địa chỉ giao hàng</span>
+                </div>
+
+                <!-- Danh sách sản phẩm của đơn -->
                 <div class="ord-item" th:each="item : ${o.items}">
                     <div class="ord-thumb">
-                        <img th:if="${item.imageUrl != null}" th:src="@{${item.imageUrl}}" alt="">
-                        <i th:unless="${item.imageUrl != null}" class="bi bi-image"></i>
+                        <img th:if="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}"
+                             th:src="${item.imageUrl}" th:alt="${item.productName}" onerror="this.remove()">
+                        <i class="bi bi-image" th:unless="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl)}"></i>
                     </div>
-                    <div>
-                        <div class="ord-name" th:text="${item.productName}">Tên sản phẩm</div>
+                    <div class="flex-grow-1">
+                        <div class="ord-name" th:text="${item.productName}">Tên sản phẩm thời trang</div>
                         <div class="ord-sub"
-                             th:text="'Màu: ' + ${item.color} + ' · Size: ' + ${item.size} + ' · SL: ' + ${item.quantity}">Màu · Size · SL</div>
+                             th:text="'Màu: ' + ${item.color} + ' · Size: ' + ${item.size} + ' · Số lượng: ' + ${item.quantity}">Màu · Size · SL</div>
                         <div class="ord-price"
-                             th:text="${#numbers.formatDecimal(item.unitPrice, 0, 'POINT', 0, 'COMMA')} + '₫'">0₫</div>
+                             th:text="${#numbers.formatDecimal(item.unitPrice, 0, 'POINT', 0, 'COMMA')} + ' ₫'">0 ₫</div>
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 pt-3">
+                <!-- Footer tóm tắt đơn: Tổng tiền + Các nút hành động -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 pt-3 border-top">
                     <div>
                         <span class="acc-label">Tổng thanh toán:</span>
-                        <span class="ord-total"
-                              th:text="${#numbers.formatDecimal(o.totalAmount, 0, 'POINT', 0, 'COMMA')} + '₫'">0₫</span>
+                        <div class="ord-total"
+                             th:text="${#numbers.formatDecimal(o.totalAmount, 0, 'POINT', 0, 'COMMA')} + ' ₫'">0 ₫</div>
                     </div>
-                    <div class="d-flex gap-2">
-                        <a href="#" class="ord-btn">Xem chi tiết</a>
-                        <a href="#" class="ord-btn dark" th:if="${o.status == 'SHIPPING'}">Theo dõi đơn hàng</a>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Nút Xem chi tiết -->
+                        <a th:href="@{/orders/{id}(id=${o.id})}" class="ord-btn">
+                            <i class="bi bi-eye"></i> Xem chi tiết
+                        </a>
+
+                        <!-- Nút Hủy đơn hàng (Chỉ hiển thị khi trạng thái là PENDING) -->
+                        <form th:if="${o.canCancel}"
+                              th:action="@{/orders/cancel/{id}(id=${o.id})}"
+                              method="post"
+                              onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn hàng #' + [[${o.orderCode}]] + ' không? Thao tác này không thể hoàn tác.');">
+                            <button type="submit" class="ord-btn danger">
+                                <i class="bi bi-x-circle"></i> Hủy đơn hàng
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
