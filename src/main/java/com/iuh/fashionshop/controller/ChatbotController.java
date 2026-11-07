@@ -9,6 +9,13 @@ import java.nio.charset.StandardCharsets;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import java.util.Map;
+import java.util.HashMap;
+import java.text.NumberFormat;
+import java.util.Locale;
+
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,7 +27,7 @@ import com.iuh.fashionshop.service.ChatbotService;
 @RequestMapping("/api/chatbot")
 public class ChatbotController {
 
-    public record ChatRequest(String message) {}
+    public record ChatRequest(String message, Long productId) {}
 
     private final ChatbotService chatbotService;
 
@@ -42,6 +49,7 @@ public class ChatbotController {
     @PostMapping("/stream")
     public ResponseEntity<StreamingResponseBody> stream(@RequestBody ChatRequest req) {
         String msg = clean(req);
+        Long productId = req != null ? req.productId() : null;
         StreamingResponseBody body = out -> {
             Writer w = new OutputStreamWriter(out, StandardCharsets.UTF_8);
             if (msg.isEmpty()) {
@@ -50,7 +58,7 @@ public class ChatbotController {
                 return;
             }
             // chổ này đẩy tưng chữ ra màn hình này còn if trên nếu nó rổng thì nó tự đẩy câu kia á
-            chatbotService.streamReply(msg, chunk -> {
+            chatbotService.streamReply(msg, productId, chunk -> {
                 try {
                     w.write(chunk);
                     w.flush();   // Đẩy ngay từng chữ về màn hình khách hàng
@@ -64,4 +72,33 @@ public class ChatbotController {
                 .header("Cache-Control", "no-cache")
                 .body(body);
     }
+
+    /**
+     * API LẤY THÔNG TIN THẺ SẢN PHẨM PHỤC VỤ HIỂN THỊ TRONG CHATBOX:
+     * - Trả về: Ảnh sản phẩm, tên, giá bán, giá gốc, % giảm, danh mục, tồn kho.
+     * - Dùng để hiển thị card sản phẩm đẹp mắt (ảnh bên trái, thông tin bên phải, link bên dưới).
+     */
+    @GetMapping("/product/{id}")
+    public ResponseEntity<?> getProductSummary(@PathVariable Long id) {
+        var p = chatbotService.getProductDetail(id);
+        if (p == null) {
+            return ResponseEntity.notFound().build();
+        }
+        NumberFormat nf = NumberFormat.getIntegerInstance(Locale.of("vi", "VN"));
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", p.id());
+        data.put("name", p.name());
+        data.put("categoryName", p.categoryName() != null ? p.categoryName() : "");
+        data.put("imageUrl", p.imageUrl() != null ? p.imageUrl() : "");
+        data.put("onSale", p.onSale());
+        data.put("discountPercent", p.discountPercent());
+        data.put("totalStock", p.totalStock());
+        data.put("currentPrice", p.currentPrice());
+        data.put("currentPriceFormatted", nf.format(p.currentPrice()) + "đ");
+        if (p.onSale() && p.price() != null) {
+            data.put("priceFormatted", nf.format(p.price()) + "đ");
+        }
+        return ResponseEntity.ok(data);
+    }
+
 }

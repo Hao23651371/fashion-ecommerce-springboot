@@ -6,18 +6,204 @@
           'orders'
       )}">
 <head>
-    <title>Đơn hàng | Fashion Shop Admin</title>
+    <title>Quản lý đơn hàng | Fashion Shop Admin</title>
 </head>
 <body>
 
-    <div id="admin-content">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-4">
-                <h4 class="fw-bold mb-2">Đây là trang Đơn hàng</h4>
-                <p class="text-muted mb-0">Giao diện trang này chưa được xây dựng.</p>
+<div id="admin-content" class="order-page">
+    <link rel="stylesheet" th:href="@{/css/admin/orders.css}">
+
+    <div class="order-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <div class="eyebrow"><i class="bi bi-bag-check-fill"></i> ĐƠN HÀNG &amp; VẬN HÀNH</div>
+            <h1>Quản lý đơn hàng</h1>
+            <p>Theo dõi, lọc và cập nhật trạng thái đơn hàng trên toàn hệ thống.</p>
+        </div>
+        <div class="order-actions d-flex flex-wrap gap-2">
+            <button type="button" class="btn order-secondary-btn" disabled title="Sẽ nối API xuất Excel sau">
+                <i class="bi bi-download"></i> Xuất danh sách
+            </button>
+            <button type="button" class="btn order-secondary-btn" onclick="window.location.reload()">
+                <i class="bi bi-arrow-clockwise"></i> Làm mới
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3 order-stats mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-heading"><span>Chờ xử lý</span><i class="bi bi-hourglass-split"></i></div>
+                <div class="stat-value" th:text="${pendingCount != null ? pendingCount : 0}">0</div>
+                <div class="stat-note">PENDING</div>
+                <div class="stat-line amber"></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-heading"><span>Đang giao</span><i class="bi bi-truck"></i></div>
+                <div class="stat-value" th:text="${shippingCount != null ? shippingCount : 0}">0</div>
+                <div class="stat-note">SHIPPING</div>
+                <div class="stat-line indigo"></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-heading"><span>Hoàn thành</span><i class="bi bi-check2-circle"></i></div>
+                <div class="stat-value" th:text="${completedCount != null ? completedCount : 0}">0</div>
+                <div class="stat-note">COMPLETED</div>
+                <div class="stat-line teal"></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-heading"><span>Đã hủy</span><i class="bi bi-x-circle"></i></div>
+                <div class="stat-value" th:text="${cancelledCount != null ? cancelledCount : 0}">0</div>
+                <div class="stat-note">CANCELLED</div>
+                <div class="stat-line slate"></div>
             </div>
         </div>
     </div>
+
+    <section class="order-panel mb-3">
+        <form class="order-filters row g-2 align-items-end" method="get" th:action="@{/admin/orders}">
+            <div class="col-md-3">
+                <label class="form-label">Tìm kiếm</label>
+                <input type="text" class="form-control" name="keyword" th:value="${keyword}" placeholder="Mã đơn, SĐT, tên khách...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Trạng thái</label>
+                <select class="form-select" name="status">
+                    <option value="">Tất cả</option>
+                    <option value="PENDING" th:selected="${status == 'PENDING'}">Chờ xử lý</option>
+                    <option value="SHIPPING" th:selected="${status == 'SHIPPING'}">Đang giao</option>
+                    <option value="COMPLETED" th:selected="${status == 'COMPLETED'}">Hoàn thành</option>
+                    <option value="CANCELLED" th:selected="${status == 'CANCELLED'}">Đã hủy</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Thanh toán</label>
+                <select class="form-select" name="payment">
+                    <option value="">Tất cả</option>
+                    <option value="COD" th:selected="${payment == 'COD'}">COD</option>
+                    <option value="BANK_TRANSFER" th:selected="${payment == 'BANK_TRANSFER'}">Chuyển khoản</option>
+                    <option value="E_WALLET" th:selected="${payment == 'E_WALLET'}">Ví điện tử</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Từ ngày</label>
+                <input type="date" class="form-control" name="from" th:value="${from}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Đến ngày</label>
+                <input type="date" class="form-control" name="to" th:value="${to}">
+            </div>
+            <div class="col-md-1 d-grid">
+                <button type="submit" class="btn order-primary-btn"><i class="bi bi-funnel"></i></button>
+            </div>
+        </form>
+    </section>
+
+    <section class="order-panel">
+        <div class="table-responsive">
+            <table class="order-table">
+                <thead>
+                <tr>
+                    <th>Mã đơn</th>
+                    <th>Khách hàng</th>
+                    <th>Ngày tạo</th>
+                    <th>Thanh toán</th>
+                    <th>Tổng tiền</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Thao tác</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="o : ${orders}" th:if="${orders != null}">
+                    <td>
+                        <a href="#" class="order-code" th:text="${o.orderCode}">ORD-0001</a>
+                        <div class="order-sub" th:text="${o.items != null ? #lists.size(o.items) + ' sản phẩm' : ''}">2 sản phẩm</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold"
+                             th:text="${o.shippingInfo != null and o.shippingInfo.recipientName != null ? o.shippingInfo.recipientName : (o.userProfile != null ? o.userProfile.fullName : '—')}">Nguyễn A</div>
+                        <div class="order-sub"
+                             th:text="${o.shippingInfo != null ? o.shippingInfo.recipientPhone : ''}">0900...</div>
+                    </td>
+                    <td>
+                        <span th:text="${o.createdAt != null ? #temporals.format(o.createdAt, 'dd/MM/yyyy HH:mm') : '—'}">01/01/2026</span>
+                    </td>
+                    <td>
+                        <span class="pay-pill"
+                              th:text="${o.paymentInfo != null ? o.paymentInfo.paymentMethod : 'COD'}">COD</span>
+                        <div class="order-sub"
+                             th:text="${o.paymentInfo != null ? o.paymentInfo.paymentStatus : ''}">UNPAID</div>
+                    </td>
+                    <td class="fw-bold"
+                        th:text="${o.totalAmount != null ? #numbers.formatDecimal(o.totalAmount, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0 ₫</td>
+                    <td>
+                        <span class="status-pill"
+                              th:classappend="${o.status != null and o.status.name() == 'PENDING'} ? ' st-pending'
+                                : (${o.status != null and o.status.name() == 'SHIPPING'} ? ' st-shipping'
+                                : (${o.status != null and o.status.name() == 'COMPLETED'} ? ' st-completed' : ' st-cancelled'))"
+                              th:text="${o.status}">PENDING</span>
+                    </td>
+                    <td class="text-end action-cell">
+                        <button type="button" class="btn-icon" title="Xem chi tiết"
+                                data-bs-toggle="modal" data-bs-target="#orderDetailModal">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <div class="dropdown d-inline-block">
+                            <button class="btn-icon" data-bs-toggle="dropdown" title="Cập nhật trạng thái">
+                                <i class="bi bi-arrow-repeat"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><span class="dropdown-item-text text-muted small">Cập nhật khi có API</span></li>
+                                <li><a class="dropdown-item" href="#">Chờ xử lý</a></li>
+                                <li><a class="dropdown-item" href="#">Đang giao</a></li>
+                                <li><a class="dropdown-item" href="#">Hoàn thành</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#">Hủy đơn</a></li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr th:if="${orders == null or #lists.isEmpty(orders)}">
+                    <td colspan="7" class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <div>Chưa có đơn hàng nào để hiển thị.</div>
+                        <small class="text-muted">Khi OrderService được nối vào AdminOrderController, danh sách sẽ hiện tại đây.</small>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="order-footer" th:if="${orders != null and !#lists.isEmpty(orders)}">
+            <span>Tổng <b th:text="${#lists.size(orders)}">0</b> đơn hàng</span>
+        </div>
+    </section>
+
+    <div class="modal fade" id="orderDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content order-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chi tiết đơn hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-0">
+                        Khung UI sẵn: thông tin khách, địa chỉ giao, danh sách sản phẩm (snapshot), tổng tiền, lịch sử trạng thái.
+                        Nội dung chi tiết sẽ nạp khi backend OrderService sẵn sàng.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn order-secondary-btn" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn order-primary-btn">Cập nhật trạng thái</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>

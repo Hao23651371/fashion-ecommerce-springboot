@@ -1,22 +1,159 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/user-base :: layout(
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/user-base :: layout(
           ~{::title},
           ~{::#customer-content}
       )}">
-
 <head>
     <title>Thanh toán | Fashion Shop</title>
 </head>
-
 <body>
 
-    <div id="customer-content">
-        <div class="custom-card p-4">
-            <h3 class="mb-2">Đây là trang Thanh toán</h3>
-            <p class="text-muted mb-0">Giao diện trang này chưa được xây dựng.</p>
-        </div>
+<div id="customer-content" class="checkout-page">
+    <link rel="stylesheet" th:href="@{/css/customer/checkout.css}">
+
+    <div class="checkout-header">
+        <p class="checkout-eyebrow">Secure checkout</p>
+        <h1 class="checkout-title">Thanh toán</h1>
+        <p class="checkout-sub">Hoàn tất đơn hàng trong vài bước.</p>
     </div>
 
-</body>
+    <div class="row g-4">
+        <!-- Form -->
+        <div class="col-lg-7">
+            <form class="checkout-form" method="post" th:action="@{/checkout}">
+                <section class="checkout-block">
+                    <h2><span class="step">1</span> Thông tin giao hàng</h2>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Họ và tên *</label>
+                            <input type="text" class="form-control" name="recipientName"
+                                   th:value="${profile != null ? profile.fullName : ''}" required maxlength="100"
+                                   placeholder="Nguyễn Văn A">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Số điện thoại *</label>
+                            <input type="tel" class="form-control" name="recipientPhone"
+                                   th:value="${profile != null ? profile.phoneNumber : ''}" required maxlength="15"
+                                   placeholder="0901234567">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Địa chỉ nhận hàng *</label>
+                            <textarea class="form-control" name="shippingAddress" rows="2" required maxlength="255"
+                                      placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Ghi chú đơn hàng</label>
+                            <input type="text" class="form-control" name="note" maxlength="255"
+                                   placeholder="Giao giờ hành chính, gọi trước khi giao...">
+                        </div>
+                    </div>
+                </section>
 
+                <section class="checkout-block">
+                    <h2><span class="step">2</span> Phương thức thanh toán</h2>
+                    <div class="pay-options">
+                        <label class="pay-option">
+                            <input type="radio" name="paymentMethod" value="COD" checked>
+                            <span class="pay-card">
+                                <i class="bi bi-cash-coin"></i>
+                                <span>
+                                    <strong>COD</strong>
+                                    <small>Thanh toán khi nhận hàng</small>
+                                </span>
+                            </span>
+                        </label>
+                        <label class="pay-option">
+                            <input type="radio" name="paymentMethod" value="BANK_TRANSFER">
+                            <span class="pay-card">
+                                <i class="bi bi-bank"></i>
+                                <span>
+                                    <strong>Chuyển khoản</strong>
+                                    <small>Chuyển khoản ngân hàng</small>
+                                </span>
+                            </span>
+                        </label>
+                        <label class="pay-option">
+                            <input type="radio" name="paymentMethod" value="E_WALLET">
+                            <span class="pay-card">
+                                <i class="bi bi-wallet2"></i>
+                                <span>
+                                    <strong>Ví điện tử</strong>
+                                    <small>MoMo / ZaloPay / ShopeePay</small>
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="checkout-block">
+                    <h2><span class="step">3</span> Mã giảm giá</h2>
+                    <div class="coupon-row">
+                        <input type="text" class="form-control" name="couponCode" placeholder="Nhập mã khuyến mãi">
+                        <button type="button" class="btn coupon-apply-btn">Áp dụng</button>
+                    </div>
+                    <p class="coupon-hint" th:if="${couponMessage}" th:text="${couponMessage}"></p>
+                </section>
+
+                <div class="checkout-actions d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                    <a th:href="@{/cart}" class="checkout-back"><i class="bi bi-arrow-left"></i> Quay lại giỏ hàng</a>
+                    <button type="submit" class="btn checkout-submit-btn">
+                        Đặt hàng <i class="bi bi-check2"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Order summary -->
+        <div class="col-lg-5">
+            <aside class="checkout-summary">
+                <h2>Đơn hàng của bạn</h2>
+
+                <div class="summary-items" th:if="${cartItems != null and !#lists.isEmpty(cartItems)}">
+                    <div class="summary-item" th:each="item : ${cartItems}">
+                        <div class="sum-thumb">
+                            <img th:if="${item.variant != null and item.variant.product != null and item.variant.product.imageUrl != null}"
+                                 th:src="${item.variant.product.imageUrl}" alt="">
+                            <i class="bi bi-image" th:unless="${item.variant != null and item.variant.product != null and item.variant.product.imageUrl != null}"></i>
+                        </div>
+                        <div class="sum-info">
+                            <div class="sum-name" th:text="${item.variant.product.name}">Sản phẩm</div>
+                            <div class="sum-meta"
+                                 th:text="${item.variant.color + ' · Size ' + item.variant.size + ' × ' + item.quantity}">
+                                Màu · Size · ×1
+                            </div>
+                        </div>
+                        <div class="sum-price"
+                             th:text="${#numbers.formatDecimal(item.calculateSubtotal(), 0, 'COMMA', 0, 'POINT') + ' ₫'}">0 ₫</div>
+                    </div>
+                </div>
+                <div class="summary-empty" th:if="${cartItems == null or #lists.isEmpty(cartItems)}">
+                    <p>Giỏ hàng trống. <a th:href="@{/shop}">Chọn sản phẩm</a> trước khi thanh toán.</p>
+                </div>
+
+                <div class="sum-lines">
+                    <div class="sum-line">
+                        <span>Tạm tính</span>
+                        <span th:text="${cartSubtotal != null ? #numbers.formatDecimal(cartSubtotal, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0 ₫</span>
+                    </div>
+                    <div class="sum-line">
+                        <span>Giảm giá</span>
+                        <span class="text-success"
+                              th:text="${discountAmount != null and discountAmount > 0 ? ('− ' + #numbers.formatDecimal(discountAmount, 0, 'COMMA', 0, 'POINT') + ' ₫') : '0 ₫'}">0 ₫</span>
+                    </div>
+                    <div class="sum-line">
+                        <span>Phí vận chuyển</span>
+                        <span th:text="${shippingFee != null ? #numbers.formatDecimal(shippingFee, 0, 'COMMA', 0, 'POINT') + ' ₫' : '30.000 ₫'}">30.000 ₫</span>
+                    </div>
+                    <div class="sum-line sum-grand">
+                        <span>Tổng thanh toán</span>
+                        <span th:text="${grandTotal != null ? #numbers.formatDecimal(grandTotal, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0 ₫</span>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+</div>
+
+</body>
 </html>
