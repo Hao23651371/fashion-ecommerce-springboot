@@ -5,6 +5,7 @@ import com.iuh.fashionshop.model.enums.CategoryStatus;
 import com.iuh.fashionshop.model.enums.ProductStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -89,4 +90,21 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                         """)
         List<Product> findAllActiveWithVariants(@Param("status") ProductStatus status,
                         @Param("categoryStatus") CategoryStatus categoryStatus);
+
+        List<Product> findByCategoryId(Long categoryId);
+
+        @Query("select count(oi) from OrderItem oi where oi.variant.product.id = :productId")
+        long countOrderItemsByProductId(@Param("productId") Long productId);
+
+        @Modifying
+        @Query("delete from WishlistItem w where w.product.id = :productId")
+        void deleteWishlistItemsByProductId(@Param("productId") Long productId);
+
+        @Modifying
+        @Query("delete from CartItem c where c.variant.product.id = :productId")
+        void deleteCartItemsByProductId(@Param("productId") Long productId);
+
+        @Modifying
+        @Query("delete from StockHistory s where s.variant.product.id = :productId")
+        void deleteStockHistoriesByProductId(@Param("productId") Long productId);
 }

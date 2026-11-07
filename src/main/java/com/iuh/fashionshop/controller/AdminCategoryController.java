@@ -1,13 +1,17 @@
 package com.iuh.fashionshop.controller;
 
 import com.iuh.fashionshop.model.Category;
+import com.iuh.fashionshop.model.Product;
 import com.iuh.fashionshop.model.enums.CategoryStatus;
+import com.iuh.fashionshop.model.enums.ProductStatus;
 import com.iuh.fashionshop.repository.CategoryRepository;
+import com.iuh.fashionshop.repository.ProductRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -19,9 +23,11 @@ import java.util.List;
 public class AdminCategoryController {
 
     private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
 
-    public AdminCategoryController(CategoryRepository categoryRepository) {
+    public AdminCategoryController(CategoryRepository categoryRepository, ProductRepository productRepository) {
         this.categoryRepository = categoryRepository;
+        this.productRepository = productRepository;
     }
 
     @GetMapping
@@ -97,6 +103,7 @@ public class AdminCategoryController {
     }
 
     @PostMapping("/edit/{id}")
+    @Transactional
     public String edit(@PathVariable Long id,
                        @RequestParam String name,
                        @RequestParam CategoryStatus status,
@@ -118,15 +125,78 @@ public class AdminCategoryController {
             return "redirect:/admin/categories";
         }
 
+        CategoryStatus oldStatus = category.getStatus();
         category.setName(cleanName);
         category.setStatus(status != null ? status : CategoryStatus.VISIBLE);
         categoryRepository.save(category);
 
-        redirect.addFlashAttribute("successMessage", "Cập nhật danh mục #" + id + " thành công!");
+        int hiddenProductCount = 0;
+        if (oldStatus == CategoryStatus.VISIBLE && category.getStatus() == CategoryStatus.HIDDEN) {
+            List<Product> products = productRepository.findByCategoryId(id);
+            if (products != null && !products.isEmpty()) {
+                for (Product p : products) {
+                    p.setStatus(ProductStatus.INACTIVE);
+                    hiddenProductCount++;
+                }
+                productRepository.saveAll(products);
+            }
+        }
+
+        if (hiddenProductCount > 0) {
+            redirect.addFlashAttribute("successMessage",
+                    "Cập nhật danh mục #" + id + " thành công và đã tự động ẩn " + hiddenProductCount + " sản phẩm đi kèm!");
+        } else {
+            redirect.addFlashAttribute("successMessage", "Cập nhật danh mục #" + id + " thành công!");
+        }
+        return "redirect:/admin/categories";
+    }
+
+    @PostMapping("/hide/{id}")
+    @Transactional
+    public String hide(@PathVariable Long id, RedirectAttributes redirect) {
+        Category category = categoryRepository.findById(id).orElse(null);
+        if (category == null) {
+            redirect.addFlashAttribute("errorMessage", "Không tìm thấy danh mục để ẩn.");
+            return "redirect:/admin/categories";
+        }
+
+        category.setStatus(CategoryStatus.HIDDEN);
+        categoryRepository.save(category);
+
+        List<Product> products = productRepository.findByCategoryId(id);
+        int hiddenProductCount = 0;
+        if (products != null && !products.isEmpty()) {
+            for (Product p : products) {
+                p.setStatus(ProductStatus.INACTIVE);
+                hiddenProductCount++;
+            }
+            productRepository.saveAll(products);
+        }
+
+        redirect.addFlashAttribute("successMessage",
+                "Đã ẩn danh mục '" + category.getName() + "' và tự động ẩn " + hiddenProductCount + " sản phẩm đi kèm thành công!");
+        return "redirect:/admin/categories";
+    }
+
+    @PostMapping("/show/{id}")
+    @Transactional
+    public String show(@PathVariable Long id, RedirectAttributes redirect) {
+        Category category = categoryRepository.findById(id).orElse(null);
+        if (category == null) {
+            redirect.addFlashAttribute("errorMessage", "Không tìm thấy danh mục để hiển thị.");
+            return "redirect:/admin/categories";
+        }
+
+        category.setStatus(CategoryStatus.VISIBLE);
+        categoryRepository.save(category);
+
+        redirect.addFlashAttribute("successMessage",
+                "Đã hiển thị lại danh mục '" + category.getName() + "' thành công!");
         return "redirect:/admin/categories";
     }
 
     @PostMapping("/delete/{id}")
+    @Transactional
     public String delete(@PathVariable Long id, RedirectAttributes redirect) {
         Category category = categoryRepository.findById(id).orElse(null);
         if (category == null) {

@@ -133,7 +133,6 @@
                 <table class="inventory-table">
                     <thead>
                     <tr>
-                        <th style="width: 40px;"><input type="checkbox" id="checkAll"></th>
                         <th style="width: 140px;">MÃ SKU</th>
                         <th>SẢN PHẨM & PHÂN LOẠI</th>
 
@@ -146,7 +145,6 @@
                     </thead>
                     <tbody>
                     <tr th:each="item : ${items.content}">
-                        <td><input type="checkbox" class="item-checkbox" th:value="${item.id}"></td>
                         <td>
                             <span class="sku-badge" th:text="${item.sku}">#PRD-001</span>
                         </td>
@@ -222,7 +220,7 @@
                     </tr>
 
                     <tr th:if="${items.empty}">
-                        <td colspan="8" class="text-center py-5 text-muted">
+                        <td colspan="7" class="text-center py-5 text-muted">
                             <i class="bi bi-box-seam fs-1 d-block mb-2 text-secondary"></i>
                             <span>Không tìm thấy biến thể hoặc sản phẩm nào phù hợp với bộ lọc.</span>
                         </td>
@@ -765,18 +763,6 @@
                     empty.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Không thể tải dữ liệu lịch sử.</span>';
                 });
         }
-
-        // Chọn tất cả Checkbox
-        document.addEventListener('DOMContentLoaded', function () {
-            const checkAll = document.getElementById('checkAll');
-            if (checkAll) {
-                checkAll.addEventListener('change', function () {
-                    document.querySelectorAll('.item-checkbox').forEach(cb => {
-                        cb.checked = checkAll.checked;
-                    });
-                });
-            }
-        });
     </script>
 </div>
 
