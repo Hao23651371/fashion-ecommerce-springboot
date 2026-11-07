@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle != null ? pageTitle : '403 - Quyền truy cập bị từ chối'}">403 - Quyền truy cập bị từ chối | Fashion Shop</title>
+
+    <!-- Google Fonts & Bootstrap 5 & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+            color: #0f172a;
+        }
+
+        .error-card {
+            max-width: 580px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(226, 232, 240, 0.8);
+            overflow: hidden;
+            text-align: center;
+            padding: 2.5rem 2rem;
+            animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .icon-circle {
+            width: 88px;
+            height: 88px;
+            margin: 0 auto 1.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            font-size: 2.8rem;
+            box-shadow: 0 0 0 10px rgba(239, 68, 68, 0.05);
+        }
+
+        .error-code {
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #ef4444;
+            margin-bottom: 0.5rem;
+        }
+
+        .error-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.02em;
+        }
+
+        .error-desc {
+            font-size: 0.95rem;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-box {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.75rem;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+
+        .btn-action-primary {
+            background-color: #0f172a;
+            border-color: #0f172a;
+            color: #ffffff;
+            font-weight: 600;
+            padding: 0.65rem 1.25rem;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-action-primary:hover {
+            background-color: #1e293b;
+            border-color: #1e293b;
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+        }
+
+        .btn-action-secondary {
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+            font-weight: 600;
+            padding: 0.65rem 1.25rem;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-action-secondary:hover {
+            background-color: #f8fafc;
+            border-color: #94a3b8;
+            color: #1e293b;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="error-card">
+        <!-- Icon cảnh báo từ chối truy cập -->
+        <div class="icon-circle">
+            <i class="bi bi-shield-x"></i>
+        </div>
+
+        <!-- Mã lỗi -->
+        <div class="error-code">
+            <i class="bi bi-slash-circle me-1"></i>HTTP ERROR 403 • FORBIDDEN
+        </div>
+
+        <!-- Tiêu đề chính -->
+        <h1 class="error-title">Quyền truy cập bị từ chối</h1>
+
+        <!-- Mô tả ngắn gọn -->
+        <p class="error-desc">
+            Bạn không có đủ quyền hạn để truy cập vào trang này. Phân hệ <strong>Quản lý Tài khoản & Phân quyền</strong> được thiết lập bảo mật nghiêm ngặt và chỉ dành riêng cho <strong>Quản trị viên cấp cao (ADMIN)</strong>.
+        </p>
+
+        <!-- Khung chi tiết vai trò của tài khoản -->
+        <div class="info-box d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-person-circle fs-5 text-secondary"></i>
+                <div class="lh-sm">
+                    <span class="text-muted d-block" style="font-size: 0.72rem;">TÀI KHOẢN ĐANG ĐĂNG NHẬP</span>
+                    <strong class="text-dark" th:text="${currentEmail != null ? currentEmail : (currentUserEmail != null ? currentUserEmail : 'Nhân viên')}">staff@fashionshop.vn</strong>
+                </div>
+            </div>
+            <div>
+                <span th:if="${isStaff or (currentRole != null and currentRole == 'STAFF')}" class="badge bg-purple-subtle text-purple px-2 py-1 border border-purple-subtle rounded-2 font-monospace">
+                    <i class="bi bi-person-badge-fill me-1"></i>ROLE: STAFF
+                </span>
+                <span th:unless="${isStaff or (currentRole != null and currentRole == 'STAFF')}" class="badge bg-secondary-subtle text-secondary px-2 py-1 border rounded-2 font-monospace">
+                    <i class="bi bi-shield-lock me-1"></i>HẠN CHẾ QUYỀN
+                </span>
+            </div>
+        </div>
+
+        <!-- Các nút thao tác điều hướng trực tiếp (Không cần dùng Undo của trình duyệt) -->
+        <div class="d-flex flex-column flex-sm-row justify-content-center gap-2 mb-3">
+            <!-- Nút 1: Quay lại trang trước qua history -->
+            <button type="button" onclick="window.history.back();" class="btn btn-action-secondary d-inline-flex align-items-center justify-content-center gap-2">
+                <i class="bi bi-arrow-left"></i>
+                <span>Quay lại trang trước</span>
+            </button>
+
+            <!-- Nút 2: Về Bảng điều khiển quản trị (Dashboard) -->
+            <a th:href="@{/admin/dashboard}" class="btn btn-action-primary d-inline-flex align-items-center justify-content-center gap-2">
+                <i class="bi bi-grid-fill"></i>
+                <span>Về Bảng điều khiển</span>
+            </a>
+        </div>
+
+        <!-- Các liên kết phụ trợ -->
+        <div class="d-flex justify-content-center align-items-center gap-3 pt-3 border-top small text-muted">
+            <a th:href="@{/}" class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1 hover-dark">
+                <i class="bi bi-house-door"></i>
+                <span>Trang chủ cửa hàng</span>
+            </a>
+            <span class="text-secondary opacity-50">•</span>
+            <a th:href="@{/logout}" class="text-decoration-none text-danger d-inline-flex align-items-center gap-1"
+               onclick="return confirm('Bạn có muốn đăng xuất để chuyển sang tài khoản khác?');">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Đổi tài khoản</span>
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>

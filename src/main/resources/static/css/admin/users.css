@@ -69,3 +69,111 @@
         border-right: 1px solid #e2e8f0 !important;
     }
 }
+
+
+/* ========================================================================= */
+/* CSS CHỨC NĂNG PHÂN QUYỀN TÀI KHOẢN (ROLE & PERMISSIONS)                    */
+/* ========================================================================= */
+.text-purple {
+    color: #6f42c1 !important;
+}
+
+.bg-purple {
+    background-color: #6f42c1 !important;
+}
+
+.bg-purple-subtle {
+    background-color: rgba(111, 66, 193, 0.12) !important;
+    color: #6f42c1 !important;
+}
+
+.border-purple-subtle {
+    border-color: rgba(111, 66, 193, 0.28) !important;
+}
+
+.btn-purple {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+    color: #ffffff;
+}
+
+.btn-purple:hover,
+.btn-purple:focus {
+    background-color: #59359a;
+    border-color: #59359a;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(111, 66, 193, 0.28);
+}
+
+.btn-outline-purple {
+    color: #6f42c1;
+    border-color: #6f42c1;
+    background-color: transparent;
+}
+
+.btn-outline-purple:hover,
+.btn-outline-purple:focus,
+.btn-outline-purple:active {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(111, 66, 193, 0.25);
+}
+
+/* Thẻ chọn vai trò (Role Option Card) */
+.role-option-card {
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background-color: #ffffff;
+}
+
+.role-option-card:hover {
+    border-color: #6f42c1 !important;
+    box-shadow: 0 4px 14px rgba(111, 66, 193, 0.12);
+    transform: translateY(-2px);
+}
+
+.role-option-card.selected {
+    border-color: #6f42c1 !important;
+    background-color: rgba(111, 66, 193, 0.04) !important;
+    box-shadow: 0 0 0 2px rgba(111, 66, 193, 0.35);
+}
+
+.role-option-card.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    background-color: #f8fafc;
+}
+
+/* Các mục quyền hạn chi tiết */
+.permission-item {
+    transition: all 0.2s ease;
+}
+
+.permission-item.inactive {
+    opacity: 0.35;
+    background-color: #f8fafc !important;
+}
+
+.permission-item.inactive .perm-icon {
+    color: #94a3b8 !important;
+}
+
+/* Tooltip / Popover xem mã xác thực email */
+.verification-popover-trigger {
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s ease-in-out;
+}
+
+.verification-popover-trigger:hover,
+.verification-popover-trigger:focus {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+    outline: none;
+}
+
+.verification-popover-trigger:hover .info-icon,
+.verification-popover-trigger:focus .info-icon {
+    color: #0d6efd !important;
+}

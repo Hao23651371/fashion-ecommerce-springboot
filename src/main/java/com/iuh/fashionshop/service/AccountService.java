@@ -420,6 +420,32 @@ public class AccountService {
         return accountRepository.save(account);
     }
 
+    /**
+     * Phân quyền tài khoản (Cập nhật vai trò / quyền hạn trong CSDL).
+     * Đảm bảo tương tác trực tiếp với Database thông qua AccountRepository trong transaction.
+     * Chặn không cho tài khoản Admin đang đăng nhập tự hạ quyền chính mình.
+     */
+    @Transactional
+    public Account updateAccountRole(Long id, Role newRole, String currentAdminEmail) {
+        if (id == null) {
+            throw new IllegalArgumentException("ID tài khoản không hợp lệ.");
+        }
+        if (newRole == null) {
+            throw new IllegalArgumentException("Vui lòng chọn vai trò hợp lệ để phân quyền.");
+        }
+
+        Account account = getAccountById(id);
+
+        if (currentAdminEmail != null && account.getEmail().equalsIgnoreCase(currentAdminEmail.trim())) {
+            if (newRole != Role.ADMIN) {
+                throw new IllegalStateException("Bạn không thể tự hạ quyền tài khoản của chính mình!");
+            }
+        }
+
+        account.setRole(newRole);
+        return accountRepository.save(account);
+    }
+
     @Transactional
     public void deleteAccount(Long id, String currentAdminEmail) {
         Account account = getAccountById(id);
@@ -445,6 +471,10 @@ public class AccountService {
 
     public long countAdminAccounts() {
         return accountRepository.countByRole(Role.ADMIN);
+    }
+
+    public long countStaffAccounts() {
+        return accountRepository.countByRole(Role.STAFF);
     }
 
     public long countCustomerAccounts() {
