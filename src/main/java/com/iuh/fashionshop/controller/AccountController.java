@@ -1,37 +1,270 @@
 package com.iuh.fashionshop.controller;
 
+import com.iuh.fashionshop.model.Account;
+import com.iuh.fashionshop.model.ShippingAddress;
+import com.iuh.fashionshop.model.UserProfile;
+import com.iuh.fashionshop.repository.AccountRepository;
+import com.iuh.fashionshop.repository.ShippingAddressRepository;
+import com.iuh.fashionshop.repository.UserProfileRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-/** Trang tài khoản khách hàng: lấy dữ liệu thật từ database theo email đang đăng nhập. */
+/**
+ * Trang tài khoản khách hàng: lấy dữ liệu thật từ database theo email đang đăng
+ * nhập.
+ */
 @Controller
 @RequestMapping("/account")
 public class AccountController {
 
-    // Các trạng thái được tính là "đang xử lý". Sửa cho khớp với enum trạng thái đơn hàng của bạn.
     private static final String IN_PROGRESS = "'PENDING','CONFIRMED','PROCESSING','SHIPPING'";
 
     private final JdbcTemplate jdbc;
+    private final AccountRepository accountRepository;
+    private final UserProfileRepository userProfileRepository;
+    private final ShippingAddressRepository shippingAddressRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public AccountController(JdbcTemplate jdbc) {
+    public AccountController(JdbcTemplate jdbc,
+            AccountRepository accountRepository,
+            UserProfileRepository userProfileRepository,
+            ShippingAddressRepository shippingAddressRepository,
+            PasswordEncoder passwordEncoder) {
         this.jdbc = jdbc;
+        this.accountRepository = accountRepository;
+        this.userProfileRepository = userProfileRepository;
+        this.shippingAddressRepository = shippingAddressRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @GetMapping
-    public String account(Authentication auth, Model model) {
-        String email = auth.getName();
+    public String account(@RequestParam(required = false, defaultValue = "profile") String tab,
+            Authentication auth,
+            Model model) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return "redirect:/login";
+        }
+        String email = auth.getName().trim().toLowerCase();
 
         // 1. Thông tin cá nhân (account + user_profile)
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 SELECT up.id AS profileId, up.full_name AS fullName, up.phone_number AS phone,
-                       DATE_FORMAT(up.birth_date, '%d/%m/%Y') AS birthDate, a.email AS email,
+                       DATE_FORMAT(up.birth_date, '%d/%m/%Y') AS birthDate,
+                       DATE_FORMAT(up.birth_date, '%Y-%m-%d') AS birthDateIso,
+                       a.email AS email,
+                       DATE_FORMAT(a.last_login_at, '%H:%i - %d/%m/%Y') AS lastLoginAt
+                FROM account a
+                LEFT JOIN user_profile up ON up.account_id = a.id
+                WHERE a.email = ?
+                """, email);
+
+        Map<String, Object> profile = rows.isEmpty() ? null : rows.get(0);
+        model.addAttribute("profile", profile);
+        model.addAttribute("email", email);
+        model.addAttribute("currentTab", tab);
+
+        Object profileIdObj = profile == null ? null : profile.get("profileId");
+        Long profileId = profileIdObj instanceof Number ? ((Number) profileIdObj).longValue() : null;
+
+        long processingCount = 0, orderCount = 0, wishlistCount = 0;
+        List<ShippingAddress> addresses = List.of();
+        String defaultAddress = null;
+
+        if (profileId != null) {
+            orderCount = count("SELECT COUNT(*) FROM orders WHERE user_profile_id = ?", profileId);
+            processingCount = count(
+                    "SELECT COUNT(*) FROM orders WHERE user_profile_id = ? AND status IN (" + IN_PROGRESS + ")",
+                    profileId);
+            wishlistCount = count("SELECT COUNT(*) FROM wishlist_item WHERE user_profile_id = ?", profileId);
+
+            addresses = shippingAddressRepository.findByUserProfileIdOrderByDefaultAddressDescIdDesc(profileId);
+            defaultAddress = addresses.stream()
+                    .filter(ShippingAddress::isDefaultAddress)
+                    .map(ShippingAddress::getAddress)
+                    .findFirst()
+                    .orElse(addresses.isEmpty() ? null : addresses.get(0).getAddress());
+        }
+
+        model.addAttribute("addresses", addresses);
+        model.addAttribute("defaultAddress", defaultAddress);
+        model.addAttribute("processingCount", processingCount);
+        model.addAttribute("orderCount", orderCount);
+        model.addAttribute("wishlistCount", wishlistCount);
+
+        return "user/account";
+    }
+
+    @PostMapping("/update-profile")
+    @Transactional
+    public String updateProfile(@RequestParam String fullName,
+            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) String birthDate,
+            Authentication auth,
+            RedirectAttributes ra) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return "redirect:/login";
+        }
+        UserProfile userProfile = getOrCreateUserProfile(auth.getName());
+        userProfile.setFullName(fullName.trim());
+        userProfile.setPhoneNumber(phone != null && !phone.isBlank() ? phone.trim() : null);
+
+        if (birthDate != null && !birthDate.isBlank()) {
+            try {
+                userProfile.setBirthDate(LocalDate.parse(birthDate.trim(), DateTimeFormatter.ISO_LOCAL_DATE));
+            } catch (Exception ignored) {
+            }
+        }
+        userProfileRepository.save(userProfile);
+        ra.addFlashAttribute("successMessage", "Cập nhật thông tin cá nhân thành công!");
+        return "redirect:/account?tab=profile";
+    }
+
+    @PostMapping("/address/add")
+    @Transactional
+    public String addAddress(@RequestParam String address,
+            @RequestParam(defaultValue = "false") boolean defaultAddress,
+            Authentication auth,
+            RedirectAttributes ra) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return "redirect:/login";
+        }
+        if (address == null || address.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Vui lòng nhập địa chỉ giao hàng hợp lệ");
+            return "redirect:/account?tab=address";
+        }
+
+        UserProfile userProfile = getOrCreateUserProfile(auth.getName());
+        List<ShippingAddress> existing = shippingAddressRepository
+                .findByUserProfileIdOrderByDefaultAddressDescIdDesc(userProfile.getId());
+
+        boolean makeDefault = defaultAddress || existing.isEmpty();
+        if (makeDefault) {
+            shippingAddressRepository.resetDefaultAddress(userProfile.getId());
+        }
+
+        ShippingAddress newAddr = new ShippingAddress();
+        newAddr.setUserProfile(userProfile);
+        newAddr.setAddress(address.trim());
+        newAddr.setDefaultAddress(makeDefault);
+        shippingAddressRepository.save(newAddr);
+
+        ra.addFlashAttribute("successMessage", "Đã thêm địa chỉ giao hàng mới thành công!");
+        return "redirect:/account?tab=address";
+    }
+
+    @PostMapping("/address/default/{id}")
+    @Transactional
+    public String setDefaultAddress(@PathVariable Long id,
+            Authentication auth,
+            RedirectAttributes ra) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return "redirect:/login";
+        }
+        UserProfile userProfile = getOrCreateUserProfile(auth.getName());
+        Optional<ShippingAddress> addrOpt = shippingAddressRepository.findById(id);
+
+        if (addrOpt.isPresent() && addrOpt.get().getUserProfile().getId().equals(userProfile.getId())) {
+            shippingAddressRepository.resetDefaultAddress(userProfile.getId());
+            ShippingAddress addr = addrOpt.get();
+            addr.setDefaultAddress(true);
+            shippingAddressRepository.save(addr);
+            ra.addFlashAttribute("successMessage", "Đã đặt làm địa chỉ mặc định!");
+        } else {
+            ra.addFlashAttribute("errorMessage", "Không tìm thấy địa chỉ hợp lệ.");
+        }
+
+        return "redirect:/account?tab=address";
+    }
+
+    @PostMapping("/address/delete/{id}")
+    @Transactional
+    public String deleteAddress(@PathVariable Long id,
+            Authentication auth,
+            RedirectAttributes ra) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return "redirect:/login";
+        }
+        UserProfile userProfile = getOrCreateUserProfile(auth.getName());
+        Optional<ShippingAddress> addrOpt = shippingAddressRepository.findById(id);
+
+        if (addrOpt.isPresent() && addrOpt.get().getUserProfile().getId().equals(userProfile.getId())) {
+            boolean wasDefault = addrOpt.get().isDefaultAddress();
+            shippingAddressRepository.delete(addrOpt.get());
+
+            // Nếu vừa xóa địa chỉ mặc định, tự động gán địa chỉ còn lại làm mặc định
+            if (wasDefault) {
+                List<ShippingAddress> remain = shippingAddressRepository
+                        .findByUserProfileIdOrderByDefaultAddressDescIdDesc(userProfile.getId());
+                if (!remain.isEmpty()) {
+                    ShippingAddress newDef = remain.get(0);
+                    newDef.setDefaultAddress(true);
+                    shippingAddressRepository.save(newDef);
+                }
+            }
+            ra.addFlashAttribute("successMessage", "Đã xóa địa chỉ thành công!");
+        } else {
+            ra.addFlashAttribute("errorMessage", "Không tìm thấy địa chỉ để xóa.");
+        }
+
+        return "redirect:/account?tab=address";
+    }
+
+    @PostMapping("/address/update")
+    @Transactional
+    public String updateAddress(@RequestParam Long id,
+            @RequestParam String address,
+            @RequestParam(defaultValue = "false") boolean defaultAddress,
+            Authentication auth,
+            RedirectAttributes ra) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return "redirect:/login";
+        }
+        if (address == null || address.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Địa chỉ giao hàng không được để trống.");
+            return "redirect:/account?tab=address";
+        }
+
+        UserProfile userProfile = getOrCreateUserProfile(auth.getName());
+        Optional<ShippingAddress> addrOpt = shippingAddressRepository.findById(id);
+
+        if (addrOpt.isPresent() && addrOpt.get().getUserProfile().getId().equals(userProfile.getId())) {
+            ShippingAddress addr = addrOpt.get();
+            addr.setAddress(address.trim());
+            if (defaultAddress && !addr.isDefaultAddress()) {
+                shippingAddressRepository.resetDefaultAddress(userProfile.getId());
+                addr.setDefaultAddress(true);
+            }
+            shippingAddressRepository.save(addr);
+            ra.addFlashAttribute("successMessage", "Đã cập nhật địa chỉ giao hàng thành công!");
+        } else {
+            ra.addFlashAttribute("errorMessage", "Không tìm thấy địa chỉ hợp lệ để cập nhật.");
+        }
+
+        return "redirect:/account?tab=address";
+    }
+
+    @GetMapping({ "/security", "/account/security" })
+    public String security(Authentication auth, Model model) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return "redirect:/login";
+        }
+        String email = auth.getName().trim().toLowerCase();
+
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                SELECT up.id AS profileId, up.full_name AS fullName, up.phone_number AS phone,
+                       a.email AS email,
                        DATE_FORMAT(a.last_login_at, '%H:%i - %d/%m/%Y') AS lastLoginAt
                 FROM account a
                 LEFT JOIN user_profile up ON up.account_id = a.id
@@ -42,29 +275,81 @@ public class AccountController {
         model.addAttribute("profile", profile);
         model.addAttribute("email", email);
 
-        Object profileId = profile == null ? null : profile.get("profileId");
+        Object profileIdObj = profile == null ? null : profile.get("profileId");
+        Long profileId = profileIdObj instanceof Number ? ((Number) profileIdObj).longValue() : null;
 
         long processingCount = 0, orderCount = 0, wishlistCount = 0;
-
         if (profileId != null) {
-            // 2. Các con số thống kê (chưa có dữ liệu thì là 0)
             orderCount = count("SELECT COUNT(*) FROM orders WHERE user_profile_id = ?", profileId);
-            processingCount = count("SELECT COUNT(*) FROM orders WHERE user_profile_id = ? AND status IN (" + IN_PROGRESS + ")", profileId);
-            wishlistCount = count("SELECT COUNT(*) FROM wishlist_item WHERE user_profile_id = ?", profileId);
-
-            // 3. Địa chỉ mặc định
-            List<Map<String, Object>> addr = jdbc.queryForList("""
-                    SELECT address FROM shipping_address
-                    WHERE user_profile_id = ? AND default_address = 1
-                    LIMIT 1
+            wishlistCount = count("""
+                        SELECT COUNT(w.id) FROM wishlist_item w
+                        JOIN product p ON p.id = w.product_id
+                        JOIN category c ON c.id = p.category_id
+                        WHERE w.user_profile_id = ? AND p.status = 'ACTIVE' AND c.status = 'VISIBLE'
                     """, profileId);
-            model.addAttribute("defaultAddress", addr.isEmpty() ? null : addr.get(0).get("address"));
         }
 
-        model.addAttribute("processingCount", processingCount);
         model.addAttribute("orderCount", orderCount);
         model.addAttribute("wishlistCount", wishlistCount);
-        return "user/account";
+        return "user/security";
+    }
+
+    @PostMapping("/change-password")
+    @Transactional
+    public String changePassword(@RequestParam String currentPassword,
+            @RequestParam String newPassword,
+            @RequestParam String confirmPassword,
+            @RequestParam(required = false, defaultValue = "/account/security") String redirectUrl,
+            Authentication auth,
+            RedirectAttributes ra) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return "redirect:/login";
+        }
+        String target = redirectUrl != null && !redirectUrl.isBlank() ? redirectUrl : "/account/security";
+        Account account = accountRepository.findByEmail(auth.getName().trim().toLowerCase()).orElse(null);
+        if (account == null) {
+            ra.addFlashAttribute("pwdError", "Không tìm thấy tài khoản người dùng.");
+            return "redirect:" + target;
+        }
+
+        if (!passwordEncoder.matches(currentPassword, account.getPassword())) {
+            ra.addFlashAttribute("pwdError", "Mật khẩu hiện tại không chính xác.");
+            return "redirect:" + target;
+        }
+
+        if (newPassword == null || newPassword.length() < 6) {
+            ra.addFlashAttribute("pwdError", "Mật khẩu mới phải có ít nhất 6 ký tự.");
+            return "redirect:" + target;
+        }
+
+        if (!newPassword.equals(confirmPassword)) {
+            ra.addFlashAttribute("pwdError", "Xác nhận mật khẩu mới không trùng khớp.");
+            return "redirect:" + target;
+        }
+
+        if (passwordEncoder.matches(newPassword, account.getPassword())) {
+            ra.addFlashAttribute("pwdError", "Mật khẩu mới không được trùng với mật khẩu hiện tại.");
+            return "redirect:" + target;
+        }
+
+        account.setPassword(passwordEncoder.encode(newPassword));
+        accountRepository.save(account);
+
+        ra.addFlashAttribute("pwdSuccess", "Đổi mật khẩu thành công! Vui lòng ghi nhớ mật khẩu mới của bạn.");
+        return "redirect:" + target;
+    }
+
+    private UserProfile getOrCreateUserProfile(String email) {
+        String cleanEmail = email.trim().toLowerCase();
+        return userProfileRepository.findByAccountEmail(cleanEmail)
+                .orElseGet(() -> {
+                    Account acc = accountRepository.findByEmail(cleanEmail)
+                            .orElseThrow(() -> new IllegalStateException("Không tìm thấy tài khoản"));
+                    UserProfile profile = new UserProfile();
+                    profile.setAccount(acc);
+                    profile.setFullName(cleanEmail);
+                    return userProfileRepository.save(profile);
+                });
     }
 
     private long count(String sql, Object arg) {

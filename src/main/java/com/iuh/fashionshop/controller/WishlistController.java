@@ -25,7 +25,7 @@ public class WishlistController {
     @GetMapping
     public String index(Authentication auth, Model model) {
         List<ProductCardDto> products = wishlistService.getWishlistCards(auth);
-        int wishlistCount = wishlistService.getWishlistCount(auth);
+        int wishlistCount = products.size(); // Đồng bộ tuyệt đối với danh sách hiển thị
         long orderCount = wishlistService.getOrderCount(auth);
 
         model.addAttribute("products", products);

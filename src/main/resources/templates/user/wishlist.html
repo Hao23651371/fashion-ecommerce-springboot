@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/user-base :: layout(
           ~{::title},
           ~{::#customer-content}
@@ -36,14 +36,14 @@
                         <i class="bi bi-bag-check"></i> Đơn hàng của tôi
                         <span class="count" th:if="${orderCount > 0}" th:text="${orderCount}">0</span>
                     </a>
-                    <a href="#"><i class="bi bi-geo-alt"></i> Sổ địa chỉ</a>
+                    <a th:href="@{/account(tab='address')}"><i class="bi bi-geo-alt"></i> Sổ địa chỉ</a>
                     <a th:href="@{/wishlist}" class="active">
                         <i class="bi bi-heart"></i> Sản phẩm yêu thích
                         <span class="count" id="sidebarWishlistCount" th:if="${wishlistCount > 0}"
                             th:text="${wishlistCount}">0</span>
-                        <span class="acc-dot"></span>
+                        <span class="acc-dot" th:if="${wishlistCount > 0}"></span>
                     </a>
-                    <a href="#"><i class="bi bi-lock"></i> Cài đặt bảo mật</a>
+                    <a th:href="@{/account/security}"><i class="bi bi-lock"></i> Cài đặt bảo mật</a>
                     <hr class="my-2">
                     <a th:href="@{/logout}" class="text-danger">
                         <i class="bi bi-box-arrow-right"></i> Đăng xuất

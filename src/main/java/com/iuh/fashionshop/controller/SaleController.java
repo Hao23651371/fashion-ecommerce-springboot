@@ -48,6 +48,10 @@ public class SaleController {
             filtered = filtered.stream()
                     .filter(p -> p.gender() == Gender.FEMALE || p.gender() == Gender.UNISEX)
                     .toList();
+        } else if ("UNISEX".equals(currentGender)) {
+            filtered = filtered.stream()
+                    .filter(p -> p.gender() == Gender.UNISEX)
+                    .toList();
         } else {
             currentGender = "ALL";
         }
