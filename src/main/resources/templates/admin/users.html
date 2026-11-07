@@ -94,7 +94,7 @@
                 </div>
             </div>
 
-            <div class="col-6 col-md-6 col-xl">
+            <div class="col-6 col-md-4 col-xl">
                 <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <span class="text-muted small fw-semibold">Quản trị viên (ADMIN)</span>
@@ -107,7 +107,20 @@
                 </div>
             </div>
 
-            <div class="col-6 col-md-6 col-xl">
+            <div class="col-6 col-md-4 col-xl">
+                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="text-muted small fw-semibold">Nhân viên (STAFF)</span>
+                        <span class="badge bg-purple-subtle text-purple p-2 rounded-circle">
+                            <i class="bi bi-person-badge fs-6"></i>
+                        </span>
+                    </div>
+                    <h3 class="fw-bold mb-0 text-dark" th:text="${staffAccounts}">0</h3>
+                    <small class="text-muted" style="font-size: 0.75rem;">Vai trò STAFF</small>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-xl">
                 <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <span class="text-muted small fw-semibold">Khách hàng (CUSTOMER)</span>
@@ -300,9 +313,10 @@
                                 <th>Email</th>
                                 <th style="width: 130px;">Vai trò (role)</th>
                                 <th style="width: 140px;">Trạng thái (status)</th>
-                                <th style="width: 140px;">Email Verified</th>
-                                <th style="width: 120px;">Mã xác thực</th>
-                                <th style="width: 160px;">Hạn mã xác thực</th>
+                                <th style="width: 155px;">
+                                    <span>Email Verified</span>
+                                    <i class="bi bi-info-circle text-muted ms-1" style="font-size: 0.75rem;" data-bs-toggle="tooltip" title="Rê chuột vào dòng trạng thái để xem mã xác thực và hạn dùng"></i>
+                                </th>
                                 <th style="width: 160px;">Ngày tạo</th>
                                 <th style="width: 160px;">Đăng nhập cuối</th>
                                 <th class="text-end pe-4" style="width: 160px;">Hành động</th>
@@ -310,7 +324,7 @@
                         </thead>
                         <tbody class="border-top-0">
                             <tr th:if="${accounts.empty}">
-                                <td colspan="10" class="text-center py-5 text-muted">
+                                <td colspan="8" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
                                     <span>Không tìm thấy tài khoản nào khớp với điều kiện tìm kiếm.</span>
                                 </td>
@@ -341,6 +355,10 @@
                                         class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-2">
                                         <i class="bi bi-shield-fill-check me-1"></i>ADMIN
                                     </span>
+                                    <span th:if="${acc.role.name() == 'STAFF'}"
+                                        class="badge bg-purple-subtle text-purple border border-purple-subtle px-2 py-1 rounded-2">
+                                        <i class="bi bi-person-badge-fill me-1"></i>STAFF
+                                    </span>
                                     <span th:if="${acc.role.name() == 'CUSTOMER'}"
                                         class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-2">
                                         <i class="bi bi-person-fill me-1"></i>CUSTOMER
@@ -362,37 +380,25 @@
                                     </span>
                                 </td>
 
-                                <!-- Xác thực email (email_verified) -->
+                                <!-- Xác thực email (email_verified) kèm Popover xem Mã xác thực & Hạn dùng -->
                                 <td>
-                                    <span th:if="${acc.emailVerified}"
-                                        class="text-success small fw-semibold d-inline-flex align-items-center gap-1">
-                                        <i class="bi bi-check-circle-fill"></i> Đã xác thực
-                                    </span>
-                                    <span th:unless="${acc.emailVerified}"
-                                        class="text-warning-emphasis small fw-medium d-inline-flex align-items-center gap-1">
-                                        <i class="bi bi-clock-history"></i> Chưa xác thực
-                                    </span>
+                                    <div class="verification-popover-trigger d-inline-flex align-items-center gap-1 px-2 py-1 rounded"
+                                        role="button" tabindex="0"
+                                        th:data-verified="${acc.emailVerified}"
+                                        th:data-code="${acc.verificationCode}"
+                                        th:data-expiry="${acc.verificationExpiry != null ? #temporals.format(acc.verificationExpiry, 'dd/MM/yyyy HH:mm') : ''}">
+                                        <span th:if="${acc.emailVerified}"
+                                            class="text-success small fw-semibold d-inline-flex align-items-center gap-1">
+                                            <i class="bi bi-check-circle-fill"></i> Đã xác thực
+                                        </span>
+                                        <span th:unless="${acc.emailVerified}"
+                                            class="text-warning-emphasis small fw-medium d-inline-flex align-items-center gap-1">
+                                            <i class="bi bi-clock-history"></i> Chưa xác thực
+                                        </span>
+                                        <i class="bi bi-info-circle text-muted ms-1 info-icon" style="font-size: 0.75rem;"></i>
+                                    </div>
                                 </td>
 
-                                <!-- Mã xác thực (verification_code) -->
-                                <td>
-                                    <code th:if="${acc.verificationCode != null and !acc.verificationCode.isBlank()}"
-                                        class="bg-light text-dark px-2 py-1 rounded border font-monospace"
-                                        th:text="${acc.verificationCode}">123456</code>
-                                    <span
-                                        th:unless="${acc.verificationCode != null and !acc.verificationCode.isBlank()}"
-                                        class="text-muted">—</span>
-                                </td>
-
-                                <!-- Hạn mã xác thực (verification_expiry) -->
-                                <td>
-                                    <span th:if="${acc.verificationExpiry != null}"
-                                        class="small font-monospace text-secondary"
-                                        th:text="${#temporals.format(acc.verificationExpiry, 'dd/MM/yyyy HH:mm')}">
-                                        25/10/2026 21:00
-                                    </span>
-                                    <span th:unless="${acc.verificationExpiry != null}" class="text-muted">—</span>
-                                </td>
 
                                 <!-- Ngày tạo (created_at) -->
                                 <td>
@@ -429,6 +435,18 @@
                                             th:data-created="${acc.createdAt != null ? #temporals.format(acc.createdAt, 'dd/MM/yyyy HH:mm:ss') : ''}"
                                             th:data-login="${acc.lastLoginAt != null ? #temporals.format(acc.lastLoginAt, 'dd/MM/yyyy HH:mm:ss') : 'Chưa đăng nhập'}">
                                             <i class="bi bi-pencil-square"></i>
+                                        </button>
+
+                                        <!-- Nút Phân quyền (Modal Phân quyền) -->
+                                        <button type="button" class="btn btn-sm btn-outline-purple rounded-2 px-2 py-1 role-assign-btn"
+                                            title="Phân quyền tài khoản (Lưu vào Database)"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#assignRoleModal"
+                                            th:data-id="${acc.id}"
+                                            th:data-email="${acc.email}"
+                                            th:data-role="${acc.role.name()}"
+                                            th:data-is-current="${currentAdminEmail != null and currentAdminEmail.equalsIgnoreCase(acc.email)}">
+                                            <i class="bi bi-shield-lock-fill"></i>
                                         </button>
 
                                         <!-- Nút Khóa / Mở khóa nhanh: Không bị khóa -> Ổ khóa mở; Bị khóa -> Ổ khóa đang khóa -->
@@ -542,6 +560,7 @@
                                             class="text-danger">*</span></label>
                                     <select name="role" class="form-select" required>
                                         <option value="CUSTOMER" selected>CUSTOMER (Khách hàng)</option>
+                                        <option value="STAFF">STAFF (Nhân viên)</option>
                                         <option value="ADMIN">ADMIN (Quản trị viên)</option>
                                     </select>
                                 </div>
@@ -564,17 +583,9 @@
                                 </select>
                             </div>
 
-                            <div class="row g-3">
-                                <div class="col-sm-6">
-                                    <label class="form-label small fw-semibold">Mã xác thực (verification_code)</label>
-                                    <input type="text" name="verificationCode" class="form-control"
-                                        placeholder="Để trống nếu không có" maxlength="100">
-                                </div>
-                                <div class="col-sm-6">
-                                    <label class="form-label small fw-semibold">Hạn mã xác thực</label>
-                                    <input type="datetime-local" name="verificationExpiry" class="form-control">
-                                </div>
-                            </div>
+                            <!-- Ẩn trường Mã xác thực và Hạn mã xác thực -->
+                            <input type="hidden" name="verificationCode" value="">
+                            <input type="hidden" name="verificationExpiry" value="">
                         </div>
                         <div class="modal-footer bg-light border-top">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
@@ -630,6 +641,7 @@
                                             class="text-danger">*</span></label>
                                     <select id="editRole" name="role" class="form-select" required>
                                         <option value="CUSTOMER">CUSTOMER (Khách hàng)</option>
+                                        <option value="STAFF">STAFF (Nhân viên)</option>
                                         <option value="ADMIN">ADMIN (Quản trị viên)</option>
                                     </select>
                                 </div>
@@ -652,20 +664,19 @@
                                 </select>
                             </div>
 
-                            <div class="row g-3 mb-3">
-                                <div class="col-sm-6">
-                                    <label class="form-label small fw-semibold">Mã xác thực (verification_code)</label>
-                                    <input type="text" id="editCode" name="verificationCode" class="form-control"
-                                        maxlength="100">
-                                </div>
-                                <div class="col-sm-6">
-                                    <label class="form-label small fw-semibold">Hạn mã xác thực</label>
-                                    <input type="datetime-local" id="editExpiry" name="verificationExpiry"
-                                        class="form-control">
-                                </div>
-                            </div>
+                            <!-- Ẩn trường Mã xác thực và Hạn mã xác thực -->
+                            <input type="hidden" id="editCode" name="verificationCode">
+                            <input type="hidden" id="editExpiry" name="verificationExpiry">
 
                             <div class="row g-3 pt-2 border-top">
+                                <div class="col-sm-6">
+                                    <label class="form-label small text-muted mb-0">Mã xác thực (OTP):</label>
+                                    <div id="editCodeDisplay" class="small fw-semibold text-secondary"></div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label small text-muted mb-0">Hạn mã xác thực:</label>
+                                    <div id="editExpiryDisplay" class="small fw-semibold text-secondary"></div>
+                                </div>
                                 <div class="col-sm-6">
                                     <label class="form-label small text-muted mb-0">Ngày tạo (created_at):</label>
                                     <div id="editCreated" class="small fw-semibold text-secondary"></div>
@@ -715,6 +726,197 @@
                         <div class="modal-footer bg-light justify-content-center border-top">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
                             <button type="submit" class="btn btn-danger fw-semibold px-4">Xóa ngay</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================================= -->
+        <!-- 9. MODAL PHÂN QUYỀN TÀI KHOẢN (ROLE ASSIGNMENT & DATABASE SYNC)          -->
+        <!-- ======================================================================= -->
+        <div class="modal fade" id="assignRoleModal" tabindex="-1" aria-labelledby="assignRoleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-light border-bottom py-3 px-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-purple-subtle text-purple p-2 rounded-circle fs-5 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="bi bi-shield-lock-fill"></i>
+                            </span>
+                            <div>
+                                <h5 class="modal-title fw-bold text-dark mb-0" id="assignRoleModalLabel">Phân quyền tài khoản</h5>
+                                <small class="text-muted">Cập nhật vai trò & quyền hạn, đồng bộ trực tiếp vào Database</small>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <form id="assignRoleForm" method="post">
+                        <div class="modal-body p-4">
+                            <!-- Card thông tin tài khoản được chọn -->
+                            <div class="card border-0 bg-light rounded-3 p-3 mb-4">
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-sm-2">
+                                        <span class="text-muted small d-block">ID Tài khoản</span>
+                                        <span id="roleModalIdBadge" class="badge bg-white text-secondary border font-monospace px-2 py-1 fs-6">#0</span>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <span class="text-muted small d-block">Địa chỉ Email</span>
+                                        <span id="roleModalEmail" class="fw-bold text-dark fs-6 text-truncate d-block">user@example.com</span>
+                                    </div>
+                                    <div class="col-sm-4 text-sm-end">
+                                        <span class="text-muted small d-block">Vai trò hiện tại</span>
+                                        <span id="roleModalCurrentRoleBadge" class="badge bg-primary px-3 py-1 rounded-pill">—</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cảnh báo nếu là tài khoản đang đăng nhập -->
+                            <div id="selfRoleWarning" class="alert alert-warning small d-none align-items-center gap-2 mb-3" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill fs-5 text-warning flex-shrink-0"></i>
+                                <div>
+                                    <strong>Lưu ý bảo mật:</strong> Đây là tài khoản bạn đang đăng nhập. Bạn không thể tự hạ quyền của chính mình để tránh mất quyền quản trị hệ thống.
+                                </div>
+                            </div>
+
+                            <!-- Nhóm lựa chọn vai trò (Radio cards) -->
+                            <label class="form-label fw-bold text-dark small text-uppercase mb-2" style="letter-spacing: 0.04em;">
+                                <i class="bi bi-person-gear text-purple me-1"></i>Chọn vai trò mới (Role)
+                            </label>
+                            <div class="row g-3 mb-4" id="roleOptionsContainer">
+                                <!-- Option 1: ADMIN -->
+                                <div class="col-md-4">
+                                    <label class="role-option-card card h-100 p-3 border rounded-3 position-relative cursor-pointer" for="roleRadio_ADMIN">
+                                        <div class="d-flex align-items-start justify-content-between mb-2">
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-2 fw-bold">
+                                                <i class="bi bi-shield-fill-check me-1"></i>ADMIN
+                                            </span>
+                                            <input class="form-check-input role-radio-input" type="radio" name="role" id="roleRadio_ADMIN" value="ADMIN" required>
+                                        </div>
+                                        <div class="fw-bold text-dark small mb-1">Quản trị viên</div>
+                                        <p class="text-muted mb-0" style="font-size: 0.75rem; line-height: 1.45;">
+                                            Toàn quyền quản trị hệ thống. Phân quyền, quản lý tài khoản, danh mục, sản phẩm, kho, đơn hàng, mã giảm giá và báo cáo thống kê.
+                                        </p>
+                                    </label>
+                                </div>
+
+                                <!-- Option 2: STAFF -->
+                                <div class="col-md-4">
+                                    <label class="role-option-card card h-100 p-3 border rounded-3 position-relative cursor-pointer" for="roleRadio_STAFF">
+                                        <div class="d-flex align-items-start justify-content-between mb-2">
+                                            <span class="badge bg-purple-subtle text-purple border border-purple-subtle px-2 py-1 rounded-2 fw-bold">
+                                                <i class="bi bi-person-badge-fill me-1"></i>STAFF
+                                            </span>
+                                            <input class="form-check-input role-radio-input" type="radio" name="role" id="roleRadio_STAFF" value="STAFF" required>
+                                        </div>
+                                        <div class="fw-bold text-dark small mb-1">Nhân viên quản lý</div>
+                                        <p class="text-muted mb-0" style="font-size: 0.75rem; line-height: 1.45;">
+                                            Vận hành cửa hàng. Quản lý sản phẩm, danh mục, xuất nhập kho, xử lý đơn hàng, mã giảm giá và xem thống kê (không quản lý tài khoản).
+                                        </p>
+                                    </label>
+                                </div>
+
+                                <!-- Option 3: CUSTOMER -->
+                                <div class="col-md-4">
+                                    <label class="role-option-card card h-100 p-3 border rounded-3 position-relative cursor-pointer" for="roleRadio_CUSTOMER">
+                                        <div class="d-flex align-items-start justify-content-between mb-2">
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-2 fw-bold">
+                                                <i class="bi bi-person-fill me-1"></i>CUSTOMER
+                                            </span>
+                                            <input class="form-check-input role-radio-input" type="radio" name="role" id="roleRadio_CUSTOMER" value="CUSTOMER" required>
+                                        </div>
+                                        <div class="fw-bold text-dark small mb-1">Khách hàng</div>
+                                        <p class="text-muted mb-0" style="font-size: 0.75rem; line-height: 1.45;">
+                                            Tài khoản mua sắm thông thường. Mua hàng, theo dõi đơn cá nhân, giỏ hàng, đánh giá sản phẩm. Không có quyền vào trang /admin.
+                                        </p>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Ma trận quyền hạn chi tiết (Preview Permissions Matrix) -->
+                            <div class="border rounded-3 p-3 bg-light-subtle">
+                                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                    <span class="fw-bold text-dark small text-uppercase" style="letter-spacing: 0.03em;">
+                                        <i class="bi bi-check2-all text-success me-1"></i>Chi tiết quyền hạn được kích hoạt theo vai trò đã chọn
+                                    </span>
+                                    <span id="roleSelectedSummaryBadge" class="badge bg-purple text-white px-2 py-1 small">ADMIN</span>
+                                </div>
+
+                                <div class="row g-2" id="permissionItemsContainer">
+                                    <div class="col-sm-6">
+                                        <div class="permission-item d-flex align-items-center gap-2 p-2 rounded bg-white border" data-perm="ROLE_ADMIN">
+                                            <i class="bi bi-check-circle-fill text-success fs-6 perm-icon"></i>
+                                            <div class="lh-sm">
+                                                <span class="small fw-semibold text-dark d-block">Quản lý Tài khoản & Phân quyền</span>
+                                                <small class="text-muted" style="font-size: 0.7rem;">/admin/users - Toàn quyền phân vai trò & khóa/xóa</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <div class="permission-item d-flex align-items-center gap-2 p-2 rounded bg-white border" data-perm="ROLE_STAFF">
+                                            <i class="bi bi-check-circle-fill text-success fs-6 perm-icon"></i>
+                                            <div class="lh-sm">
+                                                <span class="small fw-semibold text-dark d-block">Bảng điều khiển & Thống kê</span>
+                                                <small class="text-muted" style="font-size: 0.7rem;">/admin/dashboard, /admin/statistics</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <div class="permission-item d-flex align-items-center gap-2 p-2 rounded bg-white border" data-perm="ROLE_STAFF">
+                                            <i class="bi bi-check-circle-fill text-success fs-6 perm-icon"></i>
+                                            <div class="lh-sm">
+                                                <span class="small fw-semibold text-dark d-block">Quản lý Danh mục & Sản phẩm</span>
+                                                <small class="text-muted" style="font-size: 0.7rem;">/admin/categories, /admin/products</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <div class="permission-item d-flex align-items-center gap-2 p-2 rounded bg-white border" data-perm="ROLE_STAFF">
+                                            <i class="bi bi-check-circle-fill text-success fs-6 perm-icon"></i>
+                                            <div class="lh-sm">
+                                                <span class="small fw-semibold text-dark d-block">Quản lý Kho & Lịch sử xuất nhập</span>
+                                                <small class="text-muted" style="font-size: 0.7rem;">/admin/inventory - Điều chỉnh tồn kho</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <div class="permission-item d-flex align-items-center gap-2 p-2 rounded bg-white border" data-perm="ROLE_STAFF">
+                                            <i class="bi bi-check-circle-fill text-success fs-6 perm-icon"></i>
+                                            <div class="lh-sm">
+                                                <span class="small fw-semibold text-dark d-block">Quản lý Đơn hàng & Mã giảm giá</span>
+                                                <small class="text-muted" style="font-size: 0.7rem;">/admin/orders, /admin/coupons</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <div class="permission-item d-flex align-items-center gap-2 p-2 rounded bg-white border" data-perm="ROLE_CUSTOMER">
+                                            <i class="bi bi-check-circle-fill text-success fs-6 perm-icon"></i>
+                                            <div class="lh-sm">
+                                                <span class="small fw-semibold text-dark d-block">Khu vực Mua sắm Khách hàng</span>
+                                                <small class="text-muted" style="font-size: 0.7rem;">Storefront, Giỏ hàng, Đặt đơn & Tài khoản cá nhân</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex align-items-center gap-2 mt-3 pt-2 border-top text-muted small" style="font-size: 0.74rem;">
+                                    <i class="bi bi-database-check text-success fs-6"></i>
+                                    <span>Tương tác trực tiếp Database: Cập nhật cột <code>role</code> của bảng <code>account</code> và lưu tức thì.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer bg-light border-top">
+                            <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy bỏ</button>
+                            <button type="submit" id="saveRoleBtn" class="btn btn-purple px-4 fw-semibold text-white d-inline-flex align-items-center gap-2">
+                                <i class="bi bi-shield-check"></i>
+                                <span>Lưu phân quyền vào CSDL</span>
+                            </button>
                         </div>
                     </form>
                 </div>

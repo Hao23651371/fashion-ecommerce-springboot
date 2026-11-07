@@ -49,7 +49,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // Tắt CSRF để thuận tiện test
                 .authorizeHttpRequests(auth -> auth
                         // 1. Public - Tài nguyên tĩnh & Trang lỗi
-                        .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**", "/webjars/**", "/favicon.ico", "/error").permitAll()
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**", "/webjars/**", "/favicon.ico", "/error", "/error/**", "/403").permitAll()
 
                         // 2. Public - Các trang storefront & xác thực công khai
                         .requestMatchers("/", "/shop/**", "/sale",
@@ -62,8 +62,11 @@ public class SecurityConfig {
                         // 4. Customer - Khu vực khách hàng cá nhân (yêu cầu đăng nhập)
                         .requestMatchers("/cart/**", "/checkout/**", "/wishlist/**", "/orders/**", "/account/**").authenticated()
 
-                        // 5. Admin - Khu vực quản trị (yêu cầu quyền ROLE_ADMIN)
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        // 5. Admin - Khu vực quản trị
+                        // Chỉ tài khoản có quyền ROLE_ADMIN mới được truy cập quản lý tài khoản và phân quyền
+                        .requestMatchers("/admin/users/**", "/admin/accounts/**").hasRole("ADMIN")
+                        // Cả ROLE_ADMIN và ROLE_STAFF đều có thể truy cập khu vực quản trị cửa hàng
+                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "STAFF")
 
                         // 6. Các route khác còn lại
                         .anyRequest().permitAll()
@@ -81,6 +84,9 @@ public class SecurityConfig {
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
                         .permitAll()
+                )
+                .exceptionHandling(ex -> ex
+                        .accessDeniedPage("/error/403")
                 );
 
         return http.build();
@@ -111,7 +117,7 @@ public class SecurityConfig {
                 }
 
                 Set<String> roles = AuthorityUtils.authorityListToSet(authentication.getAuthorities());
-                if (roles.contains("ROLE_ADMIN")) {
+                if (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_STAFF")) {
                     response.sendRedirect("/admin/dashboard");
                 } else {
                     response.sendRedirect("/");

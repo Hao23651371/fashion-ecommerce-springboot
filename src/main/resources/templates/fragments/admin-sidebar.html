@@ -100,6 +100,10 @@
                             <i class="bi bi-people-fill"></i>
                             <span>Quản lý Tài khoản</span>
                         </div>
+                        <!-- Nếu tài khoản không phải ADMIN (ví dụ STAFF), hiển thị huy hiệu ổ khóa -->
+                        <span th:unless="${isAdmin}" class="badge bg-secondary-subtle text-secondary border font-monospace" style="font-size: 0.65rem;" title="Chỉ Quản trị viên (ADMIN) mới có quyền">
+                            <i class="bi bi-lock-fill"></i> ADMIN
+                        </span>
                     </a>
                 </li>
             </ul>

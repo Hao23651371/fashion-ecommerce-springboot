@@ -65,6 +65,7 @@ public class AdminUserController {
         model.addAttribute("activeAccounts", accountService.countActiveAccounts());
         model.addAttribute("bannedAccounts", accountService.countBannedAccounts());
         model.addAttribute("adminAccounts", accountService.countAdminAccounts());
+        model.addAttribute("staffAccounts", accountService.countStaffAccounts());
         model.addAttribute("customerAccounts", accountService.countCustomerAccounts());
 
         if (auth != null) {
@@ -150,6 +151,28 @@ public class AdminUserController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi đổi trạng thái: " + e.getMessage());
+        }
+
+        return "redirect:/admin/users";
+    }
+
+    /**
+     * Phân quyền tài khoản (Cập nhật vai trò / quyền hạn vào Database).
+     */
+    @PostMapping("/{id}/role")
+    public String updateRole(@PathVariable Long id,
+                             @RequestParam("role") Role role,
+                             Authentication auth,
+                             RedirectAttributes redirectAttributes) {
+        try {
+            String currentEmail = (auth != null) ? auth.getName() : null;
+            Account acc = accountService.updateAccountRole(id, role, currentEmail);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Phân quyền thành công cho tài khoản ID #" + id + " (" + acc.getEmail() + ") thành: " + acc.getRole().getLabel() + " (" + acc.getRole().name() + ").");
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Đã xảy ra lỗi khi phân quyền: " + e.getMessage());
         }
 
         return "redirect:/admin/users";

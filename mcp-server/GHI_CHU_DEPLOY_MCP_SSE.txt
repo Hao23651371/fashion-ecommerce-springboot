@@ -1,0 +1,66 @@
+================================================================================
+GHI CHÚ HƯỚNG DẪN KỸ THUẬT: MCP SERVER DẠNG ONLINE (SSE / HTTP)
+DỰ ÁN: FASHIONSHOP - ADMIN AI COPILOT
+Nhánh: feature/hao-mcp-sse
+Người tạo: Hào (Leader / AI Module)
+================================================================================
+
+1. MỤC ĐÍCH CỦA NHÁNH NÀY (ĐỌC KỸ TRƯỚC KHI DÙNG):
+--------------------------------------------------------------------------------
+- Nhánh này được tạo riêng để chuẩn bị sẵn file `server.js` (chế độ SSE/HTTP Online)
+  phục vụ cho việc DEPLOY LÊN CLOUD (Render / Railway / Docker) trong tương lai.
+- HIỆN TẠI: Nhóm CHƯA CẦN tạo Pull Request (gộp nhánh) vào `develop`. Cứ để nhánh
+  này lưu trữ trên GitHub. Khi nào toàn nhóm hoàn thiện website và bước vào giai
+  đoạn nộp bài / deploy chính thức thì mới lấy ra dùng.
+
+2. CẤU TRÚC 2 FILE CHẠY TRONG THƯ MỤC mcp-server/:
+--------------------------------------------------------------------------------
+- File 1: `index.js` (Chế độ `stdio` - ĐÃ GỘP Ở DEVELOP):
+  + Dành cho máy cá nhân khi code hoặc demo offline.
+  + Claude Desktop tự động bật/tắt ngầm, không cần mở cổng mạng, cực kỳ nhẹ máy.
+  + Lệnh chạy: `node index.js` (hoặc `npm start`).
+
+- File 2: `server.js` (Chế độ `SSE / HTTP` - TRONG NHÁNH NÀY):
+  + Dành cho việc DEPLOY LÊN INTERNET / CLOUD / DOCKER.
+  + Server mở cổng web (mặc định cổng 3000 hoặc biến môi trường PORT).
+  + Bất kỳ ai từ bất kỳ máy nào (kể cả điện thoại, laptop của thầy cô) đều có thể
+    kết nối vào dùng chung qua một đường link URL duy nhất.
+  + Lệnh chạy: `node server.js` (hoặc `npm run start:sse`).
+
+* LƯU Ý: Cả 2 file đều dùng chung trọn bộ 5 tools từ file `mcp-app.js`:
+  1. `check_low_stock`          : Kiểm tra cảnh báo tồn kho theo biến thể size/màu.
+  2. `get_revenue_summary`      : Báo cáo tổng doanh thu & đơn hàng COMPLETED.
+  3. `get_recent_sales`         : Xem chi tiết các món vừa bán & top bán chạy.
+  4. `search_products`          : Tra cứu danh mục, giá bán sản phẩm.
+  5. `create_promotional_coupon`: Tự động tạo mã voucher vào MariaDB.
+
+3. CÁCH CHẠY THỬ NGHIỆM LOCAL TRÊN MÁY (NẾU MUỐN TEST):
+--------------------------------------------------------------------------------
+Bước 1: Mở terminal tại thư mục `mcp-server/`.
+Bước 2: Gõ lệnh:
+        node server.js
+        (Terminal sẽ báo: "FashionShop MCP SSE Server đang chạy tại: http://0.0.0.0:3000")
+Bước 3: Mở trình duyệt web gõ: http://localhost:3000/health
+        -> Nếu màn hình hiện JSON status "UP" và tools_count: 5 là thành công 100%!
+
+Bước 4 (Tùy chọn): Nếu muốn Claude Desktop kết nối qua cổng mạng này thay vì stdio:
+        Mở `claude_desktop_config.json`, đổi cấu hình thành:
+        {
+          "mcpServers": {
+            "fashionshop": {
+              "url": "http://localhost:3000/sse"
+            }
+          }
+        }
+
+4. KHI NÀO CẢ NHÓM SẴN SÀNG DEPLOY LÊN CLOUD THÌ LÀM GÌ?
+--------------------------------------------------------------------------------
+Khi thầy cô yêu cầu nộp link deploy online:
+1. Đẩy `mcp-server` lên Render hoặc Railway (chọn Start Command là `node server.js`).
+2. Điền biến môi trường trên Cloud (DB_HOST, DB_USER, DB_PASSWORD trỏ tới DB online).
+3. Cloud sẽ cấp đường link public (ví dụ: `https://fashionshop-mcp.up.railway.app/sse`).
+4. Thầy cô chỉ việc dán link đó vào Claude Desktop của thầy là chấm bài được ngay!
+
+================================================================================
+Chúc nhóm FashionShop hoàn thành đồ án xuất sắc đạt điểm tối đa!
+================================================================================

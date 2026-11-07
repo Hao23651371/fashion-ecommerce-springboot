@@ -38,8 +38,13 @@ public class GlobalModelAttributes {
         if (loggedIn) {
             String email = auth.getName();
             model.addAttribute("currentEmail", email);
-            model.addAttribute("isAdmin", auth.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")));
+            boolean isAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            boolean isStaff = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_STAFF"));
+            model.addAttribute("isAdmin", isAdmin);
+            model.addAttribute("isStaff", isStaff);
+            model.addAttribute("hasAdminAccess", isAdmin || isStaff);
 
             Optional<UserProfile> profileOpt = userProfileRepository.findByAccountEmail(email);
             if (profileOpt.isPresent() && profileOpt.get().getFullName() != null && !profileOpt.get().getFullName().isBlank()) {
