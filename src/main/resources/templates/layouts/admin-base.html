@@ -35,8 +35,9 @@
 
             <div class="d-flex align-items-center gap-3">
                 <a th:href="@{/admin/account}" class="text-decoration-none d-flex align-items-center gap-2 bg-light px-3 py-1 rounded-pill border text-dark">
-                    <i class="bi bi-shield-lock text-primary"></i>
-                    <span class="small fw-semibold" th:text="${currentUserName != null ? currentUserName : 'Quản trị viên'}">Quản trị viên</span>
+                    <i th:if="${isAdmin}" class="bi bi-shield-lock text-primary"></i>
+                    <i th:if="${isStaff}" class="bi bi-person-badge-fill text-purple" style="color: #6f42c1;"></i>
+                    <span class="small fw-semibold" th:text="${currentUserName != null ? currentUserName : (isStaff ? 'Nhân viên' : 'Quản trị viên')}">Quản trị viên</span>
                 </a>
 
             </div>
