@@ -64,7 +64,7 @@
                             </span>
                         </label>
                         <label class="pay-option">
-                            <input type="radio" name="paymentMethod" value="BANK_TRANSFER">
+                            <input type="radio" name="paymentMethod" value="BANK_TRANSFER" id="pay-bank-transfer">
                             <span class="pay-card">
                                 <i class="bi bi-bank"></i>
                                 <span>
@@ -83,6 +83,77 @@
                                 </span>
                             </span>
                         </label>
+                    </div>
+
+                    <!-- THÔNG TIN CHUYỂN KHOẢN + QR: hiện khi chọn BANK_TRANSFER -->
+                    <div id="bank-transfer-box" class="bank-transfer-box">
+                        <div class="bank-transfer-header">
+                            <i class="bi bi-qr-code"></i>
+                            <div>
+                                <strong>Thông tin chuyển khoản</strong>
+                                <small>Quét mã QR hoặc chuyển khoản thủ công theo thông tin bên dưới</small>
+                            </div>
+                        </div>
+
+                        <div class="bank-transfer-body">
+                            <div class="bank-qr-wrap">
+                                <!--
+                                  Đổi theo STK thật của shop:
+                                  - MB → mã ngân hàng (VCB, TCB, ACB, VPB, BIDV, TPB...)
+                                  - 0123456789 → số tài khoản
+                                  - accountName → tên chủ tài khoản
+                                -->
+                                <img id="bank-qr-img"
+                                     th:src="@{'https://img.vietqr.io/image/MB-0123456789-compact2.png'(amount=${grandTotal != null ? grandTotal.longValue() : 0}, addInfo='FashionShop', accountName='FASHION SHOP')}"
+                                     alt="QR chuyển khoản"
+                                     class="bank-qr-img"
+                                     width="220" height="220">
+                                <p class="bank-qr-hint">Quét bằng app ngân hàng</p>
+                            </div>
+
+                            <div class="bank-info-list">
+                                <div class="bank-info-row">
+                                    <span class="bank-info-label">Ngân hàng</span>
+                                    <span class="bank-info-value">MB Bank (Quân đội)</span>
+                                </div>
+                                <div class="bank-info-row">
+                                    <span class="bank-info-label">Số tài khoản</span>
+                                    <span class="bank-info-value bank-stk">
+                                        0123456789
+                                        <button type="button" class="btn-copy-stk" data-copy="0123456789" title="Sao chép STK">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </span>
+                                </div>
+                                <div class="bank-info-row">
+                                    <span class="bank-info-label">Chủ tài khoản</span>
+                                    <span class="bank-info-value">FASHION SHOP</span>
+                                </div>
+                                <div class="bank-info-row">
+                                    <span class="bank-info-label">Số tiền</span>
+                                    <span class="bank-info-value bank-amount"
+                                          th:text="${grandTotal != null ? #numbers.formatDecimal(grandTotal, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0 ₫</span>
+                                </div>
+                                <div class="bank-info-row">
+                                    <span class="bank-info-label">Nội dung CK</span>
+                                    <span class="bank-info-value">
+                                        FashionShop
+                                        <button type="button" class="btn-copy-stk" data-copy="FashionShop" title="Sao chép nội dung">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bank-transfer-note">
+                            <i class="bi bi-info-circle"></i>
+                            <span>
+                                Sau khi chuyển khoản thành công, nhấn <strong>Đặt hàng</strong>.
+                                Hệ thống sẽ ghi nhận đơn ở trạng thái chờ xác nhận thanh toán.
+                                Vui lòng giữ nguyên nội dung chuyển khoản để đối soát nhanh.
+                            </span>
+                        </div>
                     </div>
                 </section>
 
@@ -153,6 +224,52 @@
             </aside>
         </div>
     </div>
+
+    <!-- Script PHẢI nằm trong #customer-content để layout không bỏ mất -->
+    <script>
+        (function () {
+            var bankBox = document.getElementById('bank-transfer-box');
+            var radios = document.querySelectorAll('input[name="paymentMethod"]');
+
+            function toggleBankBox() {
+                var selected = document.querySelector('input[name="paymentMethod"]:checked');
+                if (!bankBox || !selected) return;
+                if (selected.value === 'BANK_TRANSFER') {
+                    bankBox.classList.add('is-visible');
+                } else {
+                    bankBox.classList.remove('is-visible');
+                }
+            }
+
+            radios.forEach(function (r) {
+                r.addEventListener('change', toggleBankBox);
+            });
+            toggleBankBox();
+
+            document.querySelectorAll('.btn-copy-stk').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var text = btn.getAttribute('data-copy') || '';
+                    if (!text) return;
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(function () {
+                            var icon = btn.querySelector('i');
+                            if (icon) {
+                                icon.className = 'bi bi-check2';
+                                setTimeout(function () { icon.className = 'bi bi-clipboard'; }, 1500);
+                            }
+                        });
+                    } else {
+                        var ta = document.createElement('textarea');
+                        ta.value = text;
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(ta);
+                    }
+                });
+            });
+        })();
+    </script>
 </div>
 
 </body>
