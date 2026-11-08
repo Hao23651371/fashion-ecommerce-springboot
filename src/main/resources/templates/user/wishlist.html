@@ -179,6 +179,41 @@
 
         </div>
 
+        <!-- MODAL XÁC NHẬN XÓA TOÀN BỘ YÊU THÍCH -->
+        <div class="modal fade" id="clearWishlistModal" tabindex="-1" aria-labelledby="clearWishlistModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-0 border-0 shadow">
+                    <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-danger-subtle text-danger" style="width: 44px; height: 44px; flex-shrink: 0;">
+                                <i class="bi bi-trash3-fill fs-5"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title font-serif fs-5 text-danger mb-0" id="clearWishlistModalLabel">Xóa tất cả yêu thích</h5>
+                                <small class="text-muted">Thao tác này sẽ làm sạch danh sách lưu trữ</small>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body px-4 py-3">
+                        <div class="p-3 bg-light border-start border-danger border-3 rounded-1 mb-2">
+                            <p class="fs-7 text-secondary mb-0">
+                                Bạn có chắc chắn muốn xóa toàn bộ sản phẩm khỏi danh sách yêu thích không? Hành động này sẽ gỡ bỏ tất cả các món đồ bạn đã lưu và <strong>không thể hoàn tác</strong>.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top-0 pt-0 pb-4 px-4 gap-2">
+                        <button type="button" class="btn btn-outline-secondary rounded-0 px-3 fs-7 text-uppercase letter-spacing-1" data-bs-dismiss="modal">
+                            Hủy bỏ
+                        </button>
+                        <button type="button" class="btn btn-danger rounded-0 px-4 fs-7 text-uppercase letter-spacing-1 shadow-sm" id="btnConfirmClearWishlist">
+                            <i class="bi bi-trash3 me-1"></i> Xác nhận xóa
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast thông báo nhanh -->
         <div id="wishlistToast" class="wishlist-toast" role="alert" aria-live="assertive" aria-atomic="true">
             <i class="bi bi-check2-circle fs-5 text-success"></i>
