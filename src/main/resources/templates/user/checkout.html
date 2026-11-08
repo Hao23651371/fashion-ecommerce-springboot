@@ -18,10 +18,16 @@
         <p class="checkout-sub">Hoàn tất đơn hàng trong vài bước.</p>
     </div>
 
+    <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
     <div class="row g-4">
         <!-- Form -->
         <div class="col-lg-7">
             <form class="checkout-form" method="post" th:action="@{/checkout}">
+                <!-- Chế độ Mua ngay: giữ lại đúng 1 món để khi đặt hàng không lấy giỏ hàng -->
+                <input type="hidden" name="buyNowVariantId" th:if="${buyNow}" th:value="${buyNowVariantId}">
+                <input type="hidden" name="buyNowQuantity" th:if="${buyNow}" th:value="${buyNowQuantity}">
+
                 <section class="checkout-block">
                     <h2><span class="step">1</span> Thông tin giao hàng</h2>
                     <div class="row g-3">
@@ -39,8 +45,45 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Địa chỉ nhận hàng *</label>
-                            <textarea class="form-control" name="shippingAddress" rows="2" required maxlength="255"
-                                      placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"></textarea>
+
+                            <div class="addr-options">
+                                <!-- Địa chỉ đã lưu (mặc định đứng đầu và được chọn sẵn) -->
+                                <label class="addr-option" th:each="a, st : ${addresses}">
+                                    <input type="radio" name="addressOption" th:value="${a.id}"
+                                           th:checked="${st.first}">
+                                    <span class="addr-card">
+                                        <i class="bi bi-geo-alt"></i>
+                                        <span class="addr-text">
+                                            <span th:text="${a.address}">Địa chỉ</span>
+                                            <em class="addr-badge" th:if="${a.defaultAddress}">Mặc định</em>
+                                        </span>
+                                    </span>
+                                </label>
+
+                                <!-- Nhập địa chỉ mới -->
+                                <label class="addr-option">
+                                    <input type="radio" name="addressOption" value="new" id="addrNewRadio"
+                                           th:checked="${#lists.isEmpty(addresses)}">
+                                    <span class="addr-card">
+                                        <i class="bi bi-plus-circle"></i>
+                                        <span class="addr-text"><span>Giao đến địa chỉ khác (nhập địa chỉ mới)</span></span>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div id="newAddressBox" class="addr-new-box" style="display:none;">
+                                <textarea class="form-control" name="newAddress" id="newAddressInput" rows="2"
+                                          maxlength="255"
+                                          placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"></textarea>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" name="saveAsDefault" value="true"
+                                           id="saveAsDefault">
+                                    <label class="form-check-label" for="saveAsDefault">
+                                        Đặt làm địa chỉ mặc định
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">Địa chỉ mới sẽ được lưu vào tài khoản của bạn khi đặt hàng.</small>
+                            </div>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Ghi chú đơn hàng</label>
@@ -96,7 +139,8 @@
                 </section>
 
                 <div class="checkout-actions d-flex flex-wrap gap-2 justify-content-between align-items-center">
-                    <a th:href="@{/cart}" class="checkout-back"><i class="bi bi-arrow-left"></i> Quay lại giỏ hàng</a>
+                    <a th:if="${!buyNow}" th:href="@{/cart}" class="checkout-back"><i class="bi bi-arrow-left"></i> Quay lại giỏ hàng</a>
+                    <a th:if="${buyNow}" href="javascript:history.back()" class="checkout-back"><i class="bi bi-arrow-left"></i> Quay lại sản phẩm</a>
                     <button type="submit" class="btn checkout-submit-btn">
                         Đặt hàng <i class="bi bi-check2"></i>
                     </button>
@@ -153,6 +197,33 @@
             </aside>
         </div>
     </div>
+    <style>
+        .addr-options { display: grid; gap: 10px; }
+        .addr-option { cursor: pointer; margin: 0; }
+        .addr-option input { position: absolute; opacity: 0; pointer-events: none; }
+        .addr-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+            border: 1px solid #e5e0d6; background: #faf8f5; transition: .15s ease; }
+        .addr-card i { font-size: 1.2rem; color: #555; }
+        .addr-text { font-size: .9rem; color: #1a1a1a; }
+        .addr-badge { font-style: normal; font-size: .65rem; letter-spacing: .06em; text-transform: uppercase;
+            background: #121212; color: #fff; padding: 2px 7px; margin-left: 8px; }
+        .addr-option input:checked + .addr-card { border-color: #121212; background: #fff; box-shadow: inset 0 0 0 1px #121212; }
+        .addr-new-box { margin-top: 10px; }
+    </style>
+    <script>
+        (function () {
+            var radios = document.querySelectorAll('input[name="addressOption"]');
+            var box = document.getElementById('newAddressBox');
+            var input = document.getElementById('newAddressInput');
+            function sync() {
+                var isNew = document.getElementById('addrNewRadio').checked;
+                box.style.display = isNew ? 'block' : 'none';
+                input.required = isNew;
+            }
+            radios.forEach(function (r) { r.addEventListener('change', sync); });
+            sync();
+        })();
+    </script>
 </div>
 
 </body>

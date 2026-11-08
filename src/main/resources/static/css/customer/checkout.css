@@ -45,6 +45,132 @@
     border-color: #121212; background: #fff; box-shadow: inset 0 0 0 1px #121212;
 }
 
+/* ===== Bank transfer + QR ===== */
+.bank-transfer-box {
+    display: none;
+    margin-top: 16px;
+    border: 1px solid #e5e0d6;
+    background: #faf8f5;
+    padding: 18px 16px;
+}
+.bank-transfer-box.is-visible {
+    display: block;
+}
+/* Fallback không cần JS (trình duyệt hỗ trợ :has) */
+.checkout-block:has(input[name="paymentMethod"][value="BANK_TRANSFER"]:checked) .bank-transfer-box {
+    display: block;
+}
+
+.bank-transfer-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.bank-transfer-header > i {
+    font-size: 1.4rem;
+    color: #121212;
+    margin-top: 2px;
+}
+.bank-transfer-header strong {
+    display: block;
+    font-size: .95rem;
+    color: #1a1a1a;
+}
+.bank-transfer-header small {
+    color: #777;
+    font-size: .8rem;
+}
+.bank-transfer-body {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 20px;
+    align-items: start;
+}
+.bank-qr-wrap { text-align: center; }
+.bank-qr-img {
+    width: 220px;
+    height: 220px;
+    object-fit: contain;
+    background: #fff;
+    border: 1px solid #e5e0d6;
+    display: block;
+    margin: 0 auto;
+}
+.bank-qr-hint {
+    margin: 8px 0 0;
+    font-size: .75rem;
+    color: #888;
+}
+.bank-info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.bank-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed #e5e0d6;
+    font-size: .9rem;
+}
+.bank-info-row:last-child { border-bottom: none; }
+.bank-info-label { color: #777; flex-shrink: 0; }
+.bank-info-value {
+    font-weight: 600;
+    color: #1a1a1a;
+    text-align: right;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.bank-stk {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: .04em;
+}
+.bank-amount { color: #b45309; font-size: 1rem; }
+.btn-copy-stk {
+    border: none;
+    background: transparent;
+    color: #555;
+    padding: 2px 4px;
+    cursor: pointer;
+    line-height: 1;
+}
+.btn-copy-stk:hover { color: #121212; }
+.bank-transfer-note {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #ece5d8;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: .82rem;
+    color: #555;
+    line-height: 1.45;
+}
+.bank-transfer-note i {
+    color: #087f75;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 575px) {
+    .bank-transfer-body {
+        grid-template-columns: 1fr;
+        justify-items: center;
+    }
+    .bank-info-list { width: 100%; }
+    .bank-info-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    .bank-info-value { text-align: left; }
+}
+
 .coupon-row { display: flex; gap: 8px; }
 .coupon-row .form-control { flex: 1; }
 .coupon-apply-btn {
