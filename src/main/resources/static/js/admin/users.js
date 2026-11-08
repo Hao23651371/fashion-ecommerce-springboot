@@ -237,6 +237,62 @@ function initAdminUsers() {
     }
 
     // =========================================================================
+    // 6.5. MODAL XÁC NHẬN KHÓA / MỞ KHÓA TÀI KHOẢN (TOGGLE STATUS)
+    // =========================================================================
+    const toggleStatusModal = document.getElementById('toggleStatusModal');
+    if (toggleStatusModal) {
+        toggleStatusModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+
+            const id = button.getAttribute('data-id');
+            const email = button.getAttribute('data-email');
+            const status = button.getAttribute('data-status'); // 'ACTIVE' or 'BANNED'
+
+            const form = document.getElementById('toggleStatusAccountForm');
+            const emailElem = document.getElementById('toggleStatusAccountEmail');
+            const header = document.getElementById('toggleStatusModalHeader');
+            const headerIcon = document.getElementById('toggleStatusModalHeaderIcon');
+            const titleElem = document.getElementById('toggleStatusModalTitle');
+            const closeBtn = document.getElementById('toggleStatusModalCloseBtn');
+            const bodyIcon = document.getElementById('toggleStatusModalBodyIcon');
+            const actionText = document.getElementById('toggleStatusActionText');
+            const alertBox = document.getElementById('toggleStatusAlertBox');
+            const alertMsg = document.getElementById('toggleStatusAlertMessage');
+            const submitBtn = document.getElementById('toggleStatusSubmitBtn');
+
+            form.action = '/admin/users/' + id + '/toggle-status';
+            emailElem.textContent = email + ' (#' + id + ')';
+
+            if (status === 'ACTIVE') {
+                // Đang hoạt động -> muốn KHÓA (chuyển sang BANNED)
+                header.className = 'modal-header bg-warning text-dark';
+                closeBtn.className = 'btn-close';
+                headerIcon.className = 'bi bi-lock-fill me-2';
+                titleElem.textContent = 'Xác nhận khóa';
+                bodyIcon.className = 'bi bi-exclamation-triangle text-warning display-4 d-block mb-3';
+                actionText.textContent = 'Bạn có chắc chắn muốn KHÓA tài khoản:';
+                alertBox.className = 'alert alert-warning small text-start mb-0 py-2';
+                alertMsg.textContent = 'Tài khoản bị khóa sẽ không thể đăng nhập. Nếu tài khoản có đơn hàng đang xử lý (chờ duyệt, đang giao), hệ thống sẽ ngăn chặn việc khóa.';
+                submitBtn.className = 'btn btn-warning fw-semibold px-4 text-dark';
+                submitBtn.textContent = 'Khóa ngay';
+            } else {
+                // Đang bị khóa -> muốn MỞ KHÓA (chuyển sang ACTIVE)
+                header.className = 'modal-header bg-success text-white';
+                closeBtn.className = 'btn-close btn-close-white';
+                headerIcon.className = 'bi bi-unlock-fill me-2';
+                titleElem.textContent = 'Xác nhận mở khóa';
+                bodyIcon.className = 'bi bi-check-circle text-success display-4 d-block mb-3';
+                actionText.textContent = 'Bạn có chắc chắn muốn MỞ KHÓA tài khoản:';
+                alertBox.className = 'alert alert-success small text-start mb-0 py-2';
+                alertMsg.textContent = 'Tài khoản sau khi mở khóa sẽ có thể đăng nhập và tiếp tục mua sắm bình thường.';
+                submitBtn.className = 'btn btn-success fw-semibold px-4 text-white';
+                submitBtn.textContent = 'Mở khóa ngay';
+            }
+        });
+    }
+
+    // =========================================================================
     // 7. MODAL XÁC NHẬN XÓA TÀI KHOẢN (DELETE)
     // =========================================================================
     const deleteModal = document.getElementById('deleteAccountModal');

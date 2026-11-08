@@ -21,10 +21,9 @@
             class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
             <div>
                 <h4 class="fw-bold mb-1 text-dark">
-                    <i class="bi bi-people-fill text-primary me-2"></i>Quản lý Tài khoản (Account)
+                    <i class="bi bi-people-fill text-primary me-2"></i>Quản lý Tài khoản
                 </h4>
-                <p class="text-muted small mb-0">Quản lý toàn bộ danh sách và thông tin tài khoản đăng nhập theo các
-                    thuộc tính của bảng Account.</p>
+                <p class="text-muted small mb-0">Quản lý danh sách người dùng, cấp vai trò và kiểm soát trạng thái tài khoản hệ thống.</p>
             </div>
             <div>
                 <button type="button"
@@ -64,7 +63,7 @@
                         </span>
                     </div>
                     <h3 class="fw-bold mb-0 text-dark" th:text="${totalAccounts}">0</h3>
-                    <small class="text-muted" style="font-size: 0.75rem;">Toàn bộ bảng account</small>
+                    <small class="text-muted" style="font-size: 0.75rem;">Toàn bộ hệ thống</small>
                 </div>
             </div>
 
@@ -439,7 +438,7 @@
 
                                         <!-- Nút Phân quyền (Modal Phân quyền) -->
                                         <button type="button" class="btn btn-sm btn-outline-purple rounded-2 px-2 py-1 role-assign-btn"
-                                            title="Phân quyền tài khoản (Lưu vào Database)"
+                                            title="Phân quyền tài khoản"
                                             data-bs-toggle="modal"
                                             data-bs-target="#assignRoleModal"
                                             th:data-id="${acc.id}"
@@ -450,22 +449,27 @@
                                         </button>
 
                                         <!-- Nút Khóa / Mở khóa nhanh: Không bị khóa -> Ổ khóa mở; Bị khóa -> Ổ khóa đang khóa -->
-                                        <form th:action="@{/admin/users/{id}/toggle-status(id=${acc.id})}" method="post"
-                                            class="d-inline">
-                                            <button th:if="${acc.status.name() == 'ACTIVE'}" type="submit"
-                                                class="btn btn-sm btn-outline-success rounded-2 px-2 py-1"
-                                                title="Tài khoản không bị khóa (Bấm để khóa)"
-                                                th:disabled="${currentAdminEmail != null and currentAdminEmail.equalsIgnoreCase(acc.email)}"
-                                                onclick="return confirm('Bạn có chắc muốn KHÓA tài khoản này không?');">
-                                                <i class="bi bi-unlock-fill"></i>
-                                            </button>
-                                            <button th:if="${acc.status.name() == 'BANNED'}" type="submit"
-                                                class="btn btn-sm btn-outline-warning rounded-2 px-2 py-1"
-                                                title="Tài khoản đang bị khóa (Bấm để mở khóa)"
-                                                onclick="return confirm('Bạn có chắc muốn MỞ KHÓA tài khoản này không?');">
-                                                <i class="bi bi-lock-fill"></i>
-                                            </button>
-                                        </form>
+                                        <button th:if="${acc.status.name() == 'ACTIVE'}" type="button"
+                                            class="btn btn-sm btn-outline-success rounded-2 px-2 py-1"
+                                            title="Tài khoản không bị khóa (Bấm để khóa)"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#toggleStatusModal"
+                                            th:data-id="${acc.id}"
+                                            th:data-email="${acc.email}"
+                                            th:data-status="ACTIVE"
+                                            th:disabled="${currentAdminEmail != null and currentAdminEmail.equalsIgnoreCase(acc.email)}">
+                                            <i class="bi bi-unlock-fill"></i>
+                                        </button>
+                                        <button th:if="${acc.status.name() == 'BANNED'}" type="button"
+                                            class="btn btn-sm btn-outline-warning rounded-2 px-2 py-1"
+                                            title="Tài khoản đang bị khóa (Bấm để mở khóa)"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#toggleStatusModal"
+                                            th:data-id="${acc.id}"
+                                            th:data-email="${acc.email}"
+                                            th:data-status="BANNED">
+                                            <i class="bi bi-lock-fill"></i>
+                                        </button>
 
                                         <!-- Nút Xóa -->
                                         <button type="button" class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1"
@@ -700,6 +704,38 @@
         </div>
 
         <!-- ======================================================================= -->
+        <!-- 7.5. MODAL XÁC NHẬN KHÓA / MỞ KHÓA TÀI KHOẢN (TOGGLE STATUS)             -->
+        <!-- ======================================================================= -->
+        <div class="modal fade" id="toggleStatusModal" tabindex="-1" aria-labelledby="toggleStatusModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header" id="toggleStatusModalHeader">
+                        <h5 class="modal-title fw-bold" id="toggleStatusModalLabel">
+                            <i id="toggleStatusModalHeaderIcon" class="bi bi-lock-fill me-2"></i>
+                            <span id="toggleStatusModalTitle">Xác nhận khóa</span>
+                        </h5>
+                        <button type="button" class="btn-close" id="toggleStatusModalCloseBtn" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="toggleStatusAccountForm" method="post">
+                        <div class="modal-body p-4 text-center">
+                            <i id="toggleStatusModalBodyIcon" class="bi bi-exclamation-triangle text-warning display-4 d-block mb-3"></i>
+                            <p class="mb-1" id="toggleStatusActionText">Bạn có chắc chắn muốn KHÓA tài khoản:</p>
+                            <p class="fw-bold text-dark mb-2" id="toggleStatusAccountEmail"></p>
+                            <div class="alert small text-start mb-0 py-2" id="toggleStatusAlertBox">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <span id="toggleStatusAlertMessage">Tài khoản bị khóa sẽ không thể đăng nhập. Nếu tài khoản có đơn hàng đang xử lý, hệ thống sẽ từ chối khóa.</span>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light justify-content-center border-top">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" id="toggleStatusSubmitBtn" class="btn btn-warning fw-semibold px-4 text-dark">Khóa ngay</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================================= -->
         <!-- 8. MODAL XÁC NHẬN XÓA TÀI KHOẢN (DELETE)                                 -->
         <!-- ======================================================================= -->
         <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel"
@@ -719,8 +755,7 @@
                             <p class="mb-1">Bạn có chắc chắn muốn xóa tài khoản:</p>
                             <p class="fw-bold text-dark mb-2" id="deleteAccountEmail"></p>
                             <div class="alert alert-warning small text-start mb-0 py-2">
-                                <i class="bi bi-info-circle me-1"></i>Hành động này sẽ xóa dữ liệu tài khoản khỏi bảng
-                                account. Nếu tài khoản đã phát sinh đơn hàng, hệ thống sẽ ngăn chặn việc xóa.
+                                <i class="bi bi-info-circle me-1"></i>Hành động này sẽ xóa hoàn toàn tài khoản khỏi hệ thống. Nếu tài khoản đã từng phát sinh đơn hàng, hệ thống sẽ ngăn chặn việc xóa.
                             </div>
                         </div>
                         <div class="modal-footer bg-light justify-content-center border-top">
@@ -745,7 +780,7 @@
                             </span>
                             <div>
                                 <h5 class="modal-title fw-bold text-dark mb-0" id="assignRoleModalLabel">Phân quyền tài khoản</h5>
-                                <small class="text-muted">Cập nhật vai trò & quyền hạn, đồng bộ trực tiếp vào Database</small>
+                                <small class="text-muted">Cập nhật vai trò & quyền hạn cho người dùng hệ thống</small>
                             </div>
                         </div>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -827,7 +862,7 @@
                                         </div>
                                         <div class="fw-bold text-dark small mb-1">Khách hàng</div>
                                         <p class="text-muted mb-0" style="font-size: 0.75rem; line-height: 1.45;">
-                                            Tài khoản mua sắm thông thường. Mua hàng, theo dõi đơn cá nhân, giỏ hàng, đánh giá sản phẩm. Không có quyền vào trang /admin.
+                                            Tài khoản mua sắm thông thường. Mua hàng, theo dõi đơn cá nhân, giỏ hàng, đánh giá sản phẩm. Không có quyền truy cập trang quản trị.
                                         </p>
                                     </label>
                                 </div>
@@ -848,7 +883,7 @@
                                             <i class="bi bi-check-circle-fill text-success fs-6 perm-icon"></i>
                                             <div class="lh-sm">
                                                 <span class="small fw-semibold text-dark d-block">Quản lý Tài khoản & Phân quyền</span>
-                                                <small class="text-muted" style="font-size: 0.7rem;">/admin/users - Toàn quyền phân vai trò & khóa/xóa</small>
+                                                <small class="text-muted" style="font-size: 0.72rem;">Toàn quyền phân vai trò, cấp quyền, khóa và xóa tài khoản</small>
                                             </div>
                                         </div>
                                     </div>
@@ -858,7 +893,7 @@
                                             <i class="bi bi-check-circle-fill text-success fs-6 perm-icon"></i>
                                             <div class="lh-sm">
                                                 <span class="small fw-semibold text-dark d-block">Bảng điều khiển & Thống kê</span>
-                                                <small class="text-muted" style="font-size: 0.7rem;">/admin/dashboard, /admin/statistics</small>
+                                                <small class="text-muted" style="font-size: 0.72rem;">Theo dõi tổng quan, báo cáo doanh thu và số liệu kinh doanh</small>
                                             </div>
                                         </div>
                                     </div>
@@ -868,7 +903,7 @@
                                             <i class="bi bi-check-circle-fill text-success fs-6 perm-icon"></i>
                                             <div class="lh-sm">
                                                 <span class="small fw-semibold text-dark d-block">Quản lý Danh mục & Sản phẩm</span>
-                                                <small class="text-muted" style="font-size: 0.7rem;">/admin/categories, /admin/products</small>
+                                                <small class="text-muted" style="font-size: 0.72rem;">Xem, thêm mới, cập nhật danh mục, sản phẩm và biến thể</small>
                                             </div>
                                         </div>
                                     </div>
@@ -878,7 +913,7 @@
                                             <i class="bi bi-check-circle-fill text-success fs-6 perm-icon"></i>
                                             <div class="lh-sm">
                                                 <span class="small fw-semibold text-dark d-block">Quản lý Kho & Lịch sử xuất nhập</span>
-                                                <small class="text-muted" style="font-size: 0.7rem;">/admin/inventory - Điều chỉnh tồn kho</small>
+                                                <small class="text-muted" style="font-size: 0.72rem;">Theo dõi lượng hàng tồn, phiếu nhập kho và điều chỉnh kho</small>
                                             </div>
                                         </div>
                                     </div>
@@ -888,7 +923,7 @@
                                             <i class="bi bi-check-circle-fill text-success fs-6 perm-icon"></i>
                                             <div class="lh-sm">
                                                 <span class="small fw-semibold text-dark d-block">Quản lý Đơn hàng & Mã giảm giá</span>
-                                                <small class="text-muted" style="font-size: 0.7rem;">/admin/orders, /admin/coupons</small>
+                                                <small class="text-muted" style="font-size: 0.72rem;">Tiếp nhận, xử lý đơn hàng và thiết lập chương trình khuyến mãi</small>
                                             </div>
                                         </div>
                                     </div>
@@ -898,15 +933,15 @@
                                             <i class="bi bi-check-circle-fill text-success fs-6 perm-icon"></i>
                                             <div class="lh-sm">
                                                 <span class="small fw-semibold text-dark d-block">Khu vực Mua sắm Khách hàng</span>
-                                                <small class="text-muted" style="font-size: 0.7rem;">Storefront, Giỏ hàng, Đặt đơn & Tài khoản cá nhân</small>
+                                                <small class="text-muted" style="font-size: 0.72rem;">Xem sản phẩm, mua sắm trực tuyến, giỏ hàng và đơn hàng cá nhân</small>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="d-flex align-items-center gap-2 mt-3 pt-2 border-top text-muted small" style="font-size: 0.74rem;">
-                                    <i class="bi bi-database-check text-success fs-6"></i>
-                                    <span>Tương tác trực tiếp Database: Cập nhật cột <code>role</code> của bảng <code>account</code> và lưu tức thì.</span>
+                                <div class="d-flex align-items-center gap-2 mt-3 pt-2 border-top text-muted small" style="font-size: 0.76rem;">
+                                    <i class="bi bi-shield-check text-success fs-6"></i>
+                                    <span>Thay đổi vai trò sẽ được áp dụng ngay lập tức cho tài khoản được cập nhật.</span>
                                 </div>
                             </div>
                         </div>
@@ -915,7 +950,7 @@
                             <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy bỏ</button>
                             <button type="submit" id="saveRoleBtn" class="btn btn-purple px-4 fw-semibold text-white d-inline-flex align-items-center gap-2">
                                 <i class="bi bi-shield-check"></i>
-                                <span>Lưu phân quyền vào CSDL</span>
+                                <span>Lưu phân quyền</span>
                             </button>
                         </div>
                     </form>
