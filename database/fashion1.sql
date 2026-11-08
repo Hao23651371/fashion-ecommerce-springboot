@@ -216,13 +216,15 @@ CREATE TABLE wishlist_item (
 -- =====================================================
 -- DU LIEU MAU
 -- =====================================================
--- ADMIN mat khau: Admin@123   |   CUSTOMER mat khau: Khach@123
+-- ADMIN / STAFF mat khau: Admin@123   |   CUSTOMER mat khau: Khach@123
 -- ================= KHÁCH BỔ SUNG (TRƯỜNG HỢP BIÊN) =================
 -- khach3: khách mới, KHÔNG có địa chỉ / đơn / giỏ / yêu thích -> test các màn hình trống
 -- khach4: đã xác thực nhưng bị khóa (BANNED)                    -> test chặn đăng nhập, nút mở khóa ở /admin/users
 INSERT INTO account (email, password, role, status, email_verified, created_at) VALUES
                                                                                     ('admin1@fashionshop.vn', '$2a$10$LNbJ3jILuVETgjv8QE7eOecgt9.vKsQszcihb3R12JpnbSJwsbCtK', 'ADMIN',    'ACTIVE', 1, NOW(6)),
                                                                                     ('admin2@fashionshop.vn', '$2a$10$LNbJ3jILuVETgjv8QE7eOecgt9.vKsQszcihb3R12JpnbSJwsbCtK', 'ADMIN',    'ACTIVE', 1, NOW(6)),
+                                                                                    ('staff1@fashionshop.vn', '$2a$10$LNbJ3jILuVETgjv8QE7eOecgt9.vKsQszcihb3R12JpnbSJwsbCtK', 'STAFF',    'ACTIVE', 1, NOW(6)),
+                                                                                    ('staff2@fashionshop.vn', '$2a$10$LNbJ3jILuVETgjv8QE7eOecgt9.vKsQszcihb3R12JpnbSJwsbCtK', 'STAFF',    'ACTIVE', 1, NOW(6)),
                                                                                     ('khach1@gmail.com',      '$2a$10$274cWtcQ3KIeg.WjXjRJSuzd1TpyCgEkT1CA7KtmmtZNs0Wj4KTye', 'CUSTOMER', 'ACTIVE', 1, NOW(6)),
                                                                                     ('khach2@gmail.com',      '$2a$10$274cWtcQ3KIeg.WjXjRJSuzd1TpyCgEkT1CA7KtmmtZNs0Wj4KTye', 'CUSTOMER', 'ACTIVE', 1, NOW(6)),
                                                                                     ('khach3@gmail.com', '$2a$10$274cWtcQ3KIeg.WjXjRJSuzd1TpyCgEkT1CA7KtmmtZNs0Wj4KTye', 'CUSTOMER', 'ACTIVE', 1, NOW(6)),
@@ -231,6 +233,8 @@ INSERT INTO account (email, password, role, status, email_verified, created_at) 
 INSERT INTO user_profile (full_name, phone_number, birth_date, account_id) VALUES
                                                                                ('Nguyễn Quản Trị', '0901000001', '1995-03-15', (SELECT id FROM account WHERE email = 'admin1@fashionshop.vn')),
                                                                                ('Phạm Thu Hà',     '0901000002', '1998-07-22', (SELECT id FROM account WHERE email = 'admin2@fashionshop.vn')),
+                                                                               ('Hoàng Thị Nhân Viên', '0902000001', '1999-05-20', (SELECT id FROM account WHERE email = 'staff1@fashionshop.vn')),
+                                                                               ('Lê Văn Nhân Viên',    '0902000002', '2000-08-12', (SELECT id FROM account WHERE email = 'staff2@fashionshop.vn')),
                                                                                ('Trần Thị Mai',    '0912000001', '2001-11-05', (SELECT id FROM account WHERE email = 'khach1@gmail.com')),
                                                                                ('Lê Văn Hùng',     '0912000002', '1999-01-30', (SELECT id FROM account WHERE email = 'khach2@gmail.com')),
                                                                                ('Võ Minh Anh',    '0912000003', '2003-06-18', (SELECT id FROM account WHERE email = 'khach3@gmail.com')),
@@ -249,5 +253,5 @@ INSERT INTO shipping_address (user_profile_id, address, default_address) VALUES
                                                                               '88 Trần Hưng Đạo, Phường 2, Quận 5, TP. Hồ Chí Minh', 1);
 
 
--- ================= KIEM TRA SAU KHI CHAY (dung: 6) =================
+-- ================= KIEM TRA SAU KHI CHAY (dung: 8) =================
 SELECT COUNT(*) AS so_tai_khoan FROM account;

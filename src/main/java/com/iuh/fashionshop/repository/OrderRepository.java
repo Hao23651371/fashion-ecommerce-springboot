@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByStatusOrderByCreatedAtAsc(OrderStatus status);
     long countByUserProfileId(Long profileId);
+    boolean existsByUserProfileIdAndStatusIn(Long profileId, List<OrderStatus> statuses);
 
     @Query("""
         select distinct o from Order o

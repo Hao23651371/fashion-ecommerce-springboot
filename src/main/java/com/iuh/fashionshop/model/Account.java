@@ -63,6 +63,14 @@ public class Account {
         return role == Role.ADMIN;
     }
 
+    public boolean isStaff() {
+        return role == Role.STAFF;
+    }
+
+    public boolean hasAdminAccess() {
+        return role == Role.ADMIN || role == Role.STAFF;
+    }
+
     public boolean isVerificationCodeValid() {
         return verificationCode != null && verificationExpiry != null
                 && verificationExpiry.isAfter(LocalDateTime.now());

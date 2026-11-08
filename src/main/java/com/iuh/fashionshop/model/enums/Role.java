@@ -2,6 +2,7 @@ package com.iuh.fashionshop.model.enums;
 
 public enum Role {
     ADMIN("Quản trị viên"),
+    STAFF("Nhân viên"),
     CUSTOMER("Khách hàng");
 
     private final String label;

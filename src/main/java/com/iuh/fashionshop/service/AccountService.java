@@ -5,10 +5,13 @@ import com.iuh.fashionshop.dto.RegisterForm;
 import com.iuh.fashionshop.model.Account;
 import com.iuh.fashionshop.model.UserProfile;
 import com.iuh.fashionshop.model.enums.AccountStatus;
+import com.iuh.fashionshop.model.enums.OrderStatus;
 import com.iuh.fashionshop.model.enums.Role;
 import com.iuh.fashionshop.repository.AccountRepository;
+import com.iuh.fashionshop.repository.OrderRepository;
 import com.iuh.fashionshop.repository.UserProfileRepository;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -35,16 +38,20 @@ public class AccountService {
     private final UserProfileRepository userProfileRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final OrderRepository orderRepository;
     private final SecureRandom random = new SecureRandom();
 
+    @Autowired
     public AccountService(AccountRepository accountRepository,
                           UserProfileRepository userProfileRepository,
                           PasswordEncoder passwordEncoder,
-                          EmailService emailService) {
+                          EmailService emailService,
+                          OrderRepository orderRepository) {
         this.accountRepository = accountRepository;
         this.userProfileRepository = userProfileRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.orderRepository = orderRepository;
     }
 
     public boolean emailExists(String email) {
@@ -413,10 +420,57 @@ public class AccountService {
         }
 
         if (account.getStatus() == AccountStatus.ACTIVE) {
+            // 1. Chặn không cho khóa nếu là tài khoản ADMIN duy nhất đang hoạt động
+            if (account.getRole() == Role.ADMIN && countActiveAdminAccounts() <= 1) {
+                throw new IllegalStateException("Hệ thống phải có ít nhất 1 Quản trị viên (ADMIN) đang hoạt động! Bạn không thể khóa tài khoản Admin này.");
+            }
+
+            // 2. Chặn khóa nếu khách hàng đang có đơn hàng chưa hoàn tất (PENDING, CONFIRMED, SHIPPING)
+            if (orderRepository != null) {
+                var profileOpt = userProfileRepository.findByAccountId(account.getId());
+                if (profileOpt.isPresent()) {
+                    Long profileId = profileOpt.get().getId();
+                    boolean hasPendingOrders = orderRepository.existsByUserProfileIdAndStatusIn(
+                            profileId,
+                            List.of(OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.SHIPPING)
+                    );
+                    if (hasPendingOrders) {
+                        throw new IllegalStateException("Không thể khóa tài khoản khi khách hàng đang có đơn hàng chưa hoàn tất (đang chờ xử lý, đã xác nhận hoặc đang giao hàng)!");
+                    }
+                }
+            }
+
             account.setStatus(AccountStatus.BANNED);
         } else {
+            // Mở khóa tài khoản từ BANNED -> ACTIVE
             account.setStatus(AccountStatus.ACTIVE);
         }
+        return accountRepository.save(account);
+    }
+
+    /**
+     * Phân quyền tài khoản (Cập nhật vai trò / quyền hạn trong CSDL).
+     * Đảm bảo tương tác trực tiếp với Database thông qua AccountRepository trong transaction.
+     * Chặn không cho tài khoản Admin đang đăng nhập tự hạ quyền chính mình.
+     */
+    @Transactional
+    public Account updateAccountRole(Long id, Role newRole, String currentAdminEmail) {
+        if (id == null) {
+            throw new IllegalArgumentException("ID tài khoản không hợp lệ.");
+        }
+        if (newRole == null) {
+            throw new IllegalArgumentException("Vui lòng chọn vai trò hợp lệ để phân quyền.");
+        }
+
+        Account account = getAccountById(id);
+
+        if (currentAdminEmail != null && account.getEmail().equalsIgnoreCase(currentAdminEmail.trim())) {
+            if (newRole != Role.ADMIN) {
+                throw new IllegalStateException("Bạn không thể tự hạ quyền tài khoản của chính mình!");
+            }
+        }
+
+        account.setRole(newRole);
         return accountRepository.save(account);
     }
 
@@ -424,8 +478,25 @@ public class AccountService {
     public void deleteAccount(Long id, String currentAdminEmail) {
         Account account = getAccountById(id);
 
+        // 1. Chặn không cho tự xóa tài khoản của chính mình
         if (currentAdminEmail != null && account.getEmail().equalsIgnoreCase(currentAdminEmail.trim())) {
             throw new IllegalStateException("Bạn không thể tự xóa tài khoản của chính mình đang đăng nhập!");
+        }
+
+        // 2. Chặn không cho xóa nếu là Quản trị viên (ADMIN) duy nhất còn lại
+        if (account.getRole() == Role.ADMIN && countAdminAccounts() <= 1) {
+            throw new IllegalStateException("Hệ thống phải có ít nhất 1 Quản trị viên (ADMIN)! Bạn không thể xóa Admin duy nhất này.");
+        }
+
+        // 3. Chặn không cho xóa nếu tài khoản đã phát sinh đơn hàng trong quá khứ
+        if (orderRepository != null) {
+            var profileOpt = userProfileRepository.findByAccountId(account.getId());
+            if (profileOpt.isPresent()) {
+                long orderCount = orderRepository.countByUserProfileId(profileOpt.get().getId());
+                if (orderCount > 0) {
+                    throw new IllegalStateException("Không thể xóa tài khoản ID #" + id + " vì đã phát sinh " + orderCount + " đơn hàng trong lịch sử hệ thống! Để vô hiệu hóa tài khoản, bạn vui lòng chuyển sang chức năng Khóa tài khoản.");
+                }
+            }
         }
 
         accountRepository.delete(account);
@@ -439,12 +510,20 @@ public class AccountService {
         return accountRepository.countByStatus(AccountStatus.ACTIVE);
     }
 
+    public long countActiveAdminAccounts() {
+        return accountRepository.countByRoleAndStatus(Role.ADMIN, AccountStatus.ACTIVE);
+    }
+
     public long countBannedAccounts() {
         return accountRepository.countByStatus(AccountStatus.BANNED);
     }
 
     public long countAdminAccounts() {
         return accountRepository.countByRole(Role.ADMIN);
+    }
+
+    public long countStaffAccounts() {
+        return accountRepository.countByRole(Role.STAFF);
     }
 
     public long countCustomerAccounts() {

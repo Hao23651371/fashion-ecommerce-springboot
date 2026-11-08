@@ -94,13 +94,27 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a th:href="@{/admin/users}"
+                    <!-- Nếu là ADMIN: thẻ a bấm vào quản lý bình thường -->
+                    <a th:if="${isAdmin}" th:href="@{/admin/users}"
                        th:class="'nav-link d-flex align-items-center justify-content-between ' + (${activeMenu == 'users'} ? 'active' : '')">
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-people-fill"></i>
                             <span>Quản lý Tài khoản</span>
                         </div>
                     </a>
+                    <!-- Nếu là STAFF (không phải ADMIN): bị khóa, không bấm được -->
+                    <div th:unless="${isAdmin}"
+                         class="nav-link d-flex align-items-center justify-content-between text-secondary"
+                         style="cursor: not-allowed; opacity: 0.55; user-select: none;"
+                         title="Chức năng chỉ dành cho Quản trị viên (ADMIN)">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-people-fill"></i>
+                            <span>Quản lý Tài khoản</span>
+                        </div>
+                        <span class="badge bg-secondary-subtle text-secondary border font-monospace" style="font-size: 0.65rem;">
+                            <i class="bi bi-lock-fill"></i> ADMIN
+                        </span>
+                    </div>
                 </li>
             </ul>
         </nav>
@@ -124,7 +138,8 @@
                          th:text="${currentUserName != null ? currentUserName : (currentEmail != null ? currentEmail : 'Quản trị viên')}">
                         Admin
                     </div>
-                    <small class="text-secondary" style="font-size: 0.72rem;">Tài khoản đăng nhập</small>
+                    <small class="text-secondary" style="font-size: 0.72rem;"
+                           th:text="${isAdmin ? 'Quản trị viên (ADMIN)' : (isStaff ? 'Nhân viên (STAFF)' : 'Tài khoản đăng nhập')}">Tài khoản đăng nhập</small>
                 </div>
             </div>
             <i class="bi bi-chevron-right text-secondary ms-1" style="font-size: 0.75rem;"></i>
