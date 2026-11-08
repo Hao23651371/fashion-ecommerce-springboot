@@ -18,6 +18,8 @@
         <p class="checkout-sub">Hoàn tất đơn hàng trong vài bước.</p>
     </div>
 
+    <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
     <div class="row g-4">
         <!-- Form -->
         <div class="col-lg-7">
