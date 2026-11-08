@@ -120,7 +120,7 @@
                 <tbody>
                 <tr th:each="o : ${orders}" th:if="${orders != null}">
                     <td>
-                        <a href="#" class="order-code" th:text="${o.orderCode}">ORD-0001</a>
+                        <a th:href="@{/admin/orders/{id}(id=${o.id})}" class="order-code" th:text="${o.orderCode}">ORD-0001</a>
                         <div class="order-sub" th:text="${o.items != null ? #lists.size(o.items) + ' sản phẩm' : ''}">2 sản phẩm</div>
                     </td>
                     <td>
@@ -148,21 +148,38 @@
                               th:text="${o.status}">PENDING</span>
                     </td>
                     <td class="text-end action-cell">
-                        <button type="button" class="btn-icon" title="Xem chi tiết"
-                                data-bs-toggle="modal" data-bs-target="#orderDetailModal">
-                            <i class="bi bi-eye"></i>
-                        </button>
+                        <a th:href="@{/admin/orders/{id}(id=${o.id})}" class="btn-icon" title="Chi tiết"><i class="bi bi-eye"></i></a>
                         <div class="dropdown d-inline-block">
-                            <button class="btn-icon" data-bs-toggle="dropdown" title="Cập nhật trạng thái">
+                            <button type="button" class="btn-icon" data-bs-toggle="dropdown" title="Cập nhật trạng thái">
                                 <i class="bi bi-arrow-repeat"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><span class="dropdown-item-text text-muted small">Cập nhật khi có API</span></li>
-                                <li><a class="dropdown-item" href="#">Chờ xử lý</a></li>
-                                <li><a class="dropdown-item" href="#">Đang giao</a></li>
-                                <li><a class="dropdown-item" href="#">Hoàn thành</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#">Hủy đơn</a></li>
+                                <li th:if="${o.status != null and o.status.name() == 'PENDING'}">
+                                    <form th:action="@{/admin/orders/{id}/status(id=${o.id})}" method="post">
+                                        <input type="hidden" name="status" value="CONFIRMED">
+                                        <button type="submit" class="dropdown-item">Xác nhận (CONFIRMED)</button>
+                                    </form>
+                                </li>
+                                <li th:if="${o.status != null and (o.status.name() == 'PENDING' or o.status.name() == 'CONFIRMED')}">
+                                    <form th:action="@{/admin/orders/{id}/status(id=${o.id})}" method="post">
+                                        <input type="hidden" name="status" value="SHIPPING">
+                                        <button type="submit" class="dropdown-item">Đang giao</button>
+                                    </form>
+                                </li>
+                                <li th:if="${o.status != null and (o.status.name() == 'CONFIRMED' or o.status.name() == 'SHIPPING')}">
+                                    <form th:action="@{/admin/orders/{id}/status(id=${o.id})}" method="post">
+                                        <input type="hidden" name="status" value="COMPLETED">
+                                        <button type="submit" class="dropdown-item">Hoàn tất (+ PAID)</button>
+                                    </form>
+                                </li>
+                                <li th:if="${o.status != null and (o.status.name() == 'PENDING' or o.status.name() == 'CONFIRMED')}"><hr class="dropdown-divider"></li>
+                                <li th:if="${o.status != null and (o.status.name() == 'PENDING' or o.status.name() == 'CONFIRMED')}">
+                                    <form th:action="@{/admin/orders/{id}/status(id=${o.id})}" method="post" onsubmit="return confirm('Hủy đơn này?');">
+                                        <input type="hidden" name="status" value="CANCELLED">
+                                        <input type="hidden" name="cancelReason" value="Admin hủy từ danh sách">
+                                        <button type="submit" class="dropdown-item text-danger">Hủy đơn</button>
+                                    </form>
+                                </li>
                             </ul>
                         </div>
                     </td>
@@ -172,7 +189,7 @@
                     <td colspan="7" class="empty-state">
                         <i class="bi bi-inbox"></i>
                         <div>Chưa có đơn hàng nào để hiển thị.</div>
-                        <small class="text-muted">Khi OrderService được nối vào AdminOrderController, danh sách sẽ hiện tại đây.</small>
+                        <small class="text-muted">Không có đơn khớp bộ lọc.</small>
                     </td>
                 </tr>
                 </tbody>

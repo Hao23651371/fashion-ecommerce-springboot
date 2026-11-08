@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/admin-base :: adminLayout(
+          ~{::title},
+          ~{::#admin-content},
+          'orders'
+      )}">
+<head>
+    <title th:text="${order != null ? 'Đơn ' + order.orderCode : 'Chi tiết đơn'}">Chi tiết đơn</title>
+</head>
+<body>
+
+<div id="admin-content" class="order-page">
+    <link rel="stylesheet" th:href="@{/css/admin/orders.css}">
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+    <div class="order-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <div class="eyebrow"><i class="bi bi-receipt"></i> CHI TIẾT ĐƠN HÀNG</div>
+            <h1 th:text="${order.orderCode}">FS...</h1>
+            <p>
+                Trạng thái:
+                <span class="status-pill"
+                      th:classappend="${order.status.name() == 'PENDING'} ? ' st-pending' : (${order.status.name() == 'SHIPPING'} ? ' st-shipping' : (${order.status.name() == 'COMPLETED'} ? ' st-completed' : (${order.status.name() == 'CANCELLED'} ? ' st-cancelled' : ' st-pending')))"
+                      th:text="${order.status}">PENDING</span>
+                · Thanh toán:
+                <span class="pay-pill"
+                      th:text="${order.paymentInfo != null ? (order.paymentInfo.paymentMethod + ' / ' + order.paymentInfo.paymentStatus) : '—'}">COD / UNPAID</span>
+            </p>
+        </div>
+        <div class="order-actions d-flex flex-wrap gap-2">
+            <a th:href="@{/admin/orders}" class="btn order-secondary-btn"><i class="bi bi-arrow-left"></i> Danh sách</a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <section class="order-panel mb-3">
+                <h5 class="mb-3">Sản phẩm</h5>
+                <div class="table-responsive">
+                    <table class="order-table">
+                        <thead>
+                        <tr>
+                            <th>Sản phẩm</th>
+                            <th>Size / Màu</th>
+                            <th>Đơn giá</th>
+                            <th>SL</th>
+                            <th class="text-end">Thành tiền</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="it : ${order.items}">
+                            <td th:text="${it.productName}">SP</td>
+                            <td th:text="${it.size + ' / ' + it.color}">M</td>
+                            <td th:text="${#numbers.formatDecimal(it.unitPrice, 0, 'COMMA', 0, 'POINT') + ' ₫'}">0</td>
+                            <td th:text="${it.quantity}">1</td>
+                            <td class="text-end" th:text="${#numbers.formatDecimal(it.calculateSubtotal(), 0, 'COMMA', 0, 'POINT') + ' ₫'}">0</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="sum-lines mt-3">
+                    <div class="d-flex justify-content-between"><span>Tạm tính</span>
+                        <span th:text="${#numbers.formatDecimal(order.subtotal, 0, 'COMMA', 0, 'POINT') + ' ₫'}">0</span></div>
+                    <div class="d-flex justify-content-between"><span>Giảm giá</span>
+                        <span th:text="${#numbers.formatDecimal(order.discountAmount, 0, 'COMMA', 0, 'POINT') + ' ₫'}">0</span></div>
+                    <div class="d-flex justify-content-between"><span>Phí ship</span>
+                        <span th:text="${order.shippingInfo != null ? #numbers.formatDecimal(order.shippingInfo.shippingFee, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0</span></div>
+                    <div class="d-flex justify-content-between fw-bold mt-2 pt-2 border-top"><span>Tổng</span>
+                        <span th:text="${#numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' ₫'}">0</span></div>
+                </div>
+            </section>
+
+            <section class="order-panel">
+                <h5 class="mb-3">Giao hàng</h5>
+                <p class="mb-1"><strong th:text="${order.shippingInfo.recipientName}">Tên</strong>
+                    · <span th:text="${order.shippingInfo.recipientPhone}">SĐT</span></p>
+                <p class="mb-1" th:text="${order.shippingInfo.shippingAddress}">Địa chỉ</p>
+                <p class="text-muted small mb-0" th:if="${order.shippingInfo.note != null}"
+                   th:text="'Ghi chú: ' + ${order.shippingInfo.note}"></p>
+                <p class="text-muted small mt-2 mb-0"
+                   th:if="${order.userProfile != null and order.userProfile.account != null}"
+                   th:text="'Email TK: ' + ${order.userProfile.account.email}"></p>
+            </section>
+        </div>
+
+        <div class="col-lg-4">
+            <section class="order-panel mb-3">
+                <h5 class="mb-3">Cập nhật trạng thái</h5>
+                <p class="small text-muted">Quy trình: PENDING → CONFIRMED → SHIPPING → COMPLETED.
+                    Khi <strong>COMPLETED</strong>, hệ thống tự đánh dấu <strong>PAID</strong> nếu còn UNPAID (COD/CK).</p>
+
+                <form th:if="${canConfirm}" th:action="@{/admin/orders/{id}/status(id=${order.id})}" method="post" class="mb-2">
+                    <input type="hidden" name="status" value="CONFIRMED">
+                    <button type="submit" class="btn order-primary-btn w-100">Xác nhận đơn (CONFIRMED)</button>
+                </form>
+
+                <form th:if="${canShip}" th:action="@{/admin/orders/{id}/status(id=${order.id})}" method="post" class="mb-2">
+                    <input type="hidden" name="status" value="SHIPPING">
+                    <button type="submit" class="btn order-secondary-btn w-100">Chuyển đang giao (SHIPPING)</button>
+                </form>
+
+                <form th:if="${canComplete}" th:action="@{/admin/orders/{id}/status(id=${order.id})}" method="post" class="mb-2">
+                    <input type="hidden" name="status" value="COMPLETED">
+                    <button type="submit" class="btn order-primary-btn w-100">
+                        Hoàn tất (COMPLETED + PAID nếu chưa trả)
+                    </button>
+                </form>
+
+                <form th:if="${canCancel}" th:action="@{/admin/orders/{id}/status(id=${order.id})}" method="post" class="mb-2"
+                      onsubmit="return confirm('Hủy đơn này? Kho sẽ được hoàn.');">
+                    <input type="hidden" name="status" value="CANCELLED">
+                    <input type="text" name="cancelReason" class="form-control mb-2" placeholder="Lý do hủy">
+                    <button type="submit" class="btn btn-outline-danger w-100">Hủy đơn</button>
+                </form>
+            </section>
+
+            <section class="order-panel">
+                <h5 class="mb-3">Thanh toán</h5>
+                <p class="mb-2">
+                    Phương thức:
+                    <strong th:text="${order.paymentInfo != null ? order.paymentInfo.paymentMethod : '—'}">COD</strong><br>
+                    Trạng thái:
+                    <strong th:text="${order.paymentInfo != null ? order.paymentInfo.paymentStatus : '—'}">UNPAID</strong><br>
+                    <span th:if="${order.paymentInfo != null and order.paymentInfo.paidAt != null}"
+                          th:text="'Thu lúc: ' + ${#temporals.format(order.paymentInfo.paidAt, 'dd/MM/yyyy HH:mm')}"></span>
+                </p>
+
+                <form th:if="${canMarkBankPaid}" th:action="@{/admin/orders/{id}/mark-bank-paid(id=${order.id})}" method="post" class="mb-2">
+                    <button type="submit" class="btn order-secondary-btn w-100">Xác nhận đã nhận CK</button>
+                </form>
+
+                <form th:if="${canMarkCodPaid}" th:action="@{/admin/orders/{id}/mark-cod-paid(id=${order.id})}" method="post" class="mb-2">
+                    <button type="submit" class="btn order-secondary-btn w-100">Ghi nhận đã thu COD</button>
+                </form>
+
+                <p class="small text-muted mb-0" th:if="${order.cancelReason != null}"
+                   th:text="'Lý do hủy: ' + ${order.cancelReason}"></p>
+            </section>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

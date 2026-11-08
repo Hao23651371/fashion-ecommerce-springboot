@@ -15,21 +15,25 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Đặt hàng & thanh toán (COD / chuyển khoản / ví điện tử giả lập).
- * Không sửa Entity hay file khung; chỉ gọi repository/service có sẵn.
+ * Nghiệp vụ đơn hàng đầy đủ: checkout khách + vận hành admin.
  */
 @Service
 @Transactional
 public class OrderService {
 
-    /** Miễn phí ship từ mốc này (đồng bộ với dữ liệu mẫu fashion4.sql). */
     public static final BigDecimal FREE_SHIP_THRESHOLD = new BigDecimal("1000000");
     public static final BigDecimal DEFAULT_SHIPPING_FEE = new BigDecimal("30000");
+
+    private static final Set<OrderStatus> CAN_CANCEL =
+            EnumSet.of(OrderStatus.PENDING, OrderStatus.CONFIRMED);
 
     private final OrderRepository orderRepository;
     private final CouponRepository couponRepository;
@@ -46,9 +50,8 @@ public class OrderService {
         this.cartService = cartService;
     }
 
-    /**
-     * Tính phí ship: miễn phí nếu tạm tính >= 1.000.000đ.
-     */
+    // ===================== CHECKOUT (KHÁCH) =====================
+
     public BigDecimal calculateShippingFee(BigDecimal subtotal) {
         if (subtotal == null) {
             return DEFAULT_SHIPPING_FEE;
@@ -58,10 +61,6 @@ public class OrderService {
                 : DEFAULT_SHIPPING_FEE;
     }
 
-    /**
-     * Validate mã giảm giá, trả về coupon hợp lệ hoặc null.
-     * Ném IllegalArgumentException nếu mã sai / hết hạn / không đủ điều kiện.
-     */
     @Transactional(readOnly = true)
     public Coupon validateCoupon(String code, BigDecimal subtotal) {
         if (code == null || code.isBlank()) {
@@ -70,19 +69,12 @@ public class OrderService {
         Coupon coupon = couponRepository.findByCodeIgnoreCase(code.trim())
                 .orElseThrow(() -> new IllegalArgumentException("Mã giảm giá không tồn tại"));
         if (!coupon.isValid(subtotal)) {
-            throw new IllegalArgumentException("Mã giảm giá không hợp lệ, đã hết hạn hoặc chưa đủ điều kiện áp dụng");
+            throw new IllegalArgumentException(
+                    "Mã giảm giá không hợp lệ, đã hết hạn hoặc chưa đủ điều kiện áp dụng");
         }
         return coupon;
     }
 
-    /**
-     * Đặt hàng từ giỏ hiện tại.
-     * - COD: status PENDING, payment UNPAID
-     * - BANK_TRANSFER: status PENDING, payment UNPAID (admin xác nhận sau)
-     * - E_WALLET: status PENDING, payment UNPAID → client chuyển sang trang giả lập thanh toán ví
-     *
-     * Trả về Order đã lưu. Giỏ hàng được xóa sau khi tạo đơn thành công.
-     */
     public Order placeOrder(CheckoutForm form, Authentication auth) {
         UserProfile profile = cartService.getOrCreateProfile(auth);
         if (profile == null) {
@@ -94,13 +86,11 @@ public class OrderService {
             throw new IllegalStateException("Giỏ hàng trống. Vui lòng chọn sản phẩm trước khi thanh toán");
         }
 
-        // Kiểm tra tồn kho trước khi tạo đơn
         for (CartItem item : cartItems) {
             ProductVariant variant = item.getVariant();
             if (variant == null || !variant.isInStock(item.getQuantity())) {
                 String name = (variant != null && variant.getProduct() != null)
-                        ? variant.getProduct().getName()
-                        : "Sản phẩm";
+                        ? variant.getProduct().getName() : "Sản phẩm";
                 throw new IllegalStateException("Không đủ hàng: " + name
                         + (variant != null ? " (" + variant.getColor() + " / " + variant.getSize() + ")" : ""));
             }
@@ -144,7 +134,6 @@ public class OrderService {
         payment.setPaidAt(null);
         order.setPaymentInfo(payment);
 
-        // Snapshot item + trừ kho
         for (CartItem cartItem : cartItems) {
             ProductVariant variant = cartItem.getVariant();
             Product product = variant.getProduct();
@@ -172,29 +161,16 @@ public class OrderService {
         return saved;
     }
 
-    /**
-     * Xác nhận thanh toán online thành công (giả lập ZaloPay / MoMo / ShopeePay).
-     * Chỉ áp dụng cho đơn E_WALLET còn UNPAID của đúng user.
-     */
     public Order confirmOnlinePayment(Long orderId, Authentication auth) {
-        UserProfile profile = cartService.getOrCreateProfile(auth);
-        if (profile == null) {
-            throw new IllegalStateException("Vui lòng đăng nhập");
-        }
-
-        Order order = orderRepository.findByIdWithDetails(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng"));
-
-        if (!order.getUserProfile().getId().equals(profile.getId())) {
-            throw new IllegalStateException("Bạn không có quyền thao tác đơn hàng này");
-        }
+        UserProfile profile = requireProfile(auth);
+        Order order = requireOrderOwned(orderId, profile);
 
         PaymentInfo pay = order.getPaymentInfo();
         if (pay == null || pay.getPaymentMethod() != PaymentMethod.E_WALLET) {
             throw new IllegalStateException("Đơn hàng không phải thanh toán ví điện tử");
         }
         if (pay.getPaymentStatus() == PaymentStatus.PAID) {
-            return order; // idempotent
+            return order;
         }
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new IllegalStateException("Đơn hàng đã bị hủy, không thể thanh toán");
@@ -202,28 +178,15 @@ public class OrderService {
 
         pay.setPaymentStatus(PaymentStatus.PAID);
         pay.setPaidAt(LocalDateTime.now());
-        // Sau khi thanh toán ví thành công → xác nhận đơn
         if (order.getStatus() == OrderStatus.PENDING) {
             order.setStatus(OrderStatus.CONFIRMED);
         }
         return orderRepository.save(order);
     }
 
-    /**
-     * Đánh dấu thanh toán ví thất bại (giả lập).
-     */
     public Order failOnlinePayment(Long orderId, Authentication auth) {
-        UserProfile profile = cartService.getOrCreateProfile(auth);
-        if (profile == null) {
-            throw new IllegalStateException("Vui lòng đăng nhập");
-        }
-
-        Order order = orderRepository.findByIdWithDetails(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng"));
-
-        if (!order.getUserProfile().getId().equals(profile.getId())) {
-            throw new IllegalStateException("Bạn không có quyền thao tác đơn hàng này");
-        }
+        UserProfile profile = requireProfile(auth);
+        Order order = requireOrderOwned(orderId, profile);
 
         PaymentInfo pay = order.getPaymentInfo();
         if (pay == null || pay.getPaymentMethod() != PaymentMethod.E_WALLET) {
@@ -234,35 +197,173 @@ public class OrderService {
         }
 
         pay.setPaymentStatus(PaymentStatus.FAILED);
-        // Hủy đơn + hoàn kho + hoàn lượt coupon (tương tự OrderController cancel)
         if (order.getStatus() == OrderStatus.PENDING) {
-            order.setStatus(OrderStatus.CANCELLED);
-            order.setCancelledAt(LocalDateTime.now());
-            order.setCancelReason("Thanh toán ví điện tử thất bại");
-
-            for (OrderItem item : order.getItems()) {
-                if (item.getVariant() != null) {
-                    item.getVariant().increaseStock(item.getQuantity());
-                    productVariantRepository.save(item.getVariant());
-                }
-            }
-            if (order.getCoupon() != null) {
-                Coupon c = order.getCoupon();
-                if (c.getUsedCount() > 0) {
-                    c.setUsedCount(c.getUsedCount() - 1);
-                    couponRepository.save(c);
-                }
-            }
+            cancelInternal(order, "Thanh toán ví điện tử thất bại");
         }
         return orderRepository.save(order);
     }
 
-    /** Mã đơn dạng FS + yyyyMMdd + 3 số ngẫu nhiên (khớp mẫu FS20261010001). */
+    // ===================== ADMIN =====================
+
+    @Transactional(readOnly = true)
+    public List<Order> searchForAdmin(String q, String statusStr, String paymentMethodStr,
+                                      String fromStr, String toStr) {
+        OrderStatus status = parseStatus(statusStr);
+        PaymentMethod method = parseMethod(paymentMethodStr);
+        LocalDateTime from = parseDateStart(fromStr);
+        LocalDateTime to = parseDateEnd(toStr);
+        String keyword = (q != null && !q.isBlank()) ? q.trim() : null;
+        return orderRepository.searchAdmin(keyword, status, method, null, from, to);
+    }
+
+    @Transactional(readOnly = true)
+    public Order getByIdForAdmin(Long id) {
+        return orderRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng #" + id));
+    }
+
+    @Transactional(readOnly = true)
+    public long countByStatus(OrderStatus status) {
+        return orderRepository.countByStatus(status);
+    }
+
+    /**
+     * PENDING → CONFIRMED → SHIPPING → COMPLETED
+     * Khi COMPLETED: nếu còn UNPAID (COD / CK) → PAID.
+     */
+    public Order updateStatus(Long orderId, OrderStatus target, String cancelReason) {
+        Order order = getByIdForAdmin(orderId);
+        OrderStatus current = order.getStatus();
+
+        if (target == current) {
+            return order;
+        }
+
+        if (target == OrderStatus.CANCELLED) {
+            if (!CAN_CANCEL.contains(current)) {
+                throw new IllegalStateException("Không thể hủy đơn đang ở trạng thái " + current);
+            }
+            cancelInternal(order, cancelReason != null && !cancelReason.isBlank()
+                    ? cancelReason.trim()
+                    : "Admin hủy đơn");
+            return orderRepository.save(order);
+        }
+
+        if (current == OrderStatus.CANCELLED || current == OrderStatus.COMPLETED) {
+            throw new IllegalStateException("Đơn " + current + " không thể đổi sang " + target);
+        }
+
+        validateTransition(current, target);
+        order.setStatus(target);
+
+        if (target == OrderStatus.COMPLETED) {
+            order.setCompletedAt(LocalDateTime.now());
+            markPaidIfUnpaid(order);
+        }
+
+        return orderRepository.save(order);
+    }
+
+    /** Xác nhận đã nhận chuyển khoản → PAID (+ CONFIRMED nếu còn PENDING). */
+    public Order confirmBankTransferPaid(Long orderId) {
+        Order order = getByIdForAdmin(orderId);
+        PaymentInfo pay = order.getPaymentInfo();
+        if (pay == null || pay.getPaymentMethod() != PaymentMethod.BANK_TRANSFER) {
+            throw new IllegalStateException("Đơn không phải chuyển khoản ngân hàng");
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalStateException("Đơn đã hủy");
+        }
+        if (pay.getPaymentStatus() == PaymentStatus.PAID) {
+            return order;
+        }
+        pay.setPaymentStatus(PaymentStatus.PAID);
+        pay.setPaidAt(LocalDateTime.now());
+        if (order.getStatus() == OrderStatus.PENDING) {
+            order.setStatus(OrderStatus.CONFIRMED);
+        }
+        return orderRepository.save(order);
+    }
+
+    /** Đánh dấu đã thu COD. */
+    public Order confirmCodCollected(Long orderId) {
+        Order order = getByIdForAdmin(orderId);
+        PaymentInfo pay = order.getPaymentInfo();
+        if (pay == null || pay.getPaymentMethod() != PaymentMethod.COD) {
+            throw new IllegalStateException("Đơn không phải COD");
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalStateException("Đơn đã hủy");
+        }
+        markPaidIfUnpaid(order);
+        return orderRepository.save(order);
+    }
+
+    private void validateTransition(OrderStatus from, OrderStatus to) {
+        boolean ok = (from == OrderStatus.PENDING && (to == OrderStatus.CONFIRMED || to == OrderStatus.SHIPPING))
+                || (from == OrderStatus.CONFIRMED && (to == OrderStatus.SHIPPING || to == OrderStatus.COMPLETED))
+                || (from == OrderStatus.SHIPPING && to == OrderStatus.COMPLETED);
+        if (!ok) {
+            throw new IllegalStateException(
+                    "Không hợp lệ: " + from + " → " + to
+                            + ". Quy trình: PENDING → CONFIRMED → SHIPPING → COMPLETED (hoặc Hủy từ PENDING/CONFIRMED)");
+        }
+    }
+
+    private void markPaidIfUnpaid(Order order) {
+        PaymentInfo pay = order.getPaymentInfo();
+        if (pay != null && pay.getPaymentStatus() != PaymentStatus.PAID) {
+            pay.setPaymentStatus(PaymentStatus.PAID);
+            pay.setPaidAt(LocalDateTime.now());
+        }
+    }
+
+    private void cancelInternal(Order order, String reason) {
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setCancelledAt(LocalDateTime.now());
+        order.setCancelReason(reason);
+
+        for (OrderItem item : order.getItems()) {
+            if (item.getVariant() != null) {
+                item.getVariant().increaseStock(item.getQuantity());
+                productVariantRepository.save(item.getVariant());
+            }
+        }
+        if (order.getCoupon() != null) {
+            Coupon c = order.getCoupon();
+            if (c.getUsedCount() > 0) {
+                c.setUsedCount(c.getUsedCount() - 1);
+                couponRepository.save(c);
+            }
+        }
+        PaymentInfo pay = order.getPaymentInfo();
+        if (pay != null && pay.getPaymentMethod() == PaymentMethod.E_WALLET
+                && pay.getPaymentStatus() == PaymentStatus.UNPAID) {
+            pay.setPaymentStatus(PaymentStatus.FAILED);
+        }
+    }
+
+    private UserProfile requireProfile(Authentication auth) {
+        UserProfile profile = cartService.getOrCreateProfile(auth);
+        if (profile == null) {
+            throw new IllegalStateException("Vui lòng đăng nhập");
+        }
+        return profile;
+    }
+
+    private Order requireOrderOwned(Long orderId, UserProfile profile) {
+        Order order = orderRepository.findByIdWithDetails(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng"));
+        if (!order.getUserProfile().getId().equals(profile.getId())) {
+            throw new IllegalStateException("Bạn không có quyền thao tác đơn hàng này");
+        }
+        return order;
+    }
+
     private String generateOrderCode() {
         String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         int seq = ThreadLocalRandom.current().nextInt(100, 1000);
         String code = "FS" + datePart + seq;
-        // Tránh trùng cực hiếm
         int guard = 0;
         while (orderRepository.findByOrderCode(code).isPresent() && guard < 20) {
             seq = ThreadLocalRandom.current().nextInt(100, 1000);
@@ -270,5 +371,33 @@ public class OrderService {
             guard++;
         }
         return code;
+    }
+
+    private OrderStatus parseStatus(String s) {
+        if (s == null || s.isBlank()) return null;
+        try {
+            return OrderStatus.valueOf(s.trim().toUpperCase());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private PaymentMethod parseMethod(String s) {
+        if (s == null || s.isBlank()) return null;
+        try {
+            return PaymentMethod.valueOf(s.trim().toUpperCase());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private LocalDateTime parseDateStart(String s) {
+        if (s == null || s.isBlank()) return null;
+        return LocalDate.parse(s).atStartOfDay();
+    }
+
+    private LocalDateTime parseDateEnd(String s) {
+        if (s == null || s.isBlank()) return null;
+        return LocalDate.parse(s).atTime(LocalTime.MAX);
     }
 }
