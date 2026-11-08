@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/user-base :: layout(
+          ~{::title},
+          ~{::#customer-content}
+      )}">
+<head>
+    <title>Thanh toán ví điện tử | Fashion Shop</title>
+</head>
+<body>
+
+<div id="customer-content" class="checkout-page">
+    <link rel="stylesheet" th:href="@{/css/customer/checkout.css}">
+
+    <div class="checkout-header">
+        <p class="checkout-eyebrow">E-wallet simulation</p>
+        <h1 class="checkout-title">Cổng thanh toán ví điện tử</h1>
+        <p class="checkout-sub">
+            Đây là trang <strong>giả lập</strong> ZaloPay / MoMo / ShopeePay cho đồ án.
+            Không gọi API thật (cần merchant key &amp; sandbox của nhà cung cấp).
+        </p>
+    </div>
+
+    <div class="checkout-block payment-gateway-box">
+        <div class="pay-gateway-icons">
+            <span class="pg-badge">ZaloPay</span>
+            <span class="pg-badge">MoMo</span>
+            <span class="pg-badge">ShopeePay</span>
+        </div>
+        <p class="mb-3">Đơn hàng #<span th:text="${orderId}">0</span> đang chờ thanh toán.</p>
+        <p class="text-muted small mb-4">
+            Chọn kết quả giả lập bên dưới. Thành công → đơn chuyển <code>PAID</code> + <code>CONFIRMED</code>.
+            Thất bại → đơn <code>CANCELLED</code>, hoàn kho và hoàn lượt mã giảm giá (nếu có).
+        </p>
+
+        <div class="d-flex flex-wrap gap-2">
+            <form th:action="@{/checkout/payment/{id}/success(id=${orderId})}" method="post">
+                <button type="submit" class="btn checkout-submit-btn">
+                    <i class="bi bi-check-circle"></i> Thanh toán thành công
+                </button>
+            </form>
+            <form th:action="@{/checkout/payment/{id}/fail(id=${orderId})}" method="post">
+                <button type="submit" class="btn btn-outline-danger">
+                    <i class="bi bi-x-circle"></i> Thanh toán thất bại
+                </button>
+            </form>
+            <a th:href="@{/orders/{id}(id=${orderId})}" class="btn btn-outline-secondary">
+                Xem đơn (chưa thanh toán)
+            </a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
