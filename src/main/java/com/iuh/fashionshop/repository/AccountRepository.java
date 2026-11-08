@@ -15,4 +15,5 @@ public interface AccountRepository extends JpaRepository<Account, Long>, JpaSpec
     boolean existsByEmail(String email);
     long countByStatus(AccountStatus status);
     long countByRole(Role role);
+    long countByRoleAndStatus(Role role, AccountStatus status);
 }

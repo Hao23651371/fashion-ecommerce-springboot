@@ -62,8 +62,11 @@ public class SecurityConfig {
                         // 4. Customer - Khu vực khách hàng cá nhân (yêu cầu đăng nhập)
                         .requestMatchers("/cart/**", "/checkout/**", "/wishlist/**", "/orders/**", "/account/**").authenticated()
 
-                        // 5. Admin - Khu vực quản trị (yêu cầu quyền ROLE_ADMIN)
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        // 5. Admin - Khu vực quản trị
+                        // Chỉ tài khoản có quyền ROLE_ADMIN mới được truy cập quản lý tài khoản và phân quyền
+                        .requestMatchers("/admin/users", "/admin/users/**", "/admin/accounts", "/admin/accounts/**").hasRole("ADMIN")
+                        // Cả ROLE_ADMIN và ROLE_STAFF đều có thể truy cập khu vực quản trị cửa hàng
+                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "STAFF")
 
                         // 6. Các route khác còn lại
                         .anyRequest().permitAll()
@@ -111,7 +114,7 @@ public class SecurityConfig {
                 }
 
                 Set<String> roles = AuthorityUtils.authorityListToSet(authentication.getAuthorities());
-                if (roles.contains("ROLE_ADMIN")) {
+                if (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_STAFF")) {
                     response.sendRedirect("/admin/dashboard");
                 } else {
                     response.sendRedirect("/");

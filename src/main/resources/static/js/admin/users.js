@@ -33,6 +33,14 @@ function initAdminUsers() {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
 
+            // Dọn dẹp popover cũ trước khi đổi HTML
+            document.querySelectorAll('.verification-popover-trigger').forEach(function (el) {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Popover) {
+                    const pop = bootstrap.Popover.getInstance(el);
+                    if (pop) pop.dispose();
+                }
+            });
+
             // Cập nhật Bảng dữ liệu và phân trang
             const newTable = doc.getElementById('accountTableWrapper');
             if (newTable && tableWrapper) {
@@ -63,9 +71,10 @@ function initAdminUsers() {
                 console.warn('URL parse fallback:', e);
             }
 
-            // Gắn lại sự kiện cho phân trang và nút sắp xếp ID
+            // Gắn lại sự kiện cho phân trang, nút sắp xếp ID và Popovers
             bindAjaxPagination();
             bindSortToggle();
+            initVerificationPopovers();
         })
         .catch(err => {
             console.error('Lỗi khi tải dữ liệu qua AJAX:', err);
@@ -211,6 +220,19 @@ function initAdminUsers() {
             document.getElementById('editExpiry').value = expiry || '';
             document.getElementById('editCreated').textContent = created || '—';
             document.getElementById('editLogin').textContent = login || 'Chưa đăng nhập';
+
+            const editCodeDisplay = document.getElementById('editCodeDisplay');
+            if (editCodeDisplay) {
+                editCodeDisplay.innerHTML = (code && code.trim() !== '' && code !== 'null')
+                    ? `<code class="bg-light text-primary px-2 py-0.5 rounded border font-monospace fw-bold">${code}</code>`
+                    : '<span class="text-muted fst-italic">— (Không có)</span>';
+            }
+            const editExpiryDisplay = document.getElementById('editExpiryDisplay');
+            if (editExpiryDisplay) {
+                editExpiryDisplay.textContent = (expiry && expiry.trim() !== '' && expiry !== 'null')
+                    ? expiry.replace('T', ' ')
+                    : '—';
+            }
         });
     }
 
@@ -232,7 +254,126 @@ function initAdminUsers() {
     }
 
     // =========================================================================
-    // 8. KHỞI TẠO BOOTSTRAP POPOVER & XỬ LÝ HOVER TÌM KIẾM
+    // 8. MODAL PHÂN QUYỀN TÀI KHOẢN (ROLE ASSIGNMENT & DATABASE SYNC)
+    // =========================================================================
+    const assignModal = document.getElementById('assignRoleModal');
+    if (assignModal) {
+        const roleRadios = assignModal.querySelectorAll('.role-radio-input');
+        const roleCards = assignModal.querySelectorAll('.role-option-card');
+        const summaryBadge = document.getElementById('roleSelectedSummaryBadge');
+        const selfWarning = document.getElementById('selfRoleWarning');
+
+        function updateRoleSelectionUI(selectedRole) {
+            roleCards.forEach(card => card.classList.remove('selected'));
+            const activeRadio = document.getElementById('roleRadio_' + selectedRole);
+            if (activeRadio) {
+                activeRadio.checked = true;
+                const parentCard = activeRadio.closest('.role-option-card');
+                if (parentCard) parentCard.classList.add('selected');
+            }
+
+            if (summaryBadge) {
+                summaryBadge.textContent = selectedRole;
+                if (selectedRole === 'ADMIN') {
+                    summaryBadge.className = 'badge bg-danger text-white px-2 py-1 small';
+                } else if (selectedRole === 'STAFF') {
+                    summaryBadge.className = 'badge bg-purple text-white px-2 py-1 small';
+                } else {
+                    summaryBadge.className = 'badge bg-primary text-white px-2 py-1 small';
+                }
+            }
+
+            const permItems = assignModal.querySelectorAll('.permission-item');
+            permItems.forEach(item => {
+                const requiredPerm = item.getAttribute('data-perm');
+                let isActive = false;
+                if (selectedRole === 'ADMIN') {
+                    isActive = true;
+                } else if (selectedRole === 'STAFF') {
+                    isActive = (requiredPerm === 'ROLE_STAFF' || requiredPerm === 'ROLE_CUSTOMER');
+                } else if (selectedRole === 'CUSTOMER') {
+                    isActive = (requiredPerm === 'ROLE_CUSTOMER');
+                }
+
+                const icon = item.querySelector('.perm-icon');
+                if (isActive) {
+                    item.classList.remove('inactive');
+                    if (icon) {
+                        icon.className = 'bi bi-check-circle-fill text-success fs-6 perm-icon';
+                    }
+                } else {
+                    item.classList.add('inactive');
+                    if (icon) {
+                        icon.className = 'bi bi-dash-circle text-muted fs-6 perm-icon';
+                    }
+                }
+            });
+        }
+
+        roleRadios.forEach(radio => {
+            radio.addEventListener('change', function () {
+                if (this.checked) {
+                    updateRoleSelectionUI(this.value);
+                }
+            });
+        });
+
+        assignModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+
+            const id = button.getAttribute('data-id');
+            const email = button.getAttribute('data-email');
+            const role = button.getAttribute('data-role') || 'CUSTOMER';
+            const isCurrent = button.getAttribute('data-is-current') === 'true';
+
+            document.getElementById('assignRoleForm').action = '/admin/users/' + id + '/role';
+            document.getElementById('roleModalIdBadge').textContent = '#' + id;
+            document.getElementById('roleModalEmail').textContent = email || '—';
+
+            const curBadge = document.getElementById('roleModalCurrentRoleBadge');
+            if (curBadge) {
+                curBadge.textContent = role;
+                if (role === 'ADMIN') {
+                    curBadge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1 rounded-pill';
+                } else if (role === 'STAFF') {
+                    curBadge.className = 'badge bg-purple-subtle text-purple border border-purple-subtle px-3 py-1 rounded-pill';
+                } else {
+                    curBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill';
+                }
+            }
+
+            const staffRadio = document.getElementById('roleRadio_STAFF');
+            const customerRadio = document.getElementById('roleRadio_CUSTOMER');
+            const staffCard = staffRadio ? staffRadio.closest('.role-option-card') : null;
+            const customerCard = customerRadio ? customerRadio.closest('.role-option-card') : null;
+
+            if (isCurrent) {
+                if (selfWarning) {
+                    selfWarning.classList.remove('d-none');
+                    selfWarning.classList.add('d-flex');
+                }
+                if (staffRadio) staffRadio.disabled = true;
+                if (customerRadio) customerRadio.disabled = true;
+                if (staffCard) staffCard.classList.add('disabled');
+                if (customerCard) customerCard.classList.add('disabled');
+            } else {
+                if (selfWarning) {
+                    selfWarning.classList.add('d-none');
+                    selfWarning.classList.remove('d-flex');
+                }
+                if (staffRadio) staffRadio.disabled = false;
+                if (customerRadio) customerRadio.disabled = false;
+                if (staffCard) staffCard.classList.remove('disabled');
+                if (customerCard) customerCard.classList.remove('disabled');
+            }
+
+            updateRoleSelectionUI(role);
+        });
+    }
+
+    // =========================================================================
+    // 9. KHỞI TẠO BOOTSTRAP POPOVER & XỬ LÝ HOVER TÌM KIẾM
     // =========================================================================
     const searchPopoverContent = `
         <div style="font-size: 0.82rem; line-height: 1.5; min-width: 250px;">
@@ -283,6 +424,75 @@ function initAdminUsers() {
             searchInput.addEventListener('blur', hideCard);
         }
     }
+
+    // =========================================================================
+    // 10. KHỞI TẠO POPOVER XEM MÃ XÁC THỰC VÀ HẠN MÃ (EMAIL VERIFICATION POPOVER)
+    // =========================================================================
+    function initVerificationPopovers() {
+        if (typeof bootstrap === 'undefined' || !bootstrap.Popover) return;
+
+        // Khởi tạo tooltips
+        if (bootstrap.Tooltip) {
+            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+                const oldTooltip = bootstrap.Tooltip.getInstance(el);
+                if (oldTooltip) oldTooltip.dispose();
+                new bootstrap.Tooltip(el);
+            });
+        }
+
+        document.querySelectorAll('.verification-popover-trigger').forEach(function (el) {
+            const oldInstance = bootstrap.Popover.getInstance(el);
+            if (oldInstance) {
+                oldInstance.dispose();
+            }
+
+            const isVerified = el.getAttribute('data-verified') === 'true';
+            const code = el.getAttribute('data-code');
+            const expiry = el.getAttribute('data-expiry');
+
+            const statusBadge = isVerified
+                ? '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5"><i class="bi bi-check-circle-fill me-1"></i>Đã xác thực</span>'
+                : '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-0.5"><i class="bi bi-clock-history me-1"></i>Chưa xác thực</span>';
+
+            const codeDisplay = (code && code.trim() !== '' && code !== 'null')
+                ? `<code class="bg-light text-primary px-2 py-1 rounded border font-monospace fw-bold fs-6">${code}</code>`
+                : '<span class="text-muted fst-italic">— (Chưa có mã)</span>';
+
+            const expiryDisplay = (expiry && expiry.trim() !== '' && expiry !== 'null')
+                ? `<span class="text-dark fw-medium"><i class="bi bi-calendar-event me-1 text-secondary"></i>${expiry}</span>`
+                : '<span class="text-muted fst-italic">—</span>';
+
+            const popoverContent = `
+                <div class="p-1" style="font-size: 0.83rem; min-width: 220px;">
+                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                        <span class="text-muted">Trạng thái:</span>
+                        <div>${statusBadge}</div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                        <span class="text-muted">Mã OTP:</span>
+                        <div>${codeDisplay}</div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Hết hạn lúc:</span>
+                        <div>${expiryDisplay}</div>
+                    </div>
+                </div>
+            `;
+
+            new bootstrap.Popover(el, {
+                trigger: 'hover focus',
+                placement: 'top',
+                html: true,
+                title: '<div class="fw-bold text-dark d-flex align-items-center gap-1 small"><i class="bi bi-shield-check text-primary"></i> Thông tin mã xác thực</div>',
+                content: popoverContent,
+                sanitize: false,
+                container: 'body'
+            });
+        });
+    }
+
+    // Khởi tạo popover xác minh email lần đầu
+    initVerificationPopovers();
 }
 
 // Tự động khởi chạy khi DOM đã sẵn sàng
