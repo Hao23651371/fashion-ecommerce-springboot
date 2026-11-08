@@ -115,7 +115,6 @@
             <table class="catalog-table category-table">
                 <thead>
                 <tr>
-                    <th style="width: 40px;"><input type="checkbox" id="checkAll"></th>
                     <th style="width: 140px;">MÃ DANH MỤC</th>
                     <th>TÊN DANH MỤC</th>
                     <th style="width: 160px;">SỐ SẢN PHẨM</th>
@@ -125,7 +124,6 @@
                 </thead>
                 <tbody>
                 <tr th:each="category : ${categories.content}">
-                    <td><input type="checkbox" class="category-checkbox" th:value="${category.id}"></td>
                     <td>
                         <span class="sku" th:text="${'#CAT-' + #numbers.formatInteger(category.id, 3)}">#CAT-001</span>
                     </td>
@@ -147,6 +145,23 @@
                         </span>
                     </td>
                     <td class="action-cell text-center">
+                        <button th:if="${category.status.name() == 'VISIBLE'}"
+                                type="button" class="btn-action-hide"
+                                title="Ẩn danh mục"
+                                th:data-id="${category.id}"
+                                th:data-name="${category.name}"
+                                th:data-count="${category.products != null ? category.products.size() : 0}"
+                                onclick="openHideModal(this)">
+                            <i class="bi bi-eye-slash text-warning"></i>
+                        </button>
+                        <button th:unless="${category.status.name() == 'VISIBLE'}"
+                                type="button" class="btn-action-show"
+                                title="Hiện danh mục"
+                                th:data-id="${category.id}"
+                                th:data-name="${category.name}"
+                                onclick="openShowModal(this)">
+                            <i class="bi bi-eye text-success"></i>
+                        </button>
                         <button type="button" class="btn-action-edit"
                                 title="Chỉnh sửa danh mục"
                                 th:data-id="${category.id}"
@@ -167,7 +182,7 @@
                 </tr>
 
                 <tr th:if="${categories.empty}">
-                    <td colspan="6" class="empty-state py-5 text-center text-muted">
+                    <td colspan="5" class="empty-state py-5 text-center text-muted">
                         <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
                         <span>Không tìm thấy danh mục nào phù hợp.</span>
                     </td>
@@ -256,16 +271,74 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-dark">Trạng thái hiển thị</label>
-                            <select id="editCategoryStatus" name="status" class="form-select">
+                            <select id="editCategoryStatus" name="status" class="form-select" onchange="checkEditCategoryStatusWarning()">
                                 <option value="VISIBLE">Hiển thị (VISIBLE)</option>
                                 <option value="HIDDEN">Đang ẩn (HIDDEN)</option>
                             </select>
+                            <div id="editCategoryHiddenWarning" class="alert alert-warning py-2 small mt-2 d-none">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                <strong>Lưu ý:</strong> Chuyển sang "Đang ẩn" sẽ <strong>tự động ẩn tất cả các sản phẩm</strong> thuộc danh mục này!
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer border-top bg-light">
                         <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy</button>
                         <button type="submit" class="btn btn-primary px-4 fw-semibold" style="background-color: #4332d5; border-color: #4332d5;">
                             <i class="bi bi-save me-1"></i> Cập nhật
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: XÁC NHẬN ẨN DANH MỤC (TỰ ĐỘNG ẨN SẢN PHẨM LIÊN KẾT) -->
+    <div class="modal fade" id="hideCategoryModal" tabindex="-1" aria-labelledby="hideCategoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form id="hideCategoryForm" method="post" action="">
+                    <div class="modal-header border-bottom pb-3">
+                        <h5 class="modal-title fw-bold text-warning" id="hideCategoryModalLabel">
+                            <i class="bi bi-eye-slash-fill me-2"></i>Xác Nhận Ẩn Danh Mục
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                    </div>
+                    <div class="modal-body py-4">
+                        <p class="mb-2">Bạn có chắc chắn muốn ẩn danh mục <strong id="hideCategoryNameText" class="text-dark"></strong> không?</p>
+                        <div class="alert alert-warning py-2 small mb-0 mt-3">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                            Hệ thống sẽ <strong>tự động ẩn tất cả <span id="hideCategoryProductCount">0</span> sản phẩm</strong> thuộc danh mục này (chuyển sang trạng thái Tạm dừng / Ẩn).
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top bg-light">
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-warning px-4 fw-semibold text-dark">
+                            <i class="bi bi-eye-slash me-1"></i> Xác nhận ẩn danh mục
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: XÁC NHẬN HIỂN THỊ LẠI DANH MỤC -->
+    <div class="modal fade" id="showCategoryModal" tabindex="-1" aria-labelledby="showCategoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form id="showCategoryForm" method="post" action="">
+                    <div class="modal-header border-bottom pb-3">
+                        <h5 class="modal-title fw-bold text-success" id="showCategoryModalLabel">
+                            <i class="bi bi-eye-fill me-2"></i>Xác Nhận Hiển Thị Danh Mục
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                    </div>
+                    <div class="modal-body py-4">
+                        <p class="mb-0">Bạn có muốn hiển thị lại danh mục <strong id="showCategoryNameText" class="text-dark"></strong> trên hệ thống cửa hàng không?</p>
+                    </div>
+                    <div class="modal-footer border-top bg-light">
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-success px-4 fw-semibold text-white">
+                            <i class="bi bi-eye me-1"></i> Hiển thị danh mục
                         </button>
                     </div>
                 </form>
@@ -304,17 +377,65 @@
 
     <!-- Script xử lý mở modal & checkbox -->
     <script>
+        let editInitialStatus = 'VISIBLE';
+
+        function checkEditCategoryStatusWarning() {
+            const select = document.getElementById('editCategoryStatus');
+            const warning = document.getElementById('editCategoryHiddenWarning');
+            if (select.value === 'HIDDEN' && editInitialStatus === 'VISIBLE') {
+                warning.classList.remove('d-none');
+            } else {
+                warning.classList.add('d-none');
+            }
+        }
+
         function openEditModal(button) {
             const id = button.getAttribute('data-id');
             const name = button.getAttribute('data-name');
             const status = button.getAttribute('data-status');
+            editInitialStatus = status;
 
             document.getElementById('editCategoryCode').value = '#CAT-' + String(id).padStart(3, '0');
             document.getElementById('editCategoryName').value = name;
             document.getElementById('editCategoryStatus').value = status;
             document.getElementById('editCategoryForm').action = '/admin/categories/edit/' + id;
 
+            checkEditCategoryStatusWarning();
+
             const modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
+            modal.show();
+        }
+
+        document.getElementById('editCategoryForm').addEventListener('submit', function (e) {
+            const status = document.getElementById('editCategoryStatus').value;
+            if (status === 'HIDDEN' && editInitialStatus === 'VISIBLE') {
+                if (!confirm('Bạn đang chọn ẩn danh mục này. Tất cả sản phẩm thuộc danh mục cũng sẽ tự động bị ẩn. Bạn có chắc chắn muốn tiếp tục?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+
+        function openHideModal(button) {
+            const id = button.getAttribute('data-id');
+            const name = button.getAttribute('data-name');
+            const count = button.getAttribute('data-count') || '0';
+
+            document.getElementById('hideCategoryNameText').textContent = '"' + name + '"';
+            document.getElementById('hideCategoryProductCount').textContent = count;
+            document.getElementById('hideCategoryForm').action = '/admin/categories/hide/' + id;
+
+            const modal = new bootstrap.Modal(document.getElementById('hideCategoryModal'));
+            modal.show();
+        }
+
+        function openShowModal(button) {
+            const id = button.getAttribute('data-id');
+            const name = button.getAttribute('data-name');
+
+            document.getElementById('showCategoryNameText').textContent = '"' + name + '"';
+            document.getElementById('showCategoryForm').action = '/admin/categories/show/' + id;
+
+            const modal = new bootstrap.Modal(document.getElementById('showCategoryModal'));
             modal.show();
         }
 
@@ -344,18 +465,6 @@
             const modal = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
             modal.show();
         }
-
-        // Chọn tất cả checkbox
-        document.addEventListener('DOMContentLoaded', function () {
-            const checkAll = document.getElementById('checkAll');
-            if (checkAll) {
-                checkAll.addEventListener('change', function () {
-                    document.querySelectorAll('.category-checkbox').forEach(cb => {
-                        cb.checked = checkAll.checked;
-                    });
-                });
-            }
-        });
     </script>
 </div>
 </body>

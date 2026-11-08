@@ -1,22 +1,769 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{layouts/admin-base :: adminLayout(
-          ~{::title},
-          ~{::#admin-content},
-          'inventory'
-      )}">
+      th:replace="~{layouts/admin-base :: adminLayout(~{::title}, ~{::#admin-content}, 'inventory')}">
 <head>
-    <title>Quản lý kho | Fashion Shop Admin</title>
+    <title>Quản lý kho hàng | Fashion Shop Admin</title>
 </head>
 <body>
 
-<div id="admin-content">
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-4">
-            <h4 class="fw-bold mb-2">Đây là trang Quản lý kho</h4>
-            <p class="text-muted mb-0">Giao diện trang này chưa được xây dựng.</p>
+<div id="admin-content" class="inventory-page">
+    <!-- Nạp CSS quản lý kho trực tiếp tại trang sử dụng -->
+    <link rel="stylesheet" th:href="@{/css/admin/inventory.css}">
+
+    <!-- Flash Messages -->
+    <div th:if="${successMessage}" class="alert alert-success inventory-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <span th:text="${successMessage}">Thao tác thành công.</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger inventory-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span th:text="${errorMessage}">Đã xảy ra lỗi.</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- Header & Thao tác nhanh -->
+    <div class="inventory-heading">
+        <div>
+            <div class="breadcrumb-line">
+                <i class="bi bi-house"></i> TRANG CHỦ <span>/</span> KHO HÀNG
+            </div>
+            <h1>Quản lý Kho Hàng</h1>
+            <p>Kiểm soát xuất nhập tồn, biến thể sản phẩm và theo dõi lịch sử luân chuyển kho.</p>
+        </div>
+        <div class="inventory-actions">
+            <button type="button" class="btn btn-inventory-light" onclick="openAuditQuickModal()">
+                <i class="bi bi-clipboard-check text-primary"></i> Kiểm kê kho
+            </button>
+            <button type="button" class="btn btn-inventory-primary" onclick="openImportNewModal()">
+                <i class="bi bi-plus-circle"></i> Nhập kho mới
+            </button>
         </div>
     </div>
+
+    <!-- 4 Thẻ thống kê tổng quan -->
+    <div class="inventory-stats row g-3">
+        <div class="col-md-3">
+            <div class="inventory-stat">
+                <span>Tổng số mã SKU</span>
+                <strong th:text="${summary.totalSkus}">0</strong>
+                <em>Biến thể quản lý</em>
+                <i class="bi bi-upc-scan"></i>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="inventory-stat">
+                <span>Tổng sản phẩm tồn</span>
+                <strong th:text="${summary.totalStock}">0</strong>
+                <em class="positive">Chiếc trong kho</em>
+                <i class="bi bi-box-seam"></i>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="inventory-stat" th:classappend="${summary.lowStockCount > 0 or summary.outOfStockCount > 0} ? 'stat-danger' : ''">
+                <span>Cảnh báo tồn kho</span>
+                <strong th:text="${summary.lowStockCount + summary.outOfStockCount}">0</strong>
+                <em class="warning-tag" th:text="${'Hết: ' + summary.outOfStockCount + ' | Sắp hết: ' + summary.lowStockCount}">Cần nhập</em>
+                <i class="bi bi-exclamation-octagon"></i>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="inventory-stat stat-teal">
+                <span>Giá trị kho ước tính</span>
+                <strong th:text="${summary.totalInventoryValue}">0 đ</strong>
+                <em>Giá hiện tại × Tồn</em>
+                <i class="bi bi-cash-stack"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel chính -->
+    <section class="inventory-panel">
+        <!-- Tabs điều hướng -->
+        <div class="inventory-tabs">
+            <a th:classappend="${currentTab == 'stock' or currentTab == null} ? 'active' : ''"
+               th:href="@{/admin/inventory(tab='stock')}">
+                <i class="bi bi-boxes"></i> Tồn kho sản phẩm <b th:text="${summary.totalSkus}">0</b>
+            </a>
+            <a th:classappend="${currentTab == 'history'} ? 'active' : ''"
+               th:href="@{/admin/inventory(tab='history')}">
+                <i class="bi bi-clock-history"></i> Lịch sử biến động kho <b th:text="${totalHistoryCount}">0</b>
+            </a>
+            <span class="inventory-sync-note">
+                <i class="bi bi-circle-fill"></i> Dữ liệu đồng bộ tức thời
+            </span>
+        </div>
+
+        <!-- ================= TAB 1: TỒN KHO SẢN PHẨM ================= -->
+        <div th:if="${currentTab == 'stock' or currentTab == null}">
+            <!-- Bộ lọc dữ liệu -->
+            <form method="get" th:action="@{/admin/inventory}" class="inventory-filters">
+                <input type="hidden" name="tab" value="stock">
+                <label>
+                    <i class="bi bi-search"></i>
+                    <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm theo tên sản phẩm, mã SKU...">
+                </label>
+                <select name="categoryId" onchange="this.form.submit()">
+                    <option value="">Danh mục: Tất cả</option>
+                    <option th:each="cat : ${categories}"
+                            th:value="${cat.id}"
+                            th:text="${cat.name}"
+                            th:selected="${selectedCategory != null and selectedCategory == cat.id}">
+                        Danh mục
+                    </option>
+                </select>
+                <select name="stockStatus" onchange="this.form.submit()">
+                    <option value="ALL" th:selected="${selectedStock == 'ALL'}">Tồn kho: Tất cả mức tồn</option>
+                    <option value="AVAILABLE" th:selected="${selectedStock == 'AVAILABLE'}">Còn hàng (>= 5 chiếc)</option>
+                    <option value="LOW" th:selected="${selectedStock == 'LOW'}">Sắp hết hàng (< 5 chiếc)</option>
+                    <option value="OUT" th:selected="${selectedStock == 'OUT'}">Hết hàng (0 chiếc)</option>
+                </select>
+                <button type="submit" class="btn btn-inventory-primary">
+                    <i class="bi bi-filter"></i> Lọc
+                </button>
+                <a th:if="${(keyword != null and keyword != '') or (selectedCategory != null) or (selectedStock != null and selectedStock != 'ALL')}"
+                   th:href="@{/admin/inventory(tab='stock')}"
+                   class="btn btn-inventory-light text-danger" title="Xóa bộ lọc">
+                    <i class="bi bi-x-circle"></i> Đặt lại
+                </a>
+            </form>
+
+            <!-- Bảng dữ liệu tồn kho -->
+            <div class="table-responsive">
+                <table class="inventory-table">
+                    <thead>
+                    <tr>
+                        <th style="width: 140px;">MÃ SKU</th>
+                        <th>SẢN PHẨM & PHÂN LOẠI</th>
+
+                        <th style="width: 170px;">BIẾN THỂ (SIZE / MÀU)</th>
+                        <th style="width: 130px;">GIÁ BÁN</th>
+                        <th style="width: 150px;">TỒN KHO THỰC TẾ</th>
+                        <th style="width: 120px;">TRẠNG THÁI</th>
+                        <th style="width: 140px; text-align: center;">THAO TÁC</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item : ${items.content}">
+                        <td>
+                            <span class="sku-badge" th:text="${item.sku}">#PRD-001</span>
+                        </td>
+                        <td>
+                            <div class="product-cell">
+                                <img th:if="${item.imageUrl != ''}" th:src="${item.imageUrl}" class="thumb" alt="Product">
+                                <div th:unless="${item.imageUrl != ''}" class="thumb-placeholder">
+                                    <i class="bi bi-image"></i>
+                                </div>
+                                <div class="name-box">
+                                    <strong th:text="${item.productName}">Tên sản phẩm</strong>
+                                    <div class="cat-name">
+                                        <i class="bi bi-tag-fill me-1 text-muted"></i>
+                                        <span th:text="${item.categoryName}">Danh mục</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="variant-pill">
+                                <span class="variant-size" th:text="${'Size ' + item.size}">Size M</span>
+                                <span class="color-dot" th:style="${'background-color: ' + item.colorHex}"></span>
+                                <span class="variant-color-name" th:text="${item.color}">Đen</span>
+                            </div>
+                        </td>
+                        <td>
+                            <b th:text="${item.price}">0 đ</b>
+                        </td>
+                        <td>
+                            <div class="stock-count-wrap">
+                                <span class="stock-num" th:text="${item.stockQuantity + ' chiếc'}">10 chiếc</span>
+                                <span class="stock-tag" th:classappend="${item.stockStatusClass}" th:text="${item.stockStatusText}">Còn hàng</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border px-2 py-1" th:text="${item.status}">Đang bán</span>
+                        </td>
+                        <td class="action-cell">
+                            <div class="action-group">
+                                <!-- Nút Kiểm kê -->
+                                <button type="button" class="btn-inventory-action btn-action-audit"
+                                        title="Kiểm kê / Cân bằng kho"
+                                        th:data-id="${item.id}"
+                                        th:data-sku="${item.sku}"
+                                        th:data-name="${item.productName}"
+                                        th:data-variant="${item.size + ' - ' + item.color}"
+                                        th:data-stock="${item.stockQuantity}"
+                                        onclick="openAuditModal(this)">
+                                    <i class="bi bi-clipboard-check"></i>
+                                </button>
+                                <!-- Nút Nhập kho -->
+                                <button type="button" class="btn-inventory-action"
+                                        title="Nhập thêm hàng"
+                                        th:data-id="${item.id}"
+                                        th:data-sku="${item.sku}"
+                                        th:data-name="${item.productName}"
+                                        th:data-variant="${item.size + ' - ' + item.color}"
+                                        th:data-stock="${item.stockQuantity}"
+                                        onclick="openImportModal(this)">
+                                    <i class="bi bi-box-arrow-in-down"></i>
+                                </button>
+                                <!-- Nút Lịch sử -->
+                                <button type="button" class="btn-inventory-action btn-action-history"
+                                        title="Xem lịch sử biến động"
+                                        th:data-id="${item.id}"
+                                        th:data-sku="${item.sku}"
+                                        th:data-name="${item.productName}"
+                                        onclick="openHistoryModal(this)">
+                                    <i class="bi bi-clock-history"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr th:if="${items.empty}">
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-box-seam fs-1 d-block mb-2 text-secondary"></i>
+                            <span>Không tìm thấy biến thể hoặc sản phẩm nào phù hợp với bộ lọc.</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Phân trang -->
+            <div class="inventory-footer">
+                <span>
+                    Hiển thị <b th:text="${items.numberOfElements}">0</b> trên tổng số <b th:text="${items.totalElements}">0</b> mã SKU
+                </span>
+                <div class="inventory-pagination" th:if="${items.totalPages > 1}">
+                    <a th:if="${items.hasPrevious()}"
+                       th:href="@{/admin/inventory(tab='stock', page=${items.number - 1}, size=${items.size}, keyword=${keyword}, categoryId=${selectedCategory}, stockStatus=${selectedStock})}">
+                        ‹ Trước
+                    </a>
+                    <a th:each="i : ${#numbers.sequence(0, items.totalPages - 1)}"
+                       th:classappend="${i == items.number} ? 'current' : ''"
+                       th:href="@{/admin/inventory(tab='stock', page=${i}, size=${items.size}, keyword=${keyword}, categoryId=${selectedCategory}, stockStatus=${selectedStock})}"
+                       th:text="${i + 1}">1</a>
+                    <a th:if="${items.hasNext()}"
+                       th:href="@{/admin/inventory(tab='stock', page=${items.number + 1}, size=${items.size}, keyword=${keyword}, categoryId=${selectedCategory}, stockStatus=${selectedStock})}">
+                        Sau ›
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: LỊCH SỬ BIẾN ĐỘNG KHO ================= -->
+        <div th:if="${currentTab == 'history'}">
+            <!-- Bộ lọc dữ liệu Lịch sử biến động kho -->
+            <form method="get" th:action="@{/admin/inventory}" class="inventory-filters">
+                <input type="hidden" name="tab" value="history">
+
+                <!-- 1. Tìm tên sản phẩm hoặc biến thể (SKU, size, màu) -->
+                <label style="min-width: 250px;">
+                    <i class="bi bi-search"></i>
+                    <input type="text" name="historyKeyword" th:value="${historyKeyword}" placeholder="Tìm theo tên sản phẩm, mã SKU, size, màu...">
+                </label>
+
+                <!-- 2. Lọc theo ngày phát sinh: Từ ngày -->
+                <div class="date-filter-group">
+                    <span class="date-label"><i class="bi bi-calendar-event"></i> Từ:</span>
+                    <input type="date" name="startDate" th:value="${startDate}" class="form-control-date" title="Từ ngày phát sinh">
+                </div>
+
+                <!-- 2. Lọc theo ngày phát sinh: Đến ngày -->
+                <div class="date-filter-group">
+                    <span class="date-label"><i class="bi bi-calendar-check"></i> Đến:</span>
+                    <input type="date" name="endDate" th:value="${endDate}" class="form-control-date" title="Đến ngày phát sinh">
+                </div>
+
+                <!-- 3. Loại biến động -->
+                <select name="movementType" onchange="this.form.submit()">
+                    <option value="ALL" th:selected="${movementType == 'ALL' or movementType == null}">Loại: Tất cả biến động</option>
+                    <option value="IMPORT" th:selected="${movementType == 'IMPORT'}">Nhập kho (IMPORT)</option>
+                    <option value="ADJUSTMENT" th:selected="${movementType == 'ADJUSTMENT'}">Kiểm kê / Điều chỉnh (ADJUSTMENT)</option>
+                    <option value="SALE" th:selected="${movementType == 'SALE'}">Bán hàng (SALE)</option>
+                    <option value="CANCELLED_ORDER" th:selected="${movementType == 'CANCELLED_ORDER'}">Hủy đơn hoàn kho (CANCELLED_ORDER)</option>
+                </select>
+
+                <!-- 4. Người thực hiện -->
+                <select name="performer" onchange="this.form.submit()">
+                    <option value="ALL" th:selected="${selectedPerformer == 'ALL' or selectedPerformer == null}">Người thực hiện: Tất cả</option>
+                    <option value="SYSTEM" th:selected="${selectedPerformer == 'SYSTEM'}">Hệ thống tự động</option>
+                    <option th:each="p : ${performers}"
+                            th:value="${p.id}"
+                            th:text="${(p.fullName != null && !p.fullName.isBlank()) ? p.fullName : (p.account != null ? p.account.email : 'ID #' + p.id)}"
+                            th:selected="${selectedPerformer == '' + p.id}">
+                        Nguyễn Văn A
+                    </option>
+                </select>
+
+                <button type="submit" class="btn btn-inventory-primary">
+                    <i class="bi bi-filter"></i> Lọc
+                </button>
+                <a th:if="${(historyKeyword != null and historyKeyword != '') or (startDate != null and startDate != '') or (endDate != null and endDate != '') or (movementType != null and movementType != 'ALL') or (selectedPerformer != null and selectedPerformer != 'ALL')}"
+                   th:href="@{/admin/inventory(tab='history')}"
+                   class="btn btn-inventory-light text-danger" title="Xóa bộ lọc lịch sử">
+                    <i class="bi bi-x-circle"></i> Đặt lại
+                </a>
+            </form>
+
+            <div class="table-responsive">
+                <table class="inventory-table">
+                    <thead>
+                    <tr>
+                        <th style="width: 80px;">MÃ PHIẾU</th>
+                        <th style="width: 150px;">THỜI GIAN</th>
+                        <th>SẢN PHẨM & BIẾN THỂ</th>
+                        <th style="width: 160px;">NGHIỆP VỤ</th>
+                        <th style="width: 120px;">BIẾN ĐỘNG</th>
+                        <th style="width: 120px;">TỒN SAU GD</th>
+                        <th>NHÀ CUNG CẤP / ĐƠN HÀNG</th>
+                        <th style="width: 140px;">NGƯỜI THỰC HIỆN</th>
+                        <th>LÝ DO / GHI CHÚ</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="h : ${historyPage.content}">
+                        <td><span class="sku-badge" th:text="${'#LOG-' + h.id}">#LOG-1</span></td>
+                        <td th:text="${h.createdAt}">01/01/2026</td>
+                        <td>
+                            <strong th:text="${h.productName}">Tên sản phẩm</strong>
+                            <small class="text-muted" th:text="${h.sku + ' (' + h.variantDetails + ')'}">PRD-01</small>
+                        </td>
+                        <td>
+                            <span class="badge" th:classappend="${h.typeClass}" th:text="${h.typeLabel}">Nhập kho</span>
+                        </td>
+                        <td>
+                            <span th:class="${h.quantityChange > 0 ? 'change-plus' : (h.quantityChange < 0 ? 'change-minus' : 'change-zero')}"
+                                  th:text="${h.formattedChange + ' chiếc'}">
+                                +10 chiếc
+                            </span>
+                        </td>
+                        <td><b th:text="${h.stockAfter + ' chiếc'}">20 chiếc</b></td>
+                        <td>
+                            <span th:text="${h.supplier != '-' ? h.supplier : '-'}">-</span>
+                            <div th:if="${h.importPrice != '-'}" class="small text-muted" th:text="${'Giá nhập: ' + h.importPrice}"></div>
+                        </td>
+                        <td th:text="${h.performer}">Quản trị viên</td>
+                        <td th:text="${h.reason}">Nhập hàng định kỳ</td>
+                    </tr>
+
+                    <tr th:if="${historyPage == null or historyPage.empty}">
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="bi bi-clock-history fs-1 d-block mb-2 text-secondary"></i>
+                            <span>Chưa có lịch sử biến động kho nào được ghi nhận.</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Phân trang lịch sử -->
+            <div class="inventory-footer" th:if="${historyPage != null}">
+                <span>
+                    Hiển thị <b th:text="${historyPage.numberOfElements}">0</b> trên tổng số <b th:text="${historyPage.totalElements}">0</b> giao dịch kho
+                </span>
+                <div class="inventory-pagination" th:if="${historyPage.totalPages > 1}">
+                    <a th:if="${historyPage.hasPrevious()}"
+                       th:href="@{/admin/inventory(tab='history', page=${historyPage.number - 1}, size=${historyPage.size}, historyKeyword=${historyKeyword}, startDate=${startDate}, endDate=${endDate}, movementType=${movementType}, performer=${selectedPerformer})}">
+                        ‹ Trước
+                    </a>
+                    <a th:each="i : ${#numbers.sequence(0, historyPage.totalPages - 1)}"
+                       th:classappend="${i == historyPage.number} ? 'current' : ''"
+                       th:href="@{/admin/inventory(tab='history', page=${i}, size=${historyPage.size}, historyKeyword=${historyKeyword}, startDate=${startDate}, endDate=${endDate}, movementType=${movementType}, performer=${selectedPerformer})}"
+                       th:text="${i + 1}">1</a>
+                    <a th:if="${historyPage.hasNext()}"
+                       th:href="@{/admin/inventory(tab='history', page=${historyPage.number + 1}, size=${historyPage.size}, historyKeyword=${historyKeyword}, startDate=${startDate}, endDate=${endDate}, movementType=${movementType}, performer=${selectedPerformer})}">
+                        Sau ›
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= MODAL: NHẬP KHO MỚI (IMPORT) ================= -->
+    <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form method="post" th:action="@{/admin/inventory/import}">
+                    <div class="modal-header border-bottom pb-3">
+                        <h5 class="modal-title fw-bold" id="importModalLabel">
+                            <i class="bi bi-box-arrow-in-down text-primary me-2"></i>Nhập Kho Sản Phẩm
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                    </div>
+                    <div class="modal-body py-4">
+                        <!-- Chọn biến thể (chỉ hiện khi bấm từ nút trên cùng) -->
+                        <div class="mb-3" id="importVariantSelectGroup">
+                            <label class="form-label fw-semibold text-dark">Chọn Sản phẩm & Biến thể <span class="text-danger">*</span></label>
+                            <select id="importVariantSelect" name="variantId" class="form-select" required>
+                                <option value="">-- Chọn mã SKU / Biến thể cần nhập --</option>
+                                <option th:each="v : ${allVariants}"
+                                        th:value="${v.id}"
+                                        th:text="${'[' + v.sku + '] ' + (v.product != null ? v.product.name : '') + ' (Size ' + v.size + ' - ' + v.color + ') - Hiện tồn: ' + v.stockQuantity}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Thông tin biến thể cố định (khi bấm từ dòng) -->
+                        <div class="mb-3 d-none" id="importVariantInfoGroup">
+                            <label class="form-label fw-semibold text-dark">Sản phẩm & Biến thể nhập</label>
+                            <div class="p-3 bg-light rounded border">
+                                <input type="hidden" id="importVariantIdHidden" name="variantId" disabled>
+                                <strong id="importProductNameText" class="d-block text-dark"></strong>
+                                <span class="small text-muted" id="importVariantDetailText"></span>
+                                <div class="mt-2 text-primary fw-bold small" id="importCurrentStockText"></div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-dark">Số lượng nhập <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" name="quantity" class="form-control" min="1" value="10" required>
+                                    <span class="input-group-text">Chiếc</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-dark">Đơn giá nhập (VNĐ)</label>
+                                <input type="number" name="importPrice" class="form-control" min="0" step="1000" placeholder="Ví dụ: 150000">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-dark">Nhà cung cấp / Xưởng may</label>
+                            <input type="text" name="supplier" class="form-control" placeholder="Ví dụ: Xưởng may Tân Bình, Kho tổng Hà Nội...">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-dark">Lý do / Ghi chú nhập kho</label>
+                            <textarea name="reason" rows="2" class="form-control" placeholder="Nhập bổ sung hàng vụ mới, hàng tái đặt..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top bg-light">
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold" style="background-color: #4332d5; border-color: #4332d5;">
+                            <i class="bi bi-check2-circle me-1"></i> Xác nhận nhập kho
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: KIỂM KÊ KHO (AUDIT / ADJUSTMENT) ================= -->
+    <div class="modal fade" id="auditModal" tabindex="-1" aria-labelledby="auditModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form method="post" th:action="@{/admin/inventory/audit}">
+                    <div class="modal-header border-bottom pb-3">
+                        <h5 class="modal-title fw-bold" id="auditModalLabel">
+                            <i class="bi bi-clipboard-check text-success me-2"></i>Kiểm Kê & Điều Chỉnh Kho
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                    </div>
+                    <div class="modal-body py-4">
+                        <!-- Chọn biến thể (khi mở nhanh) -->
+                        <div class="mb-3" id="auditVariantSelectGroup">
+                            <label class="form-label fw-semibold text-dark">Chọn Sản phẩm & Biến thể <span class="text-danger">*</span></label>
+                            <select id="auditVariantSelect" name="variantId" class="form-select" onchange="onAuditVariantChange(this)" required>
+                                <option value="">-- Chọn biến thể cần kiểm kê --</option>
+                                <option th:each="v : ${allVariants}"
+                                        th:value="${v.id}"
+                                        th:data-stock="${v.stockQuantity}"
+                                        th:text="${'[' + v.sku + '] ' + (v.product != null ? v.product.name : '') + ' (Size ' + v.size + ' - ' + v.color + ') - Hiện tồn: ' + v.stockQuantity}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Thông tin biến thể cố định (khi bấm từ dòng) -->
+                        <div class="mb-3 d-none" id="auditVariantInfoGroup">
+                            <label class="form-label fw-semibold text-dark">Sản phẩm & Biến thể kiểm kê</label>
+                            <div class="p-3 bg-light rounded border">
+                                <input type="hidden" id="auditVariantIdHidden" name="variantId" disabled>
+                                <strong id="auditProductNameText" class="d-block text-dark"></strong>
+                                <span class="small text-muted" id="auditVariantDetailText"></span>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-dark">Tồn kho trên hệ thống</label>
+                                <div class="input-group">
+                                    <input type="number" id="auditSystemStock" class="form-control bg-light" readonly value="0">
+                                    <span class="input-group-text">Chiếc</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-dark">Tồn thực tế kiểm đếm <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" id="auditActualStock" name="actualStock" class="form-control" min="0" required oninput="calculateAuditDiff()">
+                                    <span class="input-group-text">Chiếc</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Khối chênh lệch Realtime -->
+                        <div class="audit-diff-box mb-3">
+                            <div>
+                                <span class="d-block small text-muted">Kết quả chênh lệch kiểm kê:</span>
+                                <strong id="auditDiffStatus" class="text-secondary">Chưa nhập số thực tế</strong>
+                            </div>
+                            <b id="auditDiffCount" class="text-secondary">0</b>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-dark">Lý do điều chỉnh kho <span class="text-danger">*</span></label>
+                            <select name="reasonSelect" class="form-select mb-2" onchange="document.getElementById('auditReasonInput').value = this.value">
+                                <option value="Kiểm kê định kỳ">Kiểm kê định kỳ khớp số liệu</option>
+                                <option value="Hàng lỗi / rách / hư hỏng phải loại bỏ">Hàng lỗi / rách / hư hỏng phải loại bỏ</option>
+                                <option value="Thất thoát không rõ nguyên nhân">Thất thoát không rõ nguyên nhân</option>
+                                <option value="Sai lệch do nhầm lẫn xuất nhập trước đó">Sai lệch do nhầm lẫn xuất nhập trước đó</option>
+                                <option value="Lý do khác">Lý do khác (tự nhập bên dưới)</option>
+                            </select>
+                            <input type="text" id="auditReasonInput" name="reason" class="form-control" value="Kiểm kê định kỳ" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top bg-light">
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-success px-4 fw-semibold" style="background-color: #087f75; border-color: #087f75;">
+                            <i class="bi bi-check2-circle me-1"></i> Cập nhật tồn kho
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: XEM LỊCH SỬ BIẾN ĐỘNG (HISTORY AJAX) ================= -->
+    <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom pb-3">
+                    <h5 class="modal-title fw-bold" id="historyModalLabel">
+                        <i class="bi bi-clock-history text-warning me-2"></i>Lịch Sử Luân Chuyển Kho: <span id="historySkuTitle" class="text-primary font-monospace"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <div class="mb-3 pb-2 border-bottom">
+                        <strong id="historyProductName" class="fs-6 text-dark d-block"></strong>
+                        <span class="small text-muted">Chi tiết các lần nhập, bán hàng và kiểm kê cân bằng kho</span>
+                    </div>
+
+                    <div id="historyLoading" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Đang tải...</span>
+                        </div>
+                        <p class="text-muted small mt-2">Đang tải lịch sử kho...</p>
+                    </div>
+
+                    <div id="historyEmpty" class="text-center py-4 text-muted d-none">
+                        <i class="bi bi-inbox fs-2 d-block mb-1"></i>
+                        <span>Chưa có lịch sử biến động nào cho biến thể này.</span>
+                    </div>
+
+                    <div id="historyContent" class="d-none table-responsive">
+                        <table class="inventory-table">
+                            <thead>
+                            <tr>
+                                <th>THỜI GIAN</th>
+                                <th>NGHIỆP VỤ</th>
+                                <th>BIẾN ĐỘNG</th>
+                                <th>TỒN SAU GD</th>
+                                <th>NGƯỜI THỰC HIỆN</th>
+                                <th>GHI CHÚ / NCC</th>
+                            </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= SCRIPT XỬ LÝ SỰ KIỆN GIAO DIỆN ================= -->
+    <script>
+        // Mở modal Nhập kho từ nút trên cùng
+        function openImportNewModal() {
+            document.getElementById('importVariantSelectGroup').classList.remove('d-none');
+            document.getElementById('importVariantSelect').disabled = false;
+            document.getElementById('importVariantSelect').value = '';
+            document.getElementById('importVariantInfoGroup').classList.add('d-none');
+            document.getElementById('importVariantIdHidden').disabled = true;
+
+            const modal = new bootstrap.Modal(document.getElementById('importModal'));
+            modal.show();
+        }
+
+        // Mở modal Nhập kho từ dòng sản phẩm
+        function openImportModal(btn) {
+            const id = btn.getAttribute('data-id');
+            const sku = btn.getAttribute('data-sku');
+            const name = btn.getAttribute('data-name');
+            const variant = btn.getAttribute('data-variant');
+            const stock = btn.getAttribute('data-stock');
+
+            document.getElementById('importVariantSelectGroup').classList.add('d-none');
+            document.getElementById('importVariantSelect').disabled = true;
+
+            document.getElementById('importVariantInfoGroup').classList.remove('d-none');
+            const hiddenId = document.getElementById('importVariantIdHidden');
+            hiddenId.disabled = false;
+            hiddenId.value = id;
+
+            document.getElementById('importProductNameText').textContent = name;
+            document.getElementById('importVariantDetailText').textContent = 'Mã SKU: ' + sku + ' | Biến thể: ' + variant;
+            document.getElementById('importCurrentStockText').textContent = 'Tồn kho hiện tại: ' + stock + ' chiếc';
+
+            const modal = new bootstrap.Modal(document.getElementById('importModal'));
+            modal.show();
+        }
+
+        // Mở modal Kiểm kê nhanh từ nút trên cùng
+        function openAuditQuickModal() {
+            document.getElementById('auditVariantSelectGroup').classList.remove('d-none');
+            document.getElementById('auditVariantSelect').disabled = false;
+            document.getElementById('auditVariantSelect').value = '';
+            document.getElementById('auditVariantInfoGroup').classList.add('d-none');
+            document.getElementById('auditVariantIdHidden').disabled = true;
+
+            document.getElementById('auditSystemStock').value = '0';
+            document.getElementById('auditActualStock').value = '';
+            calculateAuditDiff();
+
+            const modal = new bootstrap.Modal(document.getElementById('auditModal'));
+            modal.show();
+        }
+
+        // Khi chọn biến thể trong dropdown kiểm kê nhanh
+        function onAuditVariantChange(select) {
+            const selectedOpt = select.options[select.selectedIndex];
+            const stock = selectedOpt ? (selectedOpt.getAttribute('data-stock') || '0') : '0';
+            document.getElementById('auditSystemStock').value = stock;
+            document.getElementById('auditActualStock').value = stock;
+            calculateAuditDiff();
+        }
+
+        // Mở modal Kiểm kê từ dòng sản phẩm
+        function openAuditModal(btn) {
+            const id = btn.getAttribute('data-id');
+            const sku = btn.getAttribute('data-sku');
+            const name = btn.getAttribute('data-name');
+            const variant = btn.getAttribute('data-variant');
+            const stock = parseInt(btn.getAttribute('data-stock') || '0', 10);
+
+            document.getElementById('auditVariantSelectGroup').classList.add('d-none');
+            document.getElementById('auditVariantSelect').disabled = true;
+
+            document.getElementById('auditVariantInfoGroup').classList.remove('d-none');
+            const hiddenId = document.getElementById('auditVariantIdHidden');
+            hiddenId.disabled = false;
+            hiddenId.value = id;
+
+            document.getElementById('auditProductNameText').textContent = name;
+            document.getElementById('auditVariantDetailText').textContent = 'Mã SKU: ' + sku + ' | Phân loại: ' + variant;
+
+            document.getElementById('auditSystemStock').value = stock;
+            document.getElementById('auditActualStock').value = stock;
+            calculateAuditDiff();
+
+            const modal = new bootstrap.Modal(document.getElementById('auditModal'));
+            modal.show();
+        }
+
+        // Tính toán chênh lệch kiểm kê Realtime
+        function calculateAuditDiff() {
+            const system = parseInt(document.getElementById('auditSystemStock').value || '0', 10);
+            const actualInput = document.getElementById('auditActualStock').value;
+            const diffStatus = document.getElementById('auditDiffStatus');
+            const diffCount = document.getElementById('auditDiffCount');
+
+            if (actualInput === '') {
+                diffStatus.textContent = 'Chưa nhập số thực tế';
+                diffStatus.className = 'text-secondary';
+                diffCount.textContent = '0';
+                diffCount.className = 'text-secondary';
+                return;
+            }
+
+            const actual = parseInt(actualInput, 10);
+            const diff = actual - system;
+
+            if (diff > 0) {
+                diffStatus.textContent = 'Thừa kho (Thực tế > Hệ thống)';
+                diffStatus.className = 'text-success fw-bold';
+                diffCount.textContent = '+' + diff + ' chiếc';
+                diffCount.className = 'text-success fw-bold';
+            } else if (diff < 0) {
+                diffStatus.textContent = 'Thiếu kho / Thất thoát (Thực tế < Hệ thống)';
+                diffStatus.className = 'text-danger fw-bold';
+                diffCount.textContent = diff + ' chiếc';
+                diffCount.className = 'text-danger fw-bold';
+            } else {
+                diffStatus.textContent = 'Khớp hoàn toàn với hệ thống';
+                diffStatus.className = 'text-primary fw-semibold';
+                diffCount.textContent = '0 chiếc';
+                diffCount.className = 'text-primary fw-bold';
+            }
+        }
+
+        // Mở modal Lịch sử biến động qua AJAX
+        function openHistoryModal(btn) {
+            const id = btn.getAttribute('data-id');
+            const sku = btn.getAttribute('data-sku');
+            const name = btn.getAttribute('data-name');
+
+            document.getElementById('historySkuTitle').textContent = sku;
+            document.getElementById('historyProductName').textContent = name;
+
+            const loading = document.getElementById('historyLoading');
+            const empty = document.getElementById('historyEmpty');
+            const content = document.getElementById('historyContent');
+            const tbody = document.getElementById('historyTableBody');
+
+            loading.classList.remove('d-none');
+            empty.classList.add('d-none');
+            content.classList.add('d-none');
+            tbody.innerHTML = '';
+
+            const modal = new bootstrap.Modal(document.getElementById('historyModal'));
+            modal.show();
+
+            fetch('/admin/inventory/api/history/' + id)
+                .then(res => res.json())
+                .then(data => {
+                    loading.classList.add('d-none');
+                    if (!data || data.length === 0) {
+                        empty.classList.remove('d-none');
+                        return;
+                    }
+                    content.classList.remove('d-none');
+                    tbody.innerHTML = data.map(item => `
+                        <tr>
+                            <td><small class="text-muted">${item.createdAt}</small></td>
+                            <td><span class="badge ${item.typeClass}">${item.typeLabel}</span></td>
+                            <td><b class="${item.quantityChange > 0 ? 'change-plus' : (item.quantityChange < 0 ? 'change-minus' : 'change-zero')}">${item.formattedChange}</b></td>
+                            <td><b>${item.stockAfter} chiếc</b></td>
+                            <td>${item.performer}</td>
+                            <td>
+                                <div>${item.reason || '-'}</div>
+                                ${item.supplier !== '-' ? '<small class="text-muted d-block">NCC: ' + item.supplier + '</small>' : ''}
+                            </td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(err => {
+                    loading.classList.add('d-none');
+                    empty.classList.remove('d-none');
+                    empty.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i> Không thể tải dữ liệu lịch sử.</span>';
+                });
+        }
+    </script>
 </div>
 
 </body>
