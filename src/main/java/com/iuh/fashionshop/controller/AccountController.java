@@ -163,7 +163,7 @@ public class AccountController {
         newAddr.setRecipientName(
                 recipientName != null && !recipientName.isBlank() ? recipientName.trim() : userProfile.getFullName());
         newAddr.setRecipientPhone(
-                recipientPhone != null && !recipientPhone.isBlank() ? recipientPhone.trim() : userProfile.getPhone());
+                recipientPhone != null && !recipientPhone.isBlank() ? recipientPhone.trim() : userProfile.getPhoneNumber());
         newAddr.setDefaultAddress(makeDefault);
         shippingAddressRepository.save(newAddr);
 
