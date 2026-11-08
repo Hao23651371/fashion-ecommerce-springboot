@@ -1,0 +1,192 @@
+/* ==========================================================================
+   FASHIONSHOP - ACCOUNT PAGE STYLES (customer/account.css)
+   ========================================================================== */
+
+.acc-card {
+    background: #fff;
+    border: 1px solid #eee;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.acc-label {
+    font-size: .68rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #8a8a8a;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.acc-value {
+    font-size: .92rem;
+    color: #333;
+    margin-bottom: 16px;
+    font-weight: 500;
+}
+
+.acc-empty {
+    color: #aaa;
+    font-style: italic;
+}
+
+.acc-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    margin: 0;
+    color: #1a1a1a;
+}
+
+.acc-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+}
+
+.acc-link {
+    font-size: .72rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #111;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.acc-link:hover {
+    text-decoration: underline;
+}
+
+.acc-menu a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 4px;
+    font-size: .75rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #444;
+    text-decoration: none;
+    transition: all .15s;
+}
+
+.acc-menu a:hover {
+    background: #f9f8f5;
+    color: #111;
+}
+
+.acc-menu a.active {
+    background: #121212;
+    font-weight: 600;
+    color: #fff;
+}
+
+.acc-menu .count {
+    margin-left: auto;
+    color: #888;
+    font-size: .72rem;
+}
+
+.acc-menu a.active .count {
+    color: #fff;
+}
+
+.acc-stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    font-weight: 600;
+    color: #111;
+}
+
+.address-box {
+    border: 1px solid #e8e4dc;
+    padding: 18px;
+    margin-bottom: 14px;
+    transition: all .2s ease;
+    position: relative;
+    background: #fff;
+}
+
+.address-box:hover {
+    border-color: #bbb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.address-box.is-default {
+    border-color: #111;
+    background: #fdfcf9;
+}
+
+.badge-default {
+    background: #111;
+    color: #fff;
+    font-size: .65rem;
+    padding: 3px 8px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.btn-luxury {
+    background: #111;
+    color: #fff;
+    border: none;
+    border-radius: 0;
+    padding: 10px 22px;
+    font-size: .75rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    transition: all .2s;
+}
+
+.btn-luxury:hover {
+    background: #2d2d2d;
+    color: #fff;
+}
+
+.form-luxury {
+    border: 1px solid #ddd;
+    border-radius: 0;
+    padding: 9px 12px;
+    font-size: .88rem;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+
+.form-luxury:focus {
+    border-color: #111;
+    box-shadow: none;
+    outline: none;
+}
+
+select.form-luxury {
+    background-color: #fff;
+    cursor: pointer;
+}
+
+/* Modal and Action styles */
+.acc-modal-icon-del {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: #fee2e2;
+    color: #dc2626;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.acc-modal-del-card {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-left: 4px solid #ef4444;
+    padding: 12px 16px;
+    border-radius: 4px;
+}
+

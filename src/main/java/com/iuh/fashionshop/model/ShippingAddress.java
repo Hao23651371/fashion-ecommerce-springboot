@@ -23,6 +23,12 @@ public class ShippingAddress {
     @Column(nullable = false, length = 255)
     private String address;
 
+    @Column(name = "recipient_name", length = 100)
+    private String recipientName;
+
+    @Column(name = "recipient_phone", length = 20)
+    private String recipientPhone;
+
     @Column(name = "default_address", nullable = false)
     private boolean defaultAddress = false;
 }

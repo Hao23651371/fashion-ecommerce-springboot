@@ -133,7 +133,10 @@ public class AccountController {
 
     @PostMapping("/address/add")
     @Transactional
-    public String addAddress(@RequestParam String address,
+    public String addAddress(
+            @RequestParam(required = false) String recipientName,
+            @RequestParam(required = false) String recipientPhone,
+            @RequestParam String address,
             @RequestParam(defaultValue = "false") boolean defaultAddress,
             Authentication auth,
             RedirectAttributes ra) {
@@ -157,6 +160,10 @@ public class AccountController {
         ShippingAddress newAddr = new ShippingAddress();
         newAddr.setUserProfile(userProfile);
         newAddr.setAddress(address.trim());
+        newAddr.setRecipientName(
+                recipientName != null && !recipientName.isBlank() ? recipientName.trim() : userProfile.getFullName());
+        newAddr.setRecipientPhone(
+                recipientPhone != null && !recipientPhone.isBlank() ? recipientPhone.trim() : userProfile.getPhone());
         newAddr.setDefaultAddress(makeDefault);
         shippingAddressRepository.save(newAddr);
 
@@ -224,6 +231,8 @@ public class AccountController {
     @PostMapping("/address/update")
     @Transactional
     public String updateAddress(@RequestParam Long id,
+            @RequestParam(required = false) String recipientName,
+            @RequestParam(required = false) String recipientPhone,
             @RequestParam String address,
             @RequestParam(defaultValue = "false") boolean defaultAddress,
             Authentication auth,
@@ -242,6 +251,12 @@ public class AccountController {
         if (addrOpt.isPresent() && addrOpt.get().getUserProfile().getId().equals(userProfile.getId())) {
             ShippingAddress addr = addrOpt.get();
             addr.setAddress(address.trim());
+            if (recipientName != null && !recipientName.isBlank()) {
+                addr.setRecipientName(recipientName.trim());
+            }
+            if (recipientPhone != null && !recipientPhone.isBlank()) {
+                addr.setRecipientPhone(recipientPhone.trim());
+            }
             if (defaultAddress && !addr.isDefaultAddress()) {
                 shippingAddressRepository.resetDefaultAddress(userProfile.getId());
                 addr.setDefaultAddress(true);
