@@ -5,6 +5,7 @@ import com.iuh.fashionshop.model.Coupon;
 import com.iuh.fashionshop.model.Order;
 import com.iuh.fashionshop.model.OrderItem;
 import com.iuh.fashionshop.model.ProductVariant;
+import com.iuh.fashionshop.model.ShippingAddress;
 import com.iuh.fashionshop.model.UserProfile;
 import com.iuh.fashionshop.model.enums.OrderStatus;
 import com.iuh.fashionshop.model.enums.PaymentMethod;
@@ -12,6 +13,7 @@ import com.iuh.fashionshop.model.enums.VariantStatus;
 import com.iuh.fashionshop.repository.CouponRepository;
 import com.iuh.fashionshop.repository.OrderRepository;
 import com.iuh.fashionshop.repository.ProductVariantRepository;
+import com.iuh.fashionshop.repository.ShippingAddressRepository;
 import com.iuh.fashionshop.service.CartService;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -49,15 +51,18 @@ public class CheckoutController {
     private final ProductVariantRepository productVariantRepository;
     private final OrderRepository orderRepository;
     private final CouponRepository couponRepository;
+    private final ShippingAddressRepository shippingAddressRepository;
 
     public CheckoutController(CartService cartService,
                               ProductVariantRepository productVariantRepository,
                               OrderRepository orderRepository,
-                              CouponRepository couponRepository) {
+                              CouponRepository couponRepository,
+                              ShippingAddressRepository shippingAddressRepository) {
         this.cartService = cartService;
         this.productVariantRepository = productVariantRepository;
         this.orderRepository = orderRepository;
         this.couponRepository = couponRepository;
+        this.shippingAddressRepository = shippingAddressRepository;
     }
 
     @GetMapping
@@ -109,7 +114,12 @@ public class CheckoutController {
         model.addAttribute("cartSubtotal", subtotal);
         model.addAttribute("shippingFee", SHIPPING_FEE);
         model.addAttribute("grandTotal", subtotal.add(SHIPPING_FEE));
-        model.addAttribute("profile", cartService.getOrCreateProfile(auth));
+        UserProfile profile = cartService.getOrCreateProfile(auth);
+        model.addAttribute("profile", profile);
+        // Địa chỉ đã lưu: mặc định đứng đầu
+        model.addAttribute("addresses", profile == null
+                ? List.<ShippingAddress>of()
+                : shippingAddressRepository.findByUserProfileIdOrderByDefaultAddressDescIdDesc(profile.getId()));
         return "user/checkout";
     }
 
@@ -122,7 +132,9 @@ public class CheckoutController {
     @Transactional
     public String placeOrder(@RequestParam String recipientName,
                              @RequestParam String recipientPhone,
-                             @RequestParam String shippingAddress,
+                             @RequestParam(required = false) String addressOption,   // id địa chỉ đã lưu, hoặc "new"
+                             @RequestParam(required = false) String newAddress,      // nội dung nếu chọn "new"
+                             @RequestParam(defaultValue = "false") boolean saveAsDefault,
                              @RequestParam(required = false) String note,
                              @RequestParam(defaultValue = "COD") String paymentMethod,
                              @RequestParam(required = false) String couponCode,
@@ -144,10 +156,38 @@ public class CheckoutController {
         // ---- Kiểm tra thông tin giao hàng ----
         String name = recipientName == null ? "" : recipientName.trim();
         String phone = recipientPhone == null ? "" : recipientPhone.trim().replaceAll("\\s+", "");
-        String address = shippingAddress == null ? "" : shippingAddress.trim();
-        if (name.isEmpty() || address.isEmpty()) {
-            ra.addFlashAttribute("errorMessage", "Vui lòng nhập đầy đủ họ tên và địa chỉ nhận hàng.");
+        if (name.isEmpty()) {
+            ra.addFlashAttribute("errorMessage", "Vui lòng nhập họ tên người nhận.");
             return backUrl;
+        }
+
+        // ---- Địa chỉ nhận hàng: chọn địa chỉ đã lưu hoặc nhập địa chỉ mới ----
+        String address;
+        boolean isNewAddress = "new".equals(addressOption);
+        if (isNewAddress) {
+            address = newAddress == null ? "" : newAddress.trim();
+            if (address.isEmpty()) {
+                ra.addFlashAttribute("errorMessage", "Vui lòng nhập địa chỉ nhận hàng mới.");
+                return backUrl;
+            }
+            if (address.length() > 255) {
+                ra.addFlashAttribute("errorMessage", "Địa chỉ quá dài (tối đa 255 ký tự).");
+                return backUrl;
+            }
+        } else {
+            ShippingAddress saved = null;
+            try {
+                saved = addressOption == null ? null
+                        : shippingAddressRepository.findById(Long.valueOf(addressOption)).orElse(null);
+            } catch (NumberFormatException ignored) {
+                // để saved = null, báo lỗi bên dưới
+            }
+            // Chỉ cho dùng địa chỉ thuộc về chính tài khoản này
+            if (saved == null || !saved.getUserProfile().getId().equals(profile.getId())) {
+                ra.addFlashAttribute("errorMessage", "Vui lòng chọn địa chỉ nhận hàng.");
+                return backUrl;
+            }
+            address = saved.getAddress();
         }
         if (!phone.matches("^\\+?[0-9]{9,14}$")) {
             ra.addFlashAttribute("errorMessage", "Số điện thoại không hợp lệ.");
@@ -253,6 +293,11 @@ public class CheckoutController {
             couponRepository.save(coupon);
         }
 
+        // ---- Lưu địa chỉ mới vào tài khoản (sau khi mọi kiểm tra đã qua) ----
+        if (isNewAddress) {
+            saveNewAddress(profile, address, saveAsDefault);
+        }
+
         orderRepository.save(order);
 
         // Chỉ xoá giỏ hàng khi thanh toán từ giỏ. Mua ngay thì giữ nguyên giỏ.
@@ -262,6 +307,35 @@ public class CheckoutController {
 
         ra.addFlashAttribute("successMessage", "Đặt hàng thành công! Mã đơn: " + order.getOrderCode());
         return "redirect:/orders/" + order.getId();
+    }
+
+    /** Lưu địa chỉ mới cho tài khoản. Địa chỉ đầu tiên luôn là mặc định; trùng địa chỉ cũ thì không lưu lại. */
+    private void saveNewAddress(UserProfile profile, String address, boolean makeDefault) {
+        List<ShippingAddress> existing =
+                shippingAddressRepository.findByUserProfileIdOrderByDefaultAddressDescIdDesc(profile.getId());
+
+        ShippingAddress duplicate = existing.stream()
+                .filter(a -> a.getAddress().trim().equalsIgnoreCase(address))
+                .findFirst().orElse(null);
+
+        boolean becomeDefault = makeDefault || existing.isEmpty();
+        if (duplicate != null) {
+            if (makeDefault && !duplicate.isDefaultAddress()) {
+                shippingAddressRepository.resetDefaultAddress(profile.getId());
+                duplicate.setDefaultAddress(true);
+                shippingAddressRepository.save(duplicate);
+            }
+            return;
+        }
+
+        if (becomeDefault) {
+            shippingAddressRepository.resetDefaultAddress(profile.getId());
+        }
+        ShippingAddress addr = new ShippingAddress();
+        addr.setUserProfile(profile);
+        addr.setAddress(address);
+        addr.setDefaultAddress(becomeDefault);
+        shippingAddressRepository.save(addr);
     }
 
     private String generateOrderCode() {
