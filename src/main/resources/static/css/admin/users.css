@@ -177,3 +177,62 @@
 .verification-popover-trigger:focus .info-icon {
     color: #0d6efd !important;
 }
+
+/* ========================================================================= */
+/* FOOTER & PHÂN TRANG (DỰA THEO QUẢN LÝ SẢN PHẨM & QUẢN LÝ KHO)             */
+/* ========================================================================= */
+.users-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 22px;
+    color: #64748b;
+    font-size: 0.85rem;
+    background: #ffffff;
+    border-top: 1px solid #edf0f5;
+}
+
+.users-pagination {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin: 0;
+}
+
+.users-pagination a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    color: #4f5360;
+    text-decoration: none;
+    padding: 0 8px;
+    border: 1px solid #dbe1eb;
+    background: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+}
+
+.users-pagination a:hover {
+    background: #f1f5f9;
+    color: #0d6efd;
+    border-color: #cbd5e1;
+}
+
+.users-pagination a.current,
+.users-pagination a.active {
+    color: #ffffff !important;
+    background: #0d6efd !important;
+    border-color: #0d6efd !important;
+}
+
+.users-pagination a.disabled {
+    pointer-events: none;
+    opacity: 0.45;
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #94a3b8;
+}
