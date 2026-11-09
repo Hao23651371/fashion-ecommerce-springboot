@@ -194,46 +194,46 @@ function initAdminUsers() {
     });
 
     // =========================================================================
-    // 6. MODAL CHỈNH SỬA TÀI KHOẢN (EDIT)
+    // 6. MODAL XÁC NHẬN KHÔI PHỤC / RESET MẬT KHẨU
     // =========================================================================
-    const editModal = document.getElementById('editAccountModal');
-    if (editModal) {
-        editModal.addEventListener('show.bs.modal', function (event) {
+    const resetModal = document.getElementById('resetPasswordModal');
+    if (resetModal) {
+        resetModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             if (!button) return;
 
             const id = button.getAttribute('data-id');
             const email = button.getAttribute('data-email');
-            const role = button.getAttribute('data-role');
-            const status = button.getAttribute('data-status');
-            const verified = button.getAttribute('data-verified');
-            const code = button.getAttribute('data-code');
-            const expiry = button.getAttribute('data-expiry');
-            const created = button.getAttribute('data-created');
-            const login = button.getAttribute('data-login');
 
-            document.getElementById('editAccountForm').action = '/admin/users/edit/' + id;
-            document.getElementById('editId').value = id;
-            document.getElementById('editEmail').value = email || '';
-            document.getElementById('editRole').value = role || 'CUSTOMER';
-            document.getElementById('editStatus').value = status || 'ACTIVE';
-            document.getElementById('editVerified').value = (verified === 'true') ? 'true' : 'false';
-            document.getElementById('editCode').value = code || '';
-            document.getElementById('editExpiry').value = expiry || '';
-            document.getElementById('editCreated').textContent = created || '—';
-            document.getElementById('editLogin').textContent = login || 'Chưa đăng nhập';
-
-            const editCodeDisplay = document.getElementById('editCodeDisplay');
-            if (editCodeDisplay) {
-                editCodeDisplay.innerHTML = (code && code.trim() !== '' && code !== 'null')
-                    ? `<code class="bg-light text-primary px-2 py-0.5 rounded border font-monospace fw-bold">${code}</code>`
-                    : '<span class="text-muted fst-italic">— (Không có)</span>';
+            const form = document.getElementById('resetPasswordForm');
+            if (form) {
+                form.action = '/admin/users/' + id + '/reset-password';
             }
-            const editExpiryDisplay = document.getElementById('editExpiryDisplay');
-            if (editExpiryDisplay) {
-                editExpiryDisplay.textContent = (expiry && expiry.trim() !== '' && expiry !== 'null')
-                    ? expiry.replace('T', ' ')
-                    : '—';
+            const emailElem = document.getElementById('resetModalEmail');
+            if (emailElem) {
+                emailElem.textContent = email || '—';
+            }
+        });
+    }
+
+    const btnCopyReset = document.getElementById('btnCopyResetPassword');
+    if (btnCopyReset) {
+        btnCopyReset.addEventListener('click', function () {
+            const pwdInput = document.getElementById('resetDefaultPasswordVal');
+            if (pwdInput) {
+                navigator.clipboard.writeText(pwdInput.value).then(() => {
+                    const originalHtml = btnCopyReset.innerHTML;
+                    btnCopyReset.innerHTML = '<i class="bi bi-check2 text-success"></i> Đã sao chép!';
+                    btnCopyReset.classList.add('btn-success', 'text-white');
+                    btnCopyReset.classList.remove('btn-outline-secondary');
+                    setTimeout(() => {
+                        btnCopyReset.innerHTML = originalHtml;
+                        btnCopyReset.classList.remove('btn-success', 'text-white');
+                        btnCopyReset.classList.add('btn-outline-secondary');
+                    }, 2000);
+                }).catch(err => {
+                    console.warn('Không thể sao chép mật khẩu: ', err);
+                });
             }
         });
     }

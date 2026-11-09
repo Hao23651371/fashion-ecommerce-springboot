@@ -33,6 +33,7 @@ import java.util.Optional;
 public class AccountService {
 
     public static final String DEMO_BYPASS_OTP = "111111"; // Mã dự phòng cố định dùng demo nhanh
+    public static final String DEFAULT_RESET_PASSWORD = "FashionShop@123"; // Mật khẩu mặc định khi Admin reset mật khẩu cho người dùng
 
     private final AccountRepository accountRepository;
     private final UserProfileRepository userProfileRepository;
@@ -472,6 +473,26 @@ public class AccountService {
 
         account.setRole(newRole);
         return accountRepository.save(account);
+    }
+
+    /**
+     * Khôi phục / Reset mật khẩu tài khoản về mật khẩu cố định mặc định (DEFAULT_RESET_PASSWORD).
+     * Dùng khi người dùng hoặc nhân viên quên mật khẩu và nhờ Admin cấp lại.
+     */
+    @Transactional
+    public String resetAccountPassword(Long id, String currentAdminEmail) {
+        if (id == null) {
+            throw new IllegalArgumentException("ID tài khoản không hợp lệ.");
+        }
+        Account account = getAccountById(id);
+
+        if (currentAdminEmail != null && account.getEmail().equalsIgnoreCase(currentAdminEmail.trim())) {
+            throw new IllegalStateException("Bạn không thể tự reset mật khẩu của chính mình tại đây! Vui lòng vào trang 'Tài khoản đăng nhập' để đổi mật khẩu cá nhân.");
+        }
+
+        account.setPassword(passwordEncoder.encode(DEFAULT_RESET_PASSWORD));
+        accountRepository.save(account);
+        return DEFAULT_RESET_PASSWORD;
     }
 
     @Transactional
