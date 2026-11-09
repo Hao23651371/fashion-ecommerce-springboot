@@ -145,7 +145,7 @@ function initAdminUsers() {
             // Reset về page 0 khi thực hiện tìm kiếm / lọc mới
             params.set('page', '0');
             if (!params.has('size')) {
-                params.set('size', '15');
+                params.set('size', '10');
             }
 
             const targetUrl = filterForm.getAttribute('action') + '?' + params.toString();
@@ -166,7 +166,7 @@ function initAdminUsers() {
             if (sortDirInput) {
                 sortDirInput.value = 'asc';
             }
-            loadAccountsAjax('/admin/users?size=15&sortDir=asc');
+            loadAccountsAjax('/admin/users?size=10&sortDir=asc');
         });
     }
 
@@ -178,7 +178,9 @@ function initAdminUsers() {
             link.addEventListener('click', function (e) {
                 e.preventDefault();
                 const href = this.getAttribute('href');
-                if (href && !this.closest('.page-item').classList.contains('disabled')) {
+                const isItemDisabled = this.classList.contains('disabled') ||
+                                       (this.closest('.page-item') && this.closest('.page-item').classList.contains('disabled'));
+                if (href && !isItemDisabled) {
                     loadAccountsAjax(href);
                 }
             });
