@@ -11,6 +11,28 @@
 <body>
 
     <div id="admin-content">
+        <!-- Thông báo Flash Messages -->
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <span th:text="${successMessage}">Cập nhật thành công!</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span th:text="${errorMessage}">Đã xảy ra lỗi!</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${pwdSuccess}" class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-shield-check me-2"></i>
+            <span th:text="${pwdSuccess}">Đổi mật khẩu thành công!</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${pwdError}" class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-shield-exclamation me-2"></i>
+            <span th:text="${pwdError}">Lỗi đổi mật khẩu!</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
         <!-- Thông báo xác nhận trang tài khoản đăng nhập -->
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body p-4">
@@ -59,13 +81,20 @@
             </div>
 
             <div class="col-lg-8">
+                <!-- 1. Card Thông tin chi tiết tài khoản -->
                 <div class="card border-0 shadow-sm p-4">
-                    <h5 class="fw-bold mb-3 pb-2 border-bottom">Thông tin chi tiết tài khoản</h5>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom gap-2">
+                        <h5 class="fw-bold mb-0">Thông tin chi tiết tài khoản</h5>
+                        <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold"
+                            data-bs-toggle="modal" data-bs-target="#editAdminProfileModal">
+                            <i class="bi bi-pencil-square me-1"></i>Chỉnh sửa
+                        </button>
+                    </div>
 
                     <div class="row g-3">
                         <div class="col-sm-6">
                             <label class="text-muted small d-block">Họ và tên</label>
-                            <span class="fw-semibold text-dark"
+                            <span class="fw-semibold text-dark fs-6"
                                   th:text="${adminProfile != null and adminProfile.fullName != null ? adminProfile.fullName : 'Chưa cập nhật'}">
                                 Nguyễn Văn Admin
                             </span>
@@ -73,7 +102,7 @@
 
                         <div class="col-sm-6">
                             <label class="text-muted small d-block">Email đăng nhập</label>
-                            <span class="fw-semibold text-dark"
+                            <span class="fw-semibold text-dark font-monospace fs-6"
                                   th:text="${currentEmail != null ? currentEmail : (adminAccount != null ? adminAccount.email : 'admin@fashionshop.com')}">
                                 admin@fashionshop.com
                             </span>
@@ -81,7 +110,7 @@
 
                         <div class="col-sm-6">
                             <label class="text-muted small d-block">Số điện thoại</label>
-                            <span class="fw-semibold text-dark"
+                            <span class="fw-semibold text-dark font-monospace fs-6"
                                   th:text="${adminProfile != null and adminProfile.phoneNumber != null ? adminProfile.phoneNumber : 'Chưa cập nhật'}">
                                 Chưa cập nhật
                             </span>
@@ -89,8 +118,8 @@
 
                         <div class="col-sm-6">
                             <label class="text-muted small d-block">Ngày sinh</label>
-                            <span class="fw-semibold text-dark"
-                                  th:text="${adminProfile != null and adminProfile.birthDate != null ? adminProfile.birthDate : 'Chưa cập nhật'}">
+                            <span class="fw-semibold text-dark fs-6"
+                                  th:text="${adminProfile != null and adminProfile.birthDate != null ? #temporals.format(adminProfile.birthDate, 'dd/MM/yyyy') : 'Chưa cập nhật'}">
                                 Chưa cập nhật
                             </span>
                         </div>
@@ -126,8 +155,347 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 2. Card Bảo mật & Đổi mật khẩu (Tách biệt riêng, hiển thị mỗi ô 1 dòng rõ ràng) -->
+                <div class="card border-0 shadow-sm p-4 mt-4">
+                    <div class="mb-3 pb-2 border-bottom">
+                        <h5 class="fw-bold mb-1">
+                            <i class="bi bi-shield-lock-fill text-primary me-2"></i>Bảo mật & Đổi mật khẩu
+                        </h5>
+                        <p class="text-muted small mb-0">Tách riêng chức năng đổi mật khẩu. Hãy nhập mật khẩu cũ, mật khẩu mới và xác nhận để cập nhật.</p>
+                    </div>
+
+                    <form th:action="@{/admin/account/change-password}" method="post" id="adminChangePasswordForm" novalidate>
+                        <div class="row g-3" style="max-width: 580px;">
+                            <!-- Dòng 1: Mật khẩu cũ -->
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-dark mb-1">
+                                    Mật khẩu cũ (hiện tại) <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" name="currentPassword" id="adminCurrentPassword" class="form-control" placeholder="Nhập mật khẩu cũ (hiện tại)">
+                                    <button class="btn btn-outline-secondary toggle-pwd-btn" type="button" data-target="adminCurrentPassword" title="Ẩn/hiện mật khẩu">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback" id="currentPwdError"></div>
+                            </div>
+
+                            <!-- Dòng 2: Mật khẩu mới -->
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-dark mb-1">
+                                    Mật khẩu mới <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" name="newPassword" id="adminNewPassword" class="form-control" placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)">
+                                    <button class="btn btn-outline-secondary toggle-pwd-btn" type="button" data-target="adminNewPassword" title="Ẩn/hiện mật khẩu">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback" id="newPwdError"></div>
+                                <div class="form-text text-muted small mt-1">Mật khẩu mới phải có ít nhất 6 ký tự và khác mật khẩu cũ.</div>
+                            </div>
+
+                            <!-- Dòng 3: Xác nhận mật khẩu mới -->
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-dark mb-1">
+                                    Xác nhận mật khẩu mới <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" name="confirmPassword" id="adminConfirmPassword" class="form-control" placeholder="Nhập lại chính xác mật khẩu mới">
+                                    <button class="btn btn-outline-secondary toggle-pwd-btn" type="button" data-target="adminConfirmPassword" title="Ẩn/hiện mật khẩu">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback" id="confirmPwdError"></div>
+                            </div>
+
+                            <!-- Dòng 4: Nút Cập nhật mật khẩu -->
+                            <div class="col-12 mt-3 pt-1">
+                                <button type="submit" class="btn btn-dark fw-semibold px-4 py-2 rounded-2">
+                                    <i class="bi bi-key-fill me-1"></i>Cập nhật mật khẩu
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
+
+        <!-- ======================================================================= -->
+        <!-- MODAL CHỈNH SỬA THÔNG TIN CHI TIẾT TÀI KHOẢN                            -->
+        <!-- ======================================================================= -->
+        <div class="modal fade" id="editAdminProfileModal" tabindex="-1" aria-labelledby="editAdminProfileModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-light border-bottom">
+                        <h5 class="modal-title fw-bold text-dark" id="editAdminProfileModalLabel">
+                            <i class="bi bi-pencil-square text-primary me-2"></i>Chỉnh sửa thông tin tài khoản
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form th:action="@{/admin/account/update-profile}" method="post" id="editAdminProfileForm" novalidate>
+                        <div class="modal-body p-4">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold text-dark mb-1">
+                                    Họ và tên <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="fullName" id="adminProfileFullName" class="form-control"
+                                    th:value="${adminProfile != null and adminProfile.fullName != null ? adminProfile.fullName : ''}"
+                                    placeholder="Ví dụ: Nguyễn Quản Trị">
+                                <div class="invalid-feedback" id="fullNameError"></div>
+                                <div class="form-text text-muted small mt-1">Ràng buộc: Họ và tên bắt buộc từ 2 đến 100 ký tự.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold text-dark mb-1">Email đăng nhập (Khóa cố định)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-lock-fill"></i></span>
+                                    <input type="email" class="form-control bg-light text-muted font-monospace border-start-0"
+                                        th:value="${currentEmail != null ? currentEmail : (adminAccount != null ? adminAccount.email : '')}"
+                                        readonly tabindex="-1" style="cursor: not-allowed;">
+                                </div>
+                                <div class="form-text text-muted small mt-1">
+                                    <i class="bi bi-lock-fill me-1 text-secondary"></i> Email là tài khoản định danh đăng nhập cố định của hệ thống, không thể chỉnh sửa.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold text-dark mb-1">Số điện thoại</label>
+                                <input type="tel" name="phoneNumber" id="adminProfilePhone" class="form-control font-monospace"
+                                    th:value="${adminProfile != null and adminProfile.phoneNumber != null ? adminProfile.phoneNumber : ''}"
+                                    placeholder="Ví dụ: 0901000001">
+                                <div class="invalid-feedback" id="phoneError"></div>
+                                <div class="form-text text-muted small mt-1">Ràng buộc: 10 chữ số tại Việt Nam (bắt đầu bằng 03, 05, 07, 08, 09).</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold text-dark mb-1">Ngày sinh</label>
+                                <input type="date" name="birthDate" id="adminBirthDateInput" class="form-control font-monospace"
+                                    th:value="${adminProfile != null and adminProfile.birthDate != null ? adminProfile.birthDate : ''}">
+                                <div class="invalid-feedback" id="birthDateError"></div>
+                                <div class="form-text text-muted small mt-1">Ràng buộc: Ngày sinh không được là ngày trong tương lai.</div>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light border-top">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                            <button type="submit" class="btn btn-primary fw-semibold px-4">
+                                <i class="bi bi-check2-circle me-1"></i>Lưu thông tin
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Script xử lý tương tác phía Client cho trang Admin Account -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // 1. Giới hạn ngày sinh tối đa là ngày hôm nay
+                const birthInput = document.getElementById('adminBirthDateInput');
+                if (birthInput) {
+                    const today = new Date().toISOString().split('T')[0];
+                    birthInput.setAttribute('max', today);
+                }
+
+                // 2. Nút toggle ẩn/hiện mật khẩu
+                document.querySelectorAll('.toggle-pwd-btn').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        const targetId = this.getAttribute('data-target');
+                        const targetInput = document.getElementById(targetId);
+                        if (targetInput) {
+                            const isPass = targetInput.type === 'password';
+                            targetInput.type = isPass ? 'text' : 'password';
+                            const icon = this.querySelector('i');
+                            if (icon) {
+                                icon.className = isPass ? 'bi bi-eye-slash' : 'bi bi-eye';
+                            }
+                        }
+                    });
+                });
+
+                // 3. TƯƠNG TÁC RÀNG BUỘC & FOCUS LỖI CHO FORM THÔNG TIN TÀI KHOẢN (PROFILE)
+                const profileForm = document.getElementById('editAdminProfileForm');
+                if (profileForm) {
+                    const fullNameInput = document.getElementById('adminProfileFullName');
+                    const phoneInput = document.getElementById('adminProfilePhone');
+                    const birthDateInput = document.getElementById('adminBirthDateInput');
+
+                    const fullNameError = document.getElementById('fullNameError');
+                    const phoneError = document.getElementById('phoneError');
+                    const birthDateError = document.getElementById('birthDateError');
+
+                    function clearProfileError(input, errorElem) {
+                        if (input) input.classList.remove('is-invalid');
+                        if (errorElem) {
+                            errorElem.textContent = '';
+                            errorElem.style.display = 'none';
+                        }
+                    }
+
+                    function setProfileError(input, errorElem, message) {
+                        if (input) input.classList.add('is-invalid');
+                        if (errorElem) {
+                            errorElem.textContent = message;
+                            errorElem.style.display = 'block';
+                        }
+                    }
+
+                    // Tự động xóa lỗi khi người dùng gõ
+                    if (fullNameInput) fullNameInput.addEventListener('input', () => clearProfileError(fullNameInput, fullNameError));
+                    if (phoneInput) phoneInput.addEventListener('input', () => clearProfileError(phoneInput, phoneError));
+                    if (birthDateInput) birthDateInput.addEventListener('input', () => clearProfileError(birthDateInput, birthDateError));
+
+                    profileForm.addEventListener('submit', function (e) {
+                        let hasError = false;
+                        let firstErrorField = null;
+
+                        // Kiểm tra Họ và tên
+                        const fullNameVal = fullNameInput ? fullNameInput.value.trim() : '';
+                        if (!fullNameVal) {
+                            setProfileError(fullNameInput, fullNameError, 'Họ và tên không được để trống.');
+                            hasError = true;
+                            if (!firstErrorField) firstErrorField = fullNameInput;
+                        } else if (fullNameVal.length < 2 || fullNameVal.length > 100) {
+                            setProfileError(fullNameInput, fullNameError, 'Họ và tên phải có độ dài từ 2 đến 100 ký tự.');
+                            hasError = true;
+                            if (!firstErrorField) firstErrorField = fullNameInput;
+                        } else {
+                            clearProfileError(fullNameInput, fullNameError);
+                        }
+
+                        // Kiểm tra Số điện thoại
+                        const phoneVal = phoneInput ? phoneInput.value.trim().replace(/[\s.-]/g, '') : '';
+                        if (phoneVal) {
+                            const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
+                            if (!phoneRegex.test(phoneVal)) {
+                                setProfileError(phoneInput, phoneError, 'Số điện thoại không hợp lệ (yêu cầu 10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09).');
+                                hasError = true;
+                                if (!firstErrorField) firstErrorField = phoneInput;
+                            } else {
+                                clearProfileError(phoneInput, phoneError);
+                            }
+                        } else {
+                            clearProfileError(phoneInput, phoneError);
+                        }
+
+                        // Kiểm tra Ngày sinh
+                        const birthVal = birthDateInput ? birthDateInput.value : '';
+                        if (birthVal) {
+                            const todayStr = new Date().toISOString().split('T')[0];
+                            if (birthVal > todayStr) {
+                                setProfileError(birthDateInput, birthDateError, 'Ngày sinh không được là ngày trong tương lai.');
+                                hasError = true;
+                                if (!firstErrorField) firstErrorField = birthDateInput;
+                            } else {
+                                clearProfileError(birthDateInput, birthDateError);
+                            }
+                        } else {
+                            clearProfileError(birthDateInput, birthDateError);
+                        }
+
+                        // Nếu có lỗi: Chặn submit và trỏ chuột (focus) vào ô lỗi đầu tiên
+                        if (hasError) {
+                            e.preventDefault();
+                            if (firstErrorField) {
+                                firstErrorField.focus();
+                            }
+                            return false;
+                        }
+                    });
+                }
+
+                // 4. TƯƠNG TÁC RÀNG BUỘC & FOCUS LỖI CHO FORM ĐỔI MẬT KHẨU
+                const changePwdForm = document.getElementById('adminChangePasswordForm');
+                if (changePwdForm) {
+                    const curPwdInput = document.getElementById('adminCurrentPassword');
+                    const newPwdInput = document.getElementById('adminNewPassword');
+                    const confirmPwdInput = document.getElementById('adminConfirmPassword');
+
+                    const curPwdError = document.getElementById('currentPwdError');
+                    const newPwdError = document.getElementById('newPwdError');
+                    const confirmPwdError = document.getElementById('confirmPwdError');
+
+                    function clearPwdError(input, errorElem) {
+                        if (input) input.classList.remove('is-invalid');
+                        if (errorElem) {
+                            errorElem.textContent = '';
+                            errorElem.style.display = 'none';
+                        }
+                    }
+
+                    function setPwdError(input, errorElem, message) {
+                        if (input) input.classList.add('is-invalid');
+                        if (errorElem) {
+                            errorElem.textContent = message;
+                            errorElem.style.display = 'block';
+                        }
+                    }
+
+                    // Tự động xóa lỗi khi người dùng gõ
+                    if (curPwdInput) curPwdInput.addEventListener('input', () => clearPwdError(curPwdInput, curPwdError));
+                    if (newPwdInput) newPwdInput.addEventListener('input', () => clearPwdError(newPwdInput, newPwdError));
+                    if (confirmPwdInput) confirmPwdInput.addEventListener('input', () => clearPwdError(confirmPwdInput, confirmPwdError));
+
+                    changePwdForm.addEventListener('submit', function (e) {
+                        let hasError = false;
+                        let firstErrorField = null;
+
+                        const curVal = curPwdInput ? curPwdInput.value : '';
+                        const newVal = newPwdInput ? newPwdInput.value : '';
+                        const confirmVal = confirmPwdInput ? confirmPwdInput.value : '';
+
+                        // 1. Kiểm tra Mật khẩu cũ
+                        if (!curVal || curVal.trim() === '') {
+                            setPwdError(curPwdInput, curPwdError, 'Vui lòng nhập mật khẩu cũ (mật khẩu hiện tại).');
+                            hasError = true;
+                            if (!firstErrorField) firstErrorField = curPwdInput;
+                        } else {
+                            clearPwdError(curPwdInput, curPwdError);
+                        }
+
+                        // 2. Kiểm tra Mật khẩu mới
+                        if (!newVal || newVal.trim() === '') {
+                            setPwdError(newPwdInput, newPwdError, 'Vui lòng nhập mật khẩu mới.');
+                            hasError = true;
+                            if (!firstErrorField) firstErrorField = newPwdInput;
+                        } else if (newVal.length < 6) {
+                            setPwdError(newPwdInput, newPwdError, 'Mật khẩu mới phải có tối thiểu 6 ký tự.');
+                            hasError = true;
+                            if (!firstErrorField) firstErrorField = newPwdInput;
+                        } else if (curVal && newVal === curVal) {
+                            setPwdError(newPwdInput, newPwdError, 'Mật khẩu mới không được trùng với mật khẩu cũ đang dùng.');
+                            hasError = true;
+                            if (!firstErrorField) firstErrorField = newPwdInput;
+                        } else {
+                            clearPwdError(newPwdInput, newPwdError);
+                        }
+
+                        // 3. Kiểm tra Xác nhận mật khẩu mới
+                        if (!confirmVal || confirmVal.trim() === '') {
+                            setPwdError(confirmPwdInput, confirmPwdError, 'Vui lòng nhập lại xác nhận mật khẩu mới.');
+                            hasError = true;
+                            if (!firstErrorField) firstErrorField = confirmPwdInput;
+                        } else if (newVal && confirmVal !== newVal) {
+                            setPwdError(confirmPwdInput, confirmPwdError, 'Xác nhận mật khẩu mới không trùng khớp với mật khẩu mới.');
+                            hasError = true;
+                            if (!firstErrorField) firstErrorField = confirmPwdInput;
+                        } else {
+                            clearPwdError(confirmPwdInput, confirmPwdError);
+                        }
+
+                        // Nếu có lỗi: Chặn submit và trỏ chuột (focus) vào ô lỗi đầu tiên
+                        if (hasError) {
+                            e.preventDefault();
+                            if (firstErrorField) {
+                                firstErrorField.focus();
+                            }
+                            return false;
+                        }
+                    });
+                }
+            });
+        </script>
     </div>
 
 </body>

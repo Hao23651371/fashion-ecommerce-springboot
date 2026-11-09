@@ -115,28 +115,23 @@ public class AdminUserController {
     }
 
     /**
-     * Cập nhật thông tin tài khoản trong bảng Account.
+     * Khôi phục / Reset mật khẩu tài khoản về mật khẩu cố định mặc định (FashionShop@123).
+     * Dùng khi khách hàng hoặc nhân viên mất/quên mật khẩu cần Admin cấp lại.
      */
-    @PostMapping("/edit/{id}")
-    public String edit(@PathVariable Long id,
-            @Valid @ModelAttribute("accountForm") AccountForm form,
-            BindingResult bindingResult,
+    @PostMapping("/{id}/reset-password")
+    public String resetPassword(@PathVariable Long id,
+            Authentication auth,
             RedirectAttributes redirectAttributes) {
-
-        if (bindingResult.hasErrors()) {
-            String errorMsg = bindingResult.getAllErrors().get(0).getDefaultMessage();
-            redirectAttributes.addFlashAttribute("errorMessage", errorMsg);
-            return "redirect:/admin/users";
-        }
-
         try {
-            accountService.updateAccount(id, form);
+            String currentEmail = (auth != null) ? auth.getName() : null;
+            String resetPassword = accountService.resetAccountPassword(id, currentEmail);
+            Account acc = accountService.getAccountById(id);
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Cập nhật tài khoản ID #" + id + " (" + form.getEmail() + ") thành công!");
-        } catch (IllegalArgumentException e) {
+                    "Khôi phục mật khẩu tài khoản '" + acc.getEmail() + "' thành công! Mật khẩu mặc định mới là: " + resetPassword);
+        } catch (IllegalStateException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Đã xảy ra lỗi khi cập nhật: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Đã xảy ra lỗi khi khôi phục mật khẩu: " + e.getMessage());
         }
 
         return "redirect:/admin/users";
