@@ -1,16 +1,13 @@
 package com.iuh.fashionshop.controller;
 
 import com.iuh.fashionshop.model.Order;
-import com.iuh.fashionshop.model.OrderItem;
 import com.iuh.fashionshop.model.UserProfile;
-import com.iuh.fashionshop.model.enums.OrderStatus;
 import com.iuh.fashionshop.repository.OrderRepository;
-import com.iuh.fashionshop.repository.ProductVariantRepository;
 import com.iuh.fashionshop.repository.UserProfileRepository;
+import com.iuh.fashionshop.service.OrderService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,21 +42,21 @@ public class OrderController {
     private final JdbcTemplate jdbc;
     private final OrderRepository orderRepository;
     private final UserProfileRepository userProfileRepository;
-    private final ProductVariantRepository productVariantRepository;
+    private final OrderService orderService;
 
     public OrderController(JdbcTemplate jdbc,
-            OrderRepository orderRepository,
-            UserProfileRepository userProfileRepository,
-            ProductVariantRepository productVariantRepository) {
+                           OrderRepository orderRepository,
+                           UserProfileRepository userProfileRepository,
+                           OrderService orderService) {
         this.jdbc = jdbc;
         this.orderRepository = orderRepository;
         this.userProfileRepository = userProfileRepository;
-        this.productVariantRepository = productVariantRepository;
+        this.orderService = orderService;
     }
 
     @GetMapping
     public String list(@RequestParam(defaultValue = "all") String status,
-            Authentication auth, Model model) {
+                       Authentication auth, Model model) {
         if (auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
         }
@@ -102,7 +98,7 @@ public class OrderController {
             // Danh sách đơn theo tab
             String sql = """
                     SELECT id, order_code AS orderCode, status, total_amount AS totalAmount,
-                           payment_method AS paymentMethod, DATE_FORMAT(created_at, '%d/%m/%Y %H:%i') AS createdAt,
+                           payment_method AS paymentMethod, payment_status AS paymentStatus, DATE_FORMAT(created_at, '%d/%m/%Y %H:%i') AS createdAt,
                            recipient_name AS recipientName, recipient_phone AS recipientPhone, shipping_address AS shippingAddress
                     FROM orders WHERE user_profile_id = ?
                     """;
@@ -137,9 +133,9 @@ public class OrderController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id,
-            Authentication auth,
-            Model model,
-            RedirectAttributes ra) {
+                         Authentication auth,
+                         Model model,
+                         RedirectAttributes ra) {
         if (auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
         }
@@ -167,12 +163,13 @@ public class OrderController {
         return "user/order-detail";
     }
 
+    // Không dùng @Transactional ở đây: OrderService.cancelByCustomer tự quản lý giao dịch,
+    // tránh lỗi UnexpectedRollbackException khi service ném IllegalStateException.
     @PostMapping("/cancel/{id}")
-    @Transactional
     public String cancelOrder(@PathVariable Long id,
-            @RequestParam(required = false, defaultValue = "Khách hàng tự hủy đơn") String reason,
-            Authentication auth,
-            RedirectAttributes ra) {
+                              @RequestParam(required = false, defaultValue = "Khách hàng tự hủy đơn") String reason,
+                              Authentication auth,
+                              RedirectAttributes ra) {
         if (auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
         }
@@ -189,25 +186,15 @@ public class OrderController {
             return "redirect:/orders";
         }
 
-        if (!order.canBeCancelled()) {
-            ra.addFlashAttribute("errorMessage",
-                    "Đơn hàng đang ở trạng thái '" + order.getStatus() + "', không thể hủy.");
+        // Toàn bộ nghiệp vụ hủy (hoàn kho, lịch sử kho, hoàn mã giảm giá, trạng thái thanh toán)
+        // nằm trong OrderService.cancelInternal - dùng chung với admin hủy / quá hạn thanh toán.
+        try {
+            orderService.cancelByCustomer(id, auth, reason);
+        } catch (IllegalStateException e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/orders/" + id;
         }
 
-        order.setStatus(OrderStatus.CANCELLED);
-        order.setCancelledAt(LocalDateTime.now());
-        order.setCancelReason(reason != null && !reason.isBlank() ? reason.trim() : "Khách hàng tự hủy đơn");
-
-        // Hoàn lại tồn kho cho các biến thể
-        for (OrderItem item : order.getItems()) {
-            if (item.getVariant() != null) {
-                item.getVariant().increaseStock(item.getQuantity());
-                productVariantRepository.save(item.getVariant());
-            }
-        }
-
-        orderRepository.save(order);
         ra.addFlashAttribute("successMessage", "Đã hủy đơn hàng #" + order.getOrderCode() + " thành công!");
         return "redirect:/orders/" + id;
     }

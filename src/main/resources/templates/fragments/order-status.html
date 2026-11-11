@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Nhãn trạng thái đơn hàng (nhận enum hoặc String) -->
+<span th:fragment="statusPill(status)"
+      th:with="s=${#strings.toString(status)}"
+      class="od-pill"
+      th:classappend="${s == 'PENDING'} ? 'od-pending' : (${s == 'CONFIRMED'} ? 'od-confirmed' : (${s == 'SHIPPING'} ? 'od-shipping' : (${s == 'COMPLETED'} ? 'od-completed' : 'od-cancelled')))">
+    <th:block th:switch="${s}">
+        <th:block th:case="'PENDING'">Chờ xác nhận</th:block>
+        <th:block th:case="'CONFIRMED'">Đã xác nhận</th:block>
+        <th:block th:case="'SHIPPING'">Đang giao</th:block>
+        <th:block th:case="'COMPLETED'">Hoàn thành</th:block>
+        <th:block th:case="'CANCELLED'">Đã hủy</th:block>
+        <th:block th:case="*" th:text="${s}">?</th:block>
+    </th:block>
+</span>
+
+<!-- Tên phương thức thanh toán -->
+<th:block th:fragment="payMethod(method)" th:switch="${#strings.toString(method)}">
+    <th:block th:case="'COD'">Thanh toán khi nhận hàng (COD)</th:block>
+    <th:block th:case="'BANK_TRANSFER'">Chuyển khoản ngân hàng</th:block>
+    <th:block th:case="'E_WALLET'">Ví điện tử</th:block>
+    <th:block th:case="*" th:text="${method}">?</th:block>
+</th:block>
+
+<!-- Tên trạng thái thanh toán -->
+<th:block th:fragment="payStatus(status)" th:switch="${#strings.toString(status)}">
+    <th:block th:case="'UNPAID'">Chưa thanh toán</th:block>
+    <th:block th:case="'PAID'">Đã thanh toán</th:block>
+    <th:block th:case="'FAILED'">Thanh toán thất bại</th:block>
+    <th:block th:case="*" th:text="${status}">?</th:block>
+</th:block>
+
+</body>
+</html>

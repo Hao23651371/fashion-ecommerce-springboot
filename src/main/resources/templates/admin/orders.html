@@ -174,7 +174,11 @@
                                 </li>
                                 <li th:if="${o.status != null and (o.status.name() == 'PENDING' or o.status.name() == 'CONFIRMED')}"><hr class="dropdown-divider"></li>
                                 <li th:if="${o.status != null and (o.status.name() == 'PENDING' or o.status.name() == 'CONFIRMED')}">
-                                    <form th:action="@{/admin/orders/{id}/status(id=${o.id})}" method="post" onsubmit="return confirm('Hủy đơn này?');">
+                                    <form th:action="@{/admin/orders/{id}/status(id=${o.id})}" method="post"
+                                          data-confirm-title="Hủy đơn hàng?"
+                                          th:attr="data-confirm-message='Bạn có chắc chắn muốn hủy đơn ' + ${o.orderCode} + '? Kho và mã giảm giá (nếu có) sẽ được hoàn lại.'"
+                                          data-confirm-ok="Hủy đơn"
+                                          data-confirm-cancel="Không hủy">
                                         <input type="hidden" name="status" value="CANCELLED">
                                         <input type="hidden" name="cancelReason" value="Admin hủy từ danh sách">
                                         <button type="submit" class="dropdown-item text-danger">Hủy đơn</button>
@@ -220,6 +224,7 @@
             </div>
         </div>
     </div>
+    <div th:replace="~{fragments/confirm-modal :: confirmModal}"></div>
 </div>
 
 </body>

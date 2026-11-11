@@ -9,46 +9,138 @@
 </head>
 <body>
 
-<div id="customer-content" class="checkout-page">
-    <link rel="stylesheet" th:href="@{/css/customer/checkout.css}">
+<div id="customer-content" class="checkout-page pg-page">
+    <style>
+        .pg-page { max-width: 600px; margin: 0 auto; }
+        .pg-sandbox { background:#fff3cd; color:#856404; border:1px dashed #d4a72c; padding:10px 14px;
+            font-size:.8rem; margin-bottom:18px; text-align:center; }
+        .pg-box { background:#fff; border:1px solid #ece5d8; padding:28px 24px; text-align:center; }
+        .pg-eyebrow { font-size:.68rem; letter-spacing:.16em; text-transform:uppercase; color:#8a8a8a; margin:0 0 4px; }
+        .pg-title { font-family:'Playfair Display',serif; font-size:1.6rem; margin:0 0 6px; }
+        .pg-wallets { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:16px 0 4px; }
+        .pg-wallet { border:1px solid #ddd; background:#faf8f5; padding:8px 16px; font-size:.8rem; font-weight:600;
+            letter-spacing:.04em; cursor:pointer; transition:.15s; }
+        .pg-wallet.active { background:#121212; color:#fff; border-color:#121212; }
+        .pg-code { color:#777; font-size:.85rem; margin-top:14px; }
+        .pg-amount { font-family:'Playfair Display',serif; font-size:2rem; font-weight:700; margin:6px 0 2px; }
+        #pgQr { width:220px; height:220px; margin:18px auto 8px; padding:10px; border:1px solid #ddd; background:#fff; }
+        #pgQr svg { width:100%; height:100%; display:block; }
+        .pg-hint { font-size:.78rem; color:#888; }
+        .pg-timer { margin:14px 0 4px; font-size:.9rem; color:#555; }
+        .pg-timer b { font-size:1.2rem; color:#b02a37; font-variant-numeric:tabular-nums; }
+        .pg-actions { display:grid; gap:10px; margin-top:20px; }
+        .pg-actions form { margin:0; }
+        .pg-actions button { width:100%; }
+        .pg-back { display:inline-block; margin-top:16px; font-size:.75rem; letter-spacing:.08em;
+            text-transform:uppercase; color:#555; text-decoration:none; }
+    </style>
 
-    <div class="checkout-header">
-        <p class="checkout-eyebrow">E-wallet simulation</p>
-        <h1 class="checkout-title">Cổng thanh toán ví điện tử</h1>
-        <p class="checkout-sub">
-            Đây là trang <strong>giả lập</strong> ZaloPay / MoMo / ShopeePay cho đồ án.
-            Không gọi API thật (cần merchant key &amp; sandbox của nhà cung cấp).
-        </p>
+    <div class="pg-sandbox">
+        <i class="bi bi-exclamation-triangle"></i>
+        <b>MÔI TRƯỜNG THỬ NGHIỆM (SANDBOX)</b> – Trang giả lập cho đồ án, không có giao dịch hay trừ tiền thật.
     </div>
 
-    <div class="checkout-block payment-gateway-box">
-        <div class="pay-gateway-icons">
-            <span class="pg-badge">ZaloPay</span>
-            <span class="pg-badge">MoMo</span>
-            <span class="pg-badge">ShopeePay</span>
-        </div>
-        <p class="mb-3">Đơn hàng #<span th:text="${orderId}">0</span> đang chờ thanh toán.</p>
-        <p class="text-muted small mb-4">
-            Chọn kết quả giả lập bên dưới. Thành công → đơn chuyển <code>PAID</code> + <code>CONFIRMED</code>.
-            Thất bại → đơn <code>CANCELLED</code>, hoàn kho và hoàn lượt mã giảm giá (nếu có).
-        </p>
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
-        <div class="d-flex flex-wrap gap-2">
+    <div class="pg-box">
+        <p class="pg-eyebrow">E-wallet simulation</p>
+        <h1 class="pg-title">Thanh toán bằng ví điện tử</h1>
+
+        <div class="pg-wallets" id="pgWallets">
+            <button type="button" class="pg-wallet active" data-name="ZaloPay">ZaloPay</button>
+            <button type="button" class="pg-wallet" data-name="MoMo">MoMo</button>
+            <button type="button" class="pg-wallet" data-name="ShopeePay">ShopeePay</button>
+        </div>
+        <div class="pg-hint">Chọn ví để giả lập – mở app <b id="pgWalletName">ZaloPay</b> và quét mã bên dưới</div>
+
+        <div class="pg-code">Mã đơn: <b th:text="${order.orderCode}">FS000</b></div>
+        <div class="pg-amount"
+             th:text="${#numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' ₫'}">0 ₫</div>
+
+        <div id="pgQr" th:attr="data-seed=${order.orderCode}"></div>
+        <div class="pg-hint">Mã QR mô phỏng – không quét được thật. Bấm nút bên dưới để giả lập kết quả.</div>
+
+        <div class="pg-timer">
+            Đơn hết hạn sau <b id="pgCountdown">--:--</b>
+            <div class="pg-hint">(Thời gian chờ: <span th:text="${expireMinutes}">10</span> phút, quá hạn đơn sẽ tự hủy)</div>
+        </div>
+
+        <div class="pg-actions">
             <form th:action="@{/checkout/payment/{id}/success(id=${orderId})}" method="post">
                 <button type="submit" class="btn checkout-submit-btn">
-                    <i class="bi bi-check-circle"></i> Thanh toán thành công
+                    <i class="bi bi-check-circle"></i> Giả lập: Thanh toán thành công
                 </button>
             </form>
-            <form th:action="@{/checkout/payment/{id}/fail(id=${orderId})}" method="post">
+            <form th:action="@{/checkout/payment/{id}/fail(id=${orderId})}" method="post"
+                  data-confirm-title="Giả lập thanh toán thất bại?"
+                  data-confirm-message="Đơn hàng sẽ bị hủy và hoàn lại tồn kho (cùng lượt dùng mã giảm giá nếu có)."
+                  data-confirm-ok="Xác nhận thất bại"
+                  data-confirm-cancel="Quay lại">
                 <button type="submit" class="btn btn-outline-danger">
-                    <i class="bi bi-x-circle"></i> Thanh toán thất bại
+                    <i class="bi bi-x-circle"></i> Giả lập: Thanh toán thất bại
                 </button>
             </form>
-            <a th:href="@{/orders/{id}(id=${orderId})}" class="btn btn-outline-secondary">
-                Xem đơn (chưa thanh toán)
-            </a>
         </div>
+
+        <a class="pg-back" th:href="@{/orders/{id}(id=${orderId})}">
+            <i class="bi bi-arrow-left"></i> Thanh toán sau (xem đơn hàng)
+        </a>
     </div>
+
+    <script th:inline="javascript">
+        (function () {
+            // ---- Chọn ví (chỉ để minh hoạ) ----
+            var btns = document.querySelectorAll('#pgWallets .pg-wallet');
+            btns.forEach(function (b) {
+                b.addEventListener('click', function () {
+                    btns.forEach(function (x) { x.classList.remove('active'); });
+                    b.classList.add('active');
+                    document.getElementById('pgWalletName').textContent = b.getAttribute('data-name');
+                });
+            });
+
+            // ---- Đếm ngược (số giây còn lại do server tính) ----
+            var remaining = /*[[${remainingSeconds}]]*/ 600;
+            var el = document.getElementById('pgCountdown');
+            function tick() {
+                if (remaining <= 0) {
+                    el.textContent = '00:00';
+                    window.location.reload(); // server sẽ tự hủy đơn quá hạn
+                    return;
+                }
+                var m = Math.floor(remaining / 60), s = remaining % 60;
+                el.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+                remaining--;
+                setTimeout(tick, 1000);
+            }
+            tick();
+
+            // ---- Vẽ QR mô phỏng từ mã đơn ----
+            var box = document.getElementById('pgQr');
+            var seed = box.getAttribute('data-seed') || 'seed';
+            var h = 2166136261;
+            for (var i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+            function rnd() { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return (h >>> 0) / 4294967296; }
+            var N = 25, c = 10, svg = '';
+            function finder(x, y) {
+                return '<rect x="' + x * c + '" y="' + y * c + '" width="' + 7 * c + '" height="' + 7 * c + '" fill="#000"/>' +
+                    '<rect x="' + (x + 1) * c + '" y="' + (y + 1) * c + '" width="' + 5 * c + '" height="' + 5 * c + '" fill="#fff"/>' +
+                    '<rect x="' + (x + 2) * c + '" y="' + (y + 2) * c + '" width="' + 3 * c + '" height="' + 3 * c + '" fill="#000"/>';
+            }
+            function inFinder(x, y) { return (x < 8 && y < 8) || (x > N - 9 && y < 8) || (x < 8 && y > N - 9); }
+            for (var y = 0; y < N; y++) {
+                for (var x = 0; x < N; x++) {
+                    if (!inFinder(x, y) && rnd() > 0.52) {
+                        svg += '<rect x="' + x * c + '" y="' + y * c + '" width="' + c + '" height="' + c + '" fill="#000"/>';
+                    }
+                }
+            }
+            svg += finder(0, 0) + finder(N - 7, 0) + finder(0, N - 7);
+            box.innerHTML = '<svg viewBox="0 0 ' + N * c + ' ' + N * c + '" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">' + svg + '</svg>';
+        })();
+    </script>
+    <div th:replace="~{fragments/confirm-modal :: confirmModal}"></div>
 </div>
 
 </body>

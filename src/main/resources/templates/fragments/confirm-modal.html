@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+    Popup xác nhận dùng chung (thay cho confirm() của trình duyệt).
+    Cách dùng: thêm vào <form> các thuộc tính
+        data-confirm-message="Nội dung hỏi"          (bắt buộc – có thuộc tính này form mới hiện popup)
+        data-confirm-title="Tiêu đề"                 (tuỳ chọn)
+        data-confirm-ok="Chữ trên nút đồng ý"        (tuỳ chọn)
+        data-confirm-cancel="Chữ trên nút quay lại"  (tuỳ chọn)
+    Nhúng vào trang:  <div th:replace="~{fragments/confirm-modal :: confirmModal}"></div>
+-->
+<div th:fragment="confirmModal">
+    <style>
+        .cf-overlay { position: fixed; inset: 0; background: rgba(18,18,18,.55); display: none;
+            align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
+        .cf-overlay.is-open { display: flex; animation: cfFade .15s ease; }
+        .cf-box { background: #fff; width: 100%; max-width: 420px; padding: 28px 26px 22px; text-align: center;
+            border-top: 3px solid #b02a37; box-shadow: 0 18px 50px rgba(0,0,0,.25); animation: cfPop .18s ease; }
+        .cf-icon { width: 54px; height: 54px; margin: 0 auto 14px; border-radius: 50%; background: #fbeaec;
+            color: #b02a37; display: grid; place-items: center; font-size: 1.6rem; }
+        .cf-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin: 0 0 8px; color: #121212; }
+        .cf-message { font-size: .9rem; color: #555; line-height: 1.55; margin: 0 0 22px; }
+        .cf-actions { display: flex; gap: 10px; }
+        .cf-btn { flex: 1; padding: 11px 12px; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase;
+            font-weight: 600; cursor: pointer; border: 1px solid #121212; background: #fff; color: #121212; }
+        .cf-btn:hover { background: #f5f5f5; }
+        .cf-btn.danger { background: #b02a37; border-color: #b02a37; color: #fff; }
+        .cf-btn.danger:hover { background: #8f1f2b; border-color: #8f1f2b; }
+        @keyframes cfFade { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes cfPop { from { transform: translateY(8px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+    </style>
+
+    <div class="cf-overlay" id="cfOverlay" role="dialog" aria-modal="true" aria-labelledby="cfTitle">
+        <div class="cf-box">
+            <div class="cf-icon"><i class="bi bi-exclamation-triangle"></i></div>
+            <h3 class="cf-title" id="cfTitle">Xác nhận</h3>
+            <p class="cf-message" id="cfMessage"></p>
+            <div class="cf-actions">
+                <button type="button" class="cf-btn" id="cfCancel">Quay lại</button>
+                <button type="button" class="cf-btn danger" id="cfOk">Đồng ý</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var overlay = document.getElementById('cfOverlay');
+            var titleEl = document.getElementById('cfTitle');
+            var msgEl = document.getElementById('cfMessage');
+            var okBtn = document.getElementById('cfOk');
+            var cancelBtn = document.getElementById('cfCancel');
+            var pendingForm = null;
+
+            function open(form) {
+                pendingForm = form;
+                titleEl.textContent = form.getAttribute('data-confirm-title') || 'Xác nhận';
+                msgEl.textContent = form.getAttribute('data-confirm-message') || '';
+                okBtn.textContent = form.getAttribute('data-confirm-ok') || 'Đồng ý';
+                cancelBtn.textContent = form.getAttribute('data-confirm-cancel') || 'Quay lại';
+                overlay.classList.add('is-open');
+                cancelBtn.focus();
+            }
+            function close() {
+                overlay.classList.remove('is-open');
+                pendingForm = null;
+            }
+
+            // Bắt mọi form có data-confirm-message
+            document.addEventListener('submit', function (e) {
+                var form = e.target;
+                if (form && form.hasAttribute && form.hasAttribute('data-confirm-message')) {
+                    e.preventDefault();
+                    open(form);
+                }
+            });
+
+            okBtn.addEventListener('click', function () {
+                var f = pendingForm;
+                close();
+                if (f) { f.removeAttribute('data-confirm-message'); f.submit(); }
+            });
+            cancelBtn.addEventListener('click', close);
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+        })();
+    </script>
+</div>
+
+</body>
+</html>
