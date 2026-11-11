@@ -1,6 +1,7 @@
 package com.iuh.fashionshop.service;
 
 import com.iuh.fashionshop.model.Category;
+import com.iuh.fashionshop.model.Order;
 import com.iuh.fashionshop.model.Product;
 import com.iuh.fashionshop.model.ProductVariant;
 import com.iuh.fashionshop.model.StockHistory;
@@ -170,6 +171,36 @@ public class InventoryService {
         stockHistoryRepository.save(history);
     }
 
+    /**
+     * Ghi 1 dòng lịch sử kho cho biến động do ĐƠN HÀNG gây ra
+     * (SALE khi đặt hàng, CANCELLED_ORDER khi hủy đơn).
+     *
+     * Gọi SAU KHI đã cộng/trừ tồn kho trên variant (để stockAfter đúng) và SAU KHI đơn đã được lưu
+     * (để có order_id). performedBy = null nghĩa là "Hệ thống tự động" trên trang Kho.
+     *
+     * @param quantityChange số dương = tăng kho, số âm = giảm kho
+     */
+    @Transactional
+    public void recordOrderMovement(ProductVariant variant,
+                                    StockMovementType type,
+                                    int quantityChange,
+                                    Order order,
+                                    String reason) {
+        StockHistory history = new StockHistory();
+        history.setVariant(variant);
+        history.setType(type);
+        history.setQuantityChange(quantityChange);
+        history.setStockAfter(variant.getStockQuantity());
+        history.setOrder(order);
+        history.setPerformedBy(null);
+        if (reason != null && reason.length() > 255) {
+            reason = reason.substring(0, 255);
+        }
+        history.setReason(reason);
+        history.setCreatedAt(LocalDateTime.now());
+        stockHistoryRepository.save(history);
+    }
+
     @Transactional
     public void auditStock(Long variantId, int actualStock, String reason, String performedByEmail) {
         if (actualStock < 0) {
@@ -210,11 +241,11 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public Page<StockHistoryItemView> searchHistory(String keyword,
-                                                   LocalDate startDate,
-                                                   LocalDate endDate,
-                                                   String movementType,
-                                                   String performer,
-                                                   Pageable pageable) {
+                                                    LocalDate startDate,
+                                                    LocalDate endDate,
+                                                    String movementType,
+                                                    String performer,
+                                                    Pageable pageable) {
         List<StockHistory> all = stockHistoryRepository.findAllWithDetails();
 
         List<StockHistoryItemView> filtered = all.stream()

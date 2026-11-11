@@ -4,9 +4,11 @@ import com.iuh.fashionshop.model.Order;
 import com.iuh.fashionshop.model.OrderItem;
 import com.iuh.fashionshop.model.UserProfile;
 import com.iuh.fashionshop.model.enums.OrderStatus;
+import com.iuh.fashionshop.model.enums.StockMovementType;
 import com.iuh.fashionshop.repository.OrderRepository;
 import com.iuh.fashionshop.repository.ProductVariantRepository;
 import com.iuh.fashionshop.repository.UserProfileRepository;
+import com.iuh.fashionshop.service.InventoryService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -47,20 +49,23 @@ public class OrderController {
     private final OrderRepository orderRepository;
     private final UserProfileRepository userProfileRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final InventoryService inventoryService;
 
     public OrderController(JdbcTemplate jdbc,
-            OrderRepository orderRepository,
-            UserProfileRepository userProfileRepository,
-            ProductVariantRepository productVariantRepository) {
+                           OrderRepository orderRepository,
+                           UserProfileRepository userProfileRepository,
+                           ProductVariantRepository productVariantRepository,
+                           InventoryService inventoryService) {
         this.jdbc = jdbc;
         this.orderRepository = orderRepository;
         this.userProfileRepository = userProfileRepository;
         this.productVariantRepository = productVariantRepository;
+        this.inventoryService = inventoryService;
     }
 
     @GetMapping
     public String list(@RequestParam(defaultValue = "all") String status,
-            Authentication auth, Model model) {
+                       Authentication auth, Model model) {
         if (auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
         }
@@ -137,9 +142,9 @@ public class OrderController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id,
-            Authentication auth,
-            Model model,
-            RedirectAttributes ra) {
+                         Authentication auth,
+                         Model model,
+                         RedirectAttributes ra) {
         if (auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
         }
@@ -170,9 +175,9 @@ public class OrderController {
     @PostMapping("/cancel/{id}")
     @Transactional
     public String cancelOrder(@PathVariable Long id,
-            @RequestParam(required = false, defaultValue = "Khách hàng tự hủy đơn") String reason,
-            Authentication auth,
-            RedirectAttributes ra) {
+                              @RequestParam(required = false, defaultValue = "Khách hàng tự hủy đơn") String reason,
+                              Authentication auth,
+                              RedirectAttributes ra) {
         if (auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
         }
@@ -204,6 +209,11 @@ public class OrderController {
             if (item.getVariant() != null) {
                 item.getVariant().increaseStock(item.getQuantity());
                 productVariantRepository.save(item.getVariant());
+
+                // Ghi lịch sử kho (CANCELLED_ORDER) để trang Kho có dữ liệu
+                inventoryService.recordOrderMovement(item.getVariant(), StockMovementType.CANCELLED_ORDER,
+                        item.getQuantity(), order,
+                        "Hủy đơn " + order.getOrderCode() + " - " + order.getCancelReason());
             }
         }
 

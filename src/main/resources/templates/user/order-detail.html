@@ -177,6 +177,7 @@
                                 <span th:case="'PAID'">Đã thanh toán</span>
                                 <span th:case="'UNPAID'">Chưa thanh toán</span>
                                 <span th:case="'REFUNDED'">Đã hoàn tiền</span>
+                                <span th:case="'FAILED'">Thanh toán thất bại</span>
                                 <span th:case="*" th:text="${order.paymentInfo.paymentStatus}">Trạng thái</span>
                             </span>
                         </div>
@@ -198,38 +199,38 @@
                 <div class="table-responsive">
                     <table class="table ord-item-table mb-0">
                         <thead>
-                            <tr>
-                                <th style="width: 80px;">Sản phẩm</th>
-                                <th>Thông tin chi tiết</th>
-                                <th class="text-center" style="width: 130px;">Đơn giá</th>
-                                <th class="text-center" style="width: 90px;">Số lượng</th>
-                                <th class="text-end" style="width: 140px;">Thành tiền</th>
-                            </tr>
+                        <tr>
+                            <th style="width: 80px;">Sản phẩm</th>
+                            <th>Thông tin chi tiết</th>
+                            <th class="text-center" style="width: 130px;">Đơn giá</th>
+                            <th class="text-center" style="width: 90px;">Số lượng</th>
+                            <th class="text-end" style="width: 140px;">Thành tiền</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="item : ${order.items}">
-                                <td>
-                                    <div class="ord-thumb">
-                                        <img th:if="${item.variant != null and item.variant.product != null and item.variant.product.imageUrl != null}"
-                                             th:src="${item.variant.product.imageUrl}" th:alt="${item.productName}" onerror="this.remove()">
-                                        <i class="bi bi-image" th:unless="${item.variant != null and item.variant.product != null and item.variant.product.imageUrl != null}"></i>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="fw-semibold text-dark mb-1" th:text="${item.productName}">Tên sản phẩm</div>
-                                    <div class="small text-muted">
-                                        Màu sắc: <strong class="text-dark" th:text="${item.color}">Màu</strong> &nbsp;·&nbsp;
-                                        Kích cỡ: <strong class="text-dark" th:text="${item.size}">Size</strong>
-                                    </div>
-                                    <div class="small text-secondary font-monospace" th:if="${item.variant != null and item.variant.sku != null}"
-                                         th:text="'SKU: ' + ${item.variant.sku}">SKU</div>
-                                </td>
-                                <td class="text-center fw-medium"
-                                    th:text="${#numbers.formatDecimal(item.unitPrice, 0, 'POINT', 0, 'COMMA')} + ' ₫'">0 ₫</td>
-                                <td class="text-center fw-bold" th:text="${item.quantity}">1</td>
-                                <td class="text-end fw-bold text-dark"
-                                    th:text="${#numbers.formatDecimal(item.calculateSubtotal(), 0, 'POINT', 0, 'COMMA')} + ' ₫'">0 ₫</td>
-                            </tr>
+                        <tr th:each="item : ${order.items}">
+                            <td>
+                                <div class="ord-thumb">
+                                    <img th:if="${item.variant != null and item.variant.product != null and item.variant.product.imageUrl != null}"
+                                         th:src="${item.variant.product.imageUrl}" th:alt="${item.productName}" onerror="this.remove()">
+                                    <i class="bi bi-image" th:unless="${item.variant != null and item.variant.product != null and item.variant.product.imageUrl != null}"></i>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark mb-1" th:text="${item.productName}">Tên sản phẩm</div>
+                                <div class="small text-muted">
+                                    Màu sắc: <strong class="text-dark" th:text="${item.color}">Màu</strong> &nbsp;·&nbsp;
+                                    Kích cỡ: <strong class="text-dark" th:text="${item.size}">Size</strong>
+                                </div>
+                                <div class="small text-secondary font-monospace" th:if="${item.variant != null and item.variant.sku != null}"
+                                     th:text="'SKU: ' + ${item.variant.sku}">SKU</div>
+                            </td>
+                            <td class="text-center fw-medium"
+                                th:text="${#numbers.formatDecimal(item.unitPrice, 0, 'POINT', 0, 'COMMA')} + ' ₫'">0 ₫</td>
+                            <td class="text-center fw-bold" th:text="${item.quantity}">1</td>
+                            <td class="text-end fw-bold text-dark"
+                                th:text="${#numbers.formatDecimal(item.calculateSubtotal(), 0, 'POINT', 0, 'COMMA')} + ' ₫'">0 ₫</td>
+                        </tr>
                         </tbody>
                     </table>
                 </div>
@@ -265,6 +266,14 @@
                     </a>
 
                     <div class="d-flex align-items-center gap-2">
+                        <!-- Thanh toán ngay: đơn ví điện tử còn chờ thanh toán -->
+                        <a th:if="${order.status.name() == 'PENDING'
+                                    and order.paymentInfo.paymentStatus.name() == 'UNPAID'
+                                    and order.paymentInfo.paymentMethod.name() == 'E_WALLET'}"
+                           th:href="@{/checkout/payment/{id}(id=${order.id})}" class="ord-btn dark">
+                            <i class="bi bi-wallet2"></i> Thanh toán ngay
+                        </a>
+
                         <!-- Nút Hủy đơn hàng (Chỉ hiển thị khi đơn PENDING) -->
                         <form th:if="${canCancel}"
                               th:action="@{/orders/cancel/{id}(id=${order.id})}"

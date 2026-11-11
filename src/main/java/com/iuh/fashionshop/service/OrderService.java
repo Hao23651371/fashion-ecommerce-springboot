@@ -5,6 +5,7 @@ import com.iuh.fashionshop.model.*;
 import com.iuh.fashionshop.model.enums.OrderStatus;
 import com.iuh.fashionshop.model.enums.PaymentMethod;
 import com.iuh.fashionshop.model.enums.PaymentStatus;
+import com.iuh.fashionshop.model.enums.StockMovementType;
 import com.iuh.fashionshop.repository.CouponRepository;
 import com.iuh.fashionshop.repository.OrderRepository;
 import com.iuh.fashionshop.repository.ProductVariantRepository;
@@ -39,15 +40,18 @@ public class OrderService {
     private final CouponRepository couponRepository;
     private final ProductVariantRepository productVariantRepository;
     private final CartService cartService;
+    private final InventoryService inventoryService;
 
     public OrderService(OrderRepository orderRepository,
                         CouponRepository couponRepository,
                         ProductVariantRepository productVariantRepository,
-                        CartService cartService) {
+                        CartService cartService,
+                        InventoryService inventoryService) {
         this.orderRepository = orderRepository;
         this.couponRepository = couponRepository;
         this.productVariantRepository = productVariantRepository;
         this.cartService = cartService;
+        this.inventoryService = inventoryService;
     }
 
     // ===================== CHECKOUT (KHÁCH) =====================
@@ -157,6 +161,13 @@ public class OrderService {
         }
 
         Order saved = orderRepository.save(order);
+
+        // Ghi lịch sử kho (SALE) cho từng sản phẩm trong đơn
+        for (OrderItem oi : saved.getItems()) {
+            inventoryService.recordOrderMovement(oi.getVariant(), StockMovementType.SALE,
+                    -oi.getQuantity(), saved, "Bán hàng - đơn " + saved.getOrderCode());
+        }
+
         cartService.clearCart(auth);
         return saved;
     }
@@ -327,6 +338,11 @@ public class OrderService {
             if (item.getVariant() != null) {
                 item.getVariant().increaseStock(item.getQuantity());
                 productVariantRepository.save(item.getVariant());
+
+                // Ghi lịch sử kho (CANCELLED_ORDER)
+                inventoryService.recordOrderMovement(item.getVariant(), StockMovementType.CANCELLED_ORDER,
+                        item.getQuantity(), order,
+                        "Hủy đơn " + order.getOrderCode() + (reason != null && !reason.isBlank() ? " - " + reason : ""));
             }
         }
         if (order.getCoupon() != null) {
