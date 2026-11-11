@@ -1,10 +1,12 @@
 package com.iuh.fashionshop.controller;
 
+import com.iuh.fashionshop.model.Coupon;
 import com.iuh.fashionshop.model.Order;
 import com.iuh.fashionshop.model.OrderItem;
 import com.iuh.fashionshop.model.UserProfile;
 import com.iuh.fashionshop.model.enums.OrderStatus;
 import com.iuh.fashionshop.model.enums.StockMovementType;
+import com.iuh.fashionshop.repository.CouponRepository;
 import com.iuh.fashionshop.repository.OrderRepository;
 import com.iuh.fashionshop.repository.ProductVariantRepository;
 import com.iuh.fashionshop.repository.UserProfileRepository;
@@ -50,17 +52,20 @@ public class OrderController {
     private final UserProfileRepository userProfileRepository;
     private final ProductVariantRepository productVariantRepository;
     private final InventoryService inventoryService;
+    private final CouponRepository couponRepository;
 
     public OrderController(JdbcTemplate jdbc,
                            OrderRepository orderRepository,
                            UserProfileRepository userProfileRepository,
                            ProductVariantRepository productVariantRepository,
-                           InventoryService inventoryService) {
+                           InventoryService inventoryService,
+                           CouponRepository couponRepository) {
         this.jdbc = jdbc;
         this.orderRepository = orderRepository;
         this.userProfileRepository = userProfileRepository;
         this.productVariantRepository = productVariantRepository;
         this.inventoryService = inventoryService;
+        this.couponRepository = couponRepository;
     }
 
     @GetMapping
@@ -215,6 +220,13 @@ public class OrderController {
                         item.getQuantity(), order,
                         "Hủy đơn " + order.getOrderCode() + " - " + order.getCancelReason());
             }
+        }
+
+        // Hoàn lại 1 lượt dùng mã giảm giá (giống cách hủy đơn của admin)
+        Coupon coupon = order.getCoupon();
+        if (coupon != null && coupon.getUsedCount() > 0) {
+            coupon.setUsedCount(coupon.getUsedCount() - 1);
+            couponRepository.save(coupon);
         }
 
         orderRepository.save(order);
