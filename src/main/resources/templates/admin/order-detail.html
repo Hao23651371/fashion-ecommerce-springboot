@@ -110,7 +110,10 @@
                 </form>
 
                 <form th:if="${canCancel}" th:action="@{/admin/orders/{id}/status(id=${order.id})}" method="post" class="mb-2"
-                      onsubmit="return confirm('Hủy đơn này? Kho sẽ được hoàn.');">
+                      data-confirm-title="Hủy đơn hàng?"
+                      data-confirm-message="Bạn có chắc chắn muốn hủy đơn này? Kho và mã giảm giá (nếu có) sẽ được hoàn lại, thao tác không thể hoàn tác."
+                      data-confirm-ok="Hủy đơn"
+                      data-confirm-cancel="Không hủy">
                     <input type="hidden" name="status" value="CANCELLED">
                     <input type="text" name="cancelReason" class="form-control mb-2" placeholder="Lý do hủy">
                     <button type="submit" class="btn btn-outline-danger w-100">Hủy đơn</button>
@@ -141,6 +144,7 @@
             </section>
         </div>
     </div>
+    <div th:replace="~{fragments/confirm-modal :: confirmModal}"></div>
 </div>
 
 </body>

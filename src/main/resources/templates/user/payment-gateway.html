@@ -73,7 +73,10 @@
                 </button>
             </form>
             <form th:action="@{/checkout/payment/{id}/fail(id=${orderId})}" method="post"
-                  onsubmit="return confirm('Giả lập thanh toán thất bại? Đơn hàng sẽ bị hủy và hoàn lại tồn kho.');">
+                  data-confirm-title="Giả lập thanh toán thất bại?"
+                  data-confirm-message="Đơn hàng sẽ bị hủy và hoàn lại tồn kho (cùng lượt dùng mã giảm giá nếu có)."
+                  data-confirm-ok="Xác nhận thất bại"
+                  data-confirm-cancel="Quay lại">
                 <button type="submit" class="btn btn-outline-danger">
                     <i class="bi bi-x-circle"></i> Giả lập: Thanh toán thất bại
                 </button>
@@ -137,6 +140,7 @@
             box.innerHTML = '<svg viewBox="0 0 ' + N * c + ' ' + N * c + '" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">' + svg + '</svg>';
         })();
     </script>
+    <div th:replace="~{fragments/confirm-modal :: confirmModal}"></div>
 </div>
 
 </body>

@@ -275,6 +275,22 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    /**
+     * Khách tự hủy đơn (chỉ đơn PENDING). Dùng chung cancelInternal với admin hủy / quá hạn thanh toán nên
+     * kết quả luôn đồng nhất: hoàn kho + ghi lịch sử kho + hoàn lượt mã giảm giá + đổi UNPAID -> FAILED (ví điện tử).
+     */
+    public Order cancelByCustomer(Long orderId, Authentication auth, String reason) {
+        UserProfile profile = requireProfile(auth);
+        Order order = requireOrderOwned(orderId, profile);
+
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new IllegalStateException(
+                    "Đơn hàng đang ở trạng thái '" + order.getStatus() + "', không thể hủy.");
+        }
+        cancelInternal(order, reason != null && !reason.isBlank() ? reason.trim() : "Khách hàng tự hủy đơn");
+        return orderRepository.save(order);
+    }
+
     /** Xác nhận đã nhận chuyển khoản → PAID (+ CONFIRMED nếu còn PENDING). */
     public Order confirmBankTransferPaid(Long orderId) {
         Order order = getByIdForAdmin(orderId);
