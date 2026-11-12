@@ -442,7 +442,13 @@ public class OrderService {
                         "Hủy đơn " + order.getOrderCode() + (reason != null && !reason.isBlank() ? " - " + reason : ""));
             }
         }
-        // Theo quy định nghiệp vụ: Khi hủy/trả hàng, mã giảm giá không được hoàn lại lượt dùng
+        if (order.getCoupon() != null) {
+            Coupon c = order.getCoupon();
+            if (c.getUsedCount() > 0) {
+                c.setUsedCount(c.getUsedCount() - 1);
+                couponRepository.save(c);
+            }
+        }
         PaymentInfo pay = order.getPaymentInfo();
         if (pay != null && pay.getPaymentMethod() == PaymentMethod.E_WALLET
                 && pay.getPaymentStatus() == PaymentStatus.UNPAID) {

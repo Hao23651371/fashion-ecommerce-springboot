@@ -163,6 +163,9 @@ class AdminUserControllerTest {
         order.setTotalAmount(java.math.BigDecimal.valueOf(100000));
         order.setDiscountAmount(java.math.BigDecimal.ZERO);
         order.setCreatedAt(LocalDateTime.now());
+        order.getShippingInfo().setRecipientName("User Có Đơn");
+        order.getShippingInfo().setRecipientPhone("0912000099");
+        order.getShippingInfo().setShippingAddress("12 Nguyen Van Bao, Go Vap, TP.HCM");
         orderRepository.save(order);
 
         mockMvc.perform(post("/admin/users/" + testAcc.getId() + "/delete"))
@@ -200,6 +203,9 @@ class AdminUserControllerTest {
         order.setTotalAmount(java.math.BigDecimal.valueOf(250000));
         order.setDiscountAmount(java.math.BigDecimal.ZERO);
         order.setCreatedAt(LocalDateTime.now());
+        order.getShippingInfo().setRecipientName("User Đang Chờ Giao");
+        order.getShippingInfo().setRecipientPhone("0912000098");
+        order.getShippingInfo().setShippingAddress("12 Nguyen Van Bao, Go Vap, TP.HCM");
         orderRepository.save(order);
 
         mockMvc.perform(post("/admin/users/" + testAcc.getId() + "/toggle-status"))
