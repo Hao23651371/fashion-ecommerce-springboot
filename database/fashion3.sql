@@ -15,11 +15,11 @@ USE fashionshop;
 -- ================= MÃ GIẢM GIÁ (6 mã, đủ các trường hợp) =================
 INSERT INTO coupon (code, name, discount_type, discount_value, max_discount, min_order_value, quantity, used_count, start_date, end_date, status) VALUES
     -- Dùng được. Giảm 10%, trần 100.000đ, đơn từ 300.000đ. used_count = 1 vì đơn FS20261010001 (fashion4) đang dùng.
-    ('GIAM10', 'Giảm 10% đơn từ 300K (tối đa 100K)', 'PERCENT', 10.00, 100000.00, 300000.00, 100, 1,
+    ('GIAM10', 'Giảm 10% đơn từ 300.000 ₫ (tối đa 100.000 ₫)', 'PERCENT', 10.00, 100000.00, 300000.00, 100, 1,
      DATE_SUB(NOW(6), INTERVAL 30 DAY), DATE_ADD(NOW(6), INTERVAL 60 DAY), 'ACTIVE'),
 
     -- Dùng được. Giảm cố định 50.000đ, đơn từ 500.000đ. used_count = 1 vì đơn FS20261021001 (fashion4) đang dùng.
-    ('GIAM50K', 'Giảm 50K đơn từ 500K', 'FIXED_AMOUNT', 50000.00, NULL, 500000.00, 50, 1,
+    ('GIAM50K', 'Giảm 50.000 ₫ đơn từ 500.000 ₫', 'FIXED_AMOUNT', 50000.00, NULL, 500000.00, 50, 1,
      DATE_SUB(NOW(6), INTERVAL 30 DAY), DATE_ADD(NOW(6), INTERVAL 60 DAY), 'ACTIVE'),
 
     -- Admin đã tạm ngừng (status INACTIVE) -> không được áp dụng dù còn hạn.
@@ -31,7 +31,7 @@ INSERT INTO coupon (code, name, discount_type, discount_value, max_discount, min
      DATE_SUB(NOW(6), INTERVAL 60 DAY), DATE_SUB(NOW(6), INTERVAL 10 DAY), 'ACTIVE'),
 
     -- Chưa tới ngày bắt đầu (start_date là 10 ngày sau) -> báo mã chưa có hiệu lực.
-    ('CHUABATDAU', 'Mã sắp diễn ra', 'FIXED_AMOUNT', 100000.00, NULL, 1000000.00, 100, 0,
+    ('CHUABATDAU', 'Giảm 100.000 ₫ đơn từ 1.000.000 ₫', 'FIXED_AMOUNT', 100000.00, NULL, 1000000.00, 100, 0,
      DATE_ADD(NOW(6), INTERVAL 10 DAY), DATE_ADD(NOW(6), INTERVAL 40 DAY), 'ACTIVE'),
 
     -- Chỉ có 1 lượt và đã dùng hết (used_count = quantity). Lượt đó là của đơn FS20261002001 (fashion4).

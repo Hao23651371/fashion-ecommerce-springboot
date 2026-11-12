@@ -6,6 +6,7 @@ import com.iuh.fashionshop.model.UserProfile;
 import com.iuh.fashionshop.repository.AccountRepository;
 import com.iuh.fashionshop.repository.ShippingAddressRepository;
 import com.iuh.fashionshop.repository.UserProfileRepository;
+import com.iuh.fashionshop.service.AccountService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,17 +37,20 @@ public class AccountController {
     private final UserProfileRepository userProfileRepository;
     private final ShippingAddressRepository shippingAddressRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AccountService accountService;
 
     public AccountController(JdbcTemplate jdbc,
             AccountRepository accountRepository,
             UserProfileRepository userProfileRepository,
             ShippingAddressRepository shippingAddressRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            AccountService accountService) {
         this.jdbc = jdbc;
         this.accountRepository = accountRepository;
         this.userProfileRepository = userProfileRepository;
         this.shippingAddressRepository = shippingAddressRepository;
         this.passwordEncoder = passwordEncoder;
+        this.accountService = accountService;
     }
 
     @GetMapping
@@ -108,7 +112,7 @@ public class AccountController {
 
     @PostMapping("/update-profile")
     @Transactional
-    public String updateProfile(@RequestParam String fullName,
+    public String updateProfile(@RequestParam(required = false) String fullName,
             @RequestParam(required = false) String phone,
             @RequestParam(required = false) String birthDate,
             Authentication auth,
@@ -116,16 +120,85 @@ public class AccountController {
         if (auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
         }
-        UserProfile userProfile = getOrCreateUserProfile(auth.getName());
-        userProfile.setFullName(fullName.trim());
-        userProfile.setPhoneNumber(phone != null && !phone.isBlank() ? phone.trim() : null);
 
-        if (birthDate != null && !birthDate.isBlank()) {
-            try {
-                userProfile.setBirthDate(LocalDate.parse(birthDate.trim(), DateTimeFormatter.ISO_LOCAL_DATE));
-            } catch (Exception ignored) {
-            }
+        // 1. Ràng buộc Họ và tên
+        if (fullName == null || fullName.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Họ và tên không được để trống.");
+            ra.addFlashAttribute("openEditProfileModal", true);
+            return "redirect:/account?tab=profile";
         }
+        String cleanFullName = fullName.trim();
+        if (cleanFullName.length() < 2 || cleanFullName.length() > 100) {
+            ra.addFlashAttribute("errorMessage", "Họ và tên phải có độ dài từ 2 đến 100 ký tự.");
+            ra.addFlashAttribute("openEditProfileModal", true);
+            return "redirect:/account?tab=profile";
+        }
+
+        // 2. Ràng buộc Số điện thoại
+        if (phone == null || phone.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Số điện thoại không được để trống.");
+            ra.addFlashAttribute("openEditProfileModal", true);
+            return "redirect:/account?tab=profile";
+        }
+        String cleanPhone = phone.trim().replaceAll("[\\s.-]", "");
+        if (cleanPhone.startsWith("+84")) {
+            cleanPhone = "0" + cleanPhone.substring(3);
+        }
+        // Định dạng SĐT di động Việt Nam: 10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09
+        if (!cleanPhone.matches("^0[35789]\\d{8}$")) {
+            ra.addFlashAttribute("errorMessage", "Số điện thoại không hợp lệ (phải gồm 10 chữ số và bắt đầu bằng 03, 05, 07, 08 hoặc 09).");
+            ra.addFlashAttribute("openEditProfileModal", true);
+            return "redirect:/account?tab=profile";
+        }
+        // Kiểm tra số điện thoại có bị tài khoản khác sử dụng chưa
+        if (accountService.isPhoneTakenByAnotherUser(cleanPhone, auth.getName())) {
+            ra.addFlashAttribute("errorMessage", "Số điện thoại này đã được sử dụng bởi một tài khoản khác.");
+            ra.addFlashAttribute("openEditProfileModal", true);
+            return "redirect:/account?tab=profile";
+        }
+
+        // 3. Ràng buộc Ngày sinh
+        if (birthDate == null || birthDate.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Ngày sinh không được để trống.");
+            ra.addFlashAttribute("openEditProfileModal", true);
+            return "redirect:/account?tab=profile";
+        }
+        LocalDate parsedBirthDate;
+        try {
+            parsedBirthDate = LocalDate.parse(birthDate.trim(), DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", "Định dạng ngày sinh không hợp lệ.");
+            ra.addFlashAttribute("openEditProfileModal", true);
+            return "redirect:/account?tab=profile";
+        }
+
+        LocalDate today = LocalDate.now();
+        if (parsedBirthDate.isAfter(today)) {
+            ra.addFlashAttribute("errorMessage", "Ngày sinh không thể là ngày trong tương lai.");
+            ra.addFlashAttribute("openEditProfileModal", true);
+            return "redirect:/account?tab=profile";
+        }
+        if (parsedBirthDate.isEqual(today)) {
+            ra.addFlashAttribute("errorMessage", "Ngày sinh phải trước ngày hiện tại.");
+            ra.addFlashAttribute("openEditProfileModal", true);
+            return "redirect:/account?tab=profile";
+        }
+        if (parsedBirthDate.isAfter(today.minusYears(15))) {
+            ra.addFlashAttribute("errorMessage", "Khách hàng phải từ đủ 15 tuổi trở lên.");
+            ra.addFlashAttribute("openEditProfileModal", true);
+            return "redirect:/account?tab=profile";
+        }
+        if (parsedBirthDate.isBefore(today.minusYears(120))) {
+            ra.addFlashAttribute("errorMessage", "Ngày sinh không hợp lệ (vượt quá 120 tuổi).");
+            ra.addFlashAttribute("openEditProfileModal", true);
+            return "redirect:/account?tab=profile";
+        }
+
+        UserProfile userProfile = getOrCreateUserProfile(auth.getName());
+        userProfile.setFullName(cleanFullName);
+        userProfile.setPhoneNumber(cleanPhone);
+        userProfile.setBirthDate(parsedBirthDate);
+
         userProfileRepository.save(userProfile);
         ra.addFlashAttribute("successMessage", "Cập nhật thông tin cá nhân thành công!");
         return "redirect:/account?tab=profile";

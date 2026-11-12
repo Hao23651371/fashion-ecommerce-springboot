@@ -45,6 +45,10 @@
                 <i class="bi bi-truck text-danger"></i>
                 <span>Miễn phí giao hàng cho đơn từ <strong>1.000.000 ₫</strong></span>
             </div>
+            <div class="sale-stat-pill" th:if="${!#lists.isEmpty(coupons)}">
+                <i class="bi bi-ticket-perforated-fill text-danger"></i>
+                <span><strong th:text="${#lists.size(coupons)}">0</strong> mã ưu đãi đang áp dụng</span>
+            </div>
         </div>
     </div>
 
@@ -53,19 +57,27 @@
         <div class="d-flex align-items-center justify-content-between mb-3">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-ticket-perforated fs-5 text-danger"></i>
-                <h2 class="font-serif fs-5 fw-bold mb-0">Mã Giảm Giá Đang Áp Dụng</h2>
+                <h2 class="font-serif fs-5 fw-bold mb-0">
+                    Mã Giảm Giá Đang Áp Dụng
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fs-8 ms-1 fw-semibold"
+                          th:text="${#lists.size(coupons)} + ' mã'">3 mã</span>
+                </h2>
             </div>
             <span class="fs-8 text-muted">Bấm sao chép và nhập tại bước thanh toán</span>
         </div>
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
             <div class="col" th:each="c : ${coupons}">
                 <div class="coupon-card">
-                    <div>
-                        <span class="coupon-badge-code" th:text="${c.code}">ATELIER10</span>
-                        <h4 class="fs-7 fw-bold mb-1 text-dark" th:text="${c.name}">Giảm 10% đơn từ 500k</h4>
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <span class="coupon-badge-code" th:text="${c.code}">ATELIER10</span>
+                            <span class="badge bg-light text-secondary border fs-9 fw-normal">
+                                <i class="bi bi-ticket-detailed text-danger me-1"></i>Còn lại: <strong class="text-danger" th:text="${c.remainingQuantity}">0</strong>/<span th:text="${c.quantity}">100</span> lượt
+                            </span>
+                        </div>
+                        <h4 class="fs-7 fw-bold mb-1 text-dark" th:text="${c.discountDisplay}">Giảm 10% (Tối đa 100.000 ₫)</h4>
                         <div class="fs-8 text-muted">
-                            <span th:if="${c.minOrderValue != null and c.minOrderValue > 0}"
-                                  th:text="'Đơn từ ' + ${#numbers.formatDecimal(c.minOrderValue, 0, 'POINT', 0, 'COMMA')} + ' ₫ • '">Đơn từ 500.000 ₫ • </span>
+                            <span th:text="${c.minOrderDisplay} + ' • '">Đơn từ 500.000 ₫ • </span>
                             <span th:text="'HSD: ' + ${#temporals.format(c.endDate, 'dd/MM/yyyy')}">HSD: 31/12/2026</span>
                         </div>
                     </div>

@@ -9,7 +9,9 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 @Entity
 @Table(name = "coupon",
@@ -78,5 +80,33 @@ public class Coupon {
             discount = discountValue;
         }
         return discount.min(subtotal);
+    }
+
+    public String getDiscountDisplay() {
+        if (discountType == DiscountType.PERCENT) {
+            String pct = (discountValue != null ? discountValue.stripTrailingZeros().toPlainString() : "0") + "%";
+            if (maxDiscount != null && maxDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                return "Giảm " + pct + " (Tối đa " + formatCurrency(maxDiscount) + ")";
+            }
+            return "Giảm " + pct;
+        } else {
+            return "Giảm " + formatCurrency(discountValue);
+        }
+    }
+
+    public String getMinOrderDisplay() {
+        if (minOrderValue != null && minOrderValue.compareTo(BigDecimal.ZERO) > 0) {
+            return "Đơn từ " + formatCurrency(minOrderValue);
+        }
+        return "Mọi đơn hàng";
+    }
+
+    public int getRemainingQuantity() {
+        return Math.max(0, quantity - usedCount);
+    }
+
+    private String formatCurrency(BigDecimal amount) {
+        if (amount == null) return "0 ₫";
+        return NumberFormat.getInstance(new Locale("vi", "VN")).format(amount) + " ₫";
     }
 }
