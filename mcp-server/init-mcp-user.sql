@@ -10,7 +10,7 @@
 --    - TUYỆT ĐỐI KHÔNG có quyền UPDATE, DELETE hay DROP bất kỳ bảng nào!
 -- =========================================================================
 
-CREATE USER IF NOT EXISTS 'fashionshop_mcp'@'localhost' IDENTIFIED BY 'CHANGE_ME';
+CREATE USER IF NOT EXISTS 'fashionshop_mcp'@'localhost' IDENTIFIED BY 'F_shop_Mcp_9821aKz';
 
 -- Cấp quyền Đọc dữ liệu toàn shop
 GRANT SELECT ON fashionshop.* TO 'fashionshop_mcp'@'localhost';

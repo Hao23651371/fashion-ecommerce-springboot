@@ -517,3 +517,262 @@
     }
 }
 
+/* ==========================================================================
+   ENHANCED COUPON STYLES (THEO QUY TRÌNH NGHIỆP VỤ MỚI)
+   ========================================================================== */
+
+.form-section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #4f46e5;
+    background: #f8fafc;
+    padding: 7px 12px;
+    border-radius: 6px;
+    border-left: 3px solid #4f46e5;
+    margin-bottom: 12px;
+}
+
+.stat-line.purple { background-color: #6366f1; }
+.stat-line.teal { background-color: #0d9488; }
+.stat-line.red { background-color: #ef4444; }
+.stat-line.green { background-color: #10b981; }
+
+.text-teal { color: #0d9488 !important; }
+
+.status-pill.status-active {
+    background-color: #dcfce7 !important;
+    color: #15803d !important;
+    font-weight: 600;
+}
+
+.status-pill.status-upcoming {
+    background-color: #e0f2fe !important;
+    color: #0369a1 !important;
+    font-weight: 600;
+}
+
+.status-pill.status-expired {
+    background-color: #f1f5f9 !important;
+    color: #64748b !important;
+    font-weight: 600;
+}
+
+.status-pill.status-paused {
+    background-color: #fef3c7 !important;
+    color: #b45309 !important;
+    font-weight: 600;
+}
+
+.code-badge {
+    background: #eef2ff;
+    color: #4338ca;
+    border: 1px dashed #c7d2fe;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+}
+
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    transition: all 0.15s ease;
+}
+
+.btn-icon:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.badge-target {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 6px;
+    border-radius: 4px;
+}
+
+.discount-value {
+    font-size: 0.95rem;
+}
+
+.usage-box .progress {
+    background-color: #e2e8f0;
+    border-radius: 4px;
+}
+
+.action-btn-group {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Toast Notification System */
+.coupon-toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.coupon-toast {
+    pointer-events: auto;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.15), 0 2px 6px rgba(15, 23, 42, 0.08);
+    min-width: 320px;
+    max-width: 480px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.4;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.coupon-toast.toast-hiding {
+    animation: toastSlideOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(60px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes toastSlideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(60px) scale(0.95);
+    }
+}
+
+.coupon-toast .toast-icon {
+    font-size: 1.35rem;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.coupon-toast .toast-body {
+    flex-grow: 1;
+    color: #1e293b;
+}
+
+.coupon-toast .toast-close {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    line-height: 1;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+
+.coupon-toast .toast-close:hover {
+    color: #334155;
+    background: #f1f5f9;
+}
+
+.coupon-toast.toast-success {
+    border-left: 5px solid #10b981;
+}
+.coupon-toast.toast-success .toast-icon {
+    color: #10b981;
+}
+
+.coupon-toast.toast-error {
+    border-left: 5px solid #ef4444;
+}
+.coupon-toast.toast-error .toast-icon {
+    color: #ef4444;
+}
+
+.coupon-toast.toast-info {
+    border-left: 5px solid #3b82f6;
+}
+.coupon-toast.toast-info .toast-icon {
+    color: #3b82f6;
+}
+
+.coupon-toast.toast-warning {
+    border-left: 5px solid #f59e0b;
+}
+.coupon-toast.toast-warning .toast-icon {
+    color: #f59e0b;
+}
+
+/* Animations for Table Rows */
+.coupon-row-new {
+    animation: rowFadeIn 0.5s ease-out forwards;
+}
+
+@keyframes rowFadeIn {
+    0% {
+        opacity: 0;
+        background-color: #ecfdf5;
+        transform: translateY(-8px);
+    }
+    60% {
+        opacity: 1;
+        background-color: #ecfdf5;
+    }
+    100% {
+        background-color: transparent;
+        transform: translateY(0);
+    }
+}
+
+.coupon-row-updated {
+    animation: rowUpdated 0.8s ease-out forwards;
+}
+
+@keyframes rowUpdated {
+    0% {
+        background-color: #e0f2fe;
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+.coupon-row-fadeout {
+    transition: all 0.35s ease;
+    opacity: 0 !important;
+    transform: scale(0.96) !important;
+}
+
+/* Create section slide */
+#create-coupon-section {
+    transition: all 0.3s ease;
+}
+
+
+

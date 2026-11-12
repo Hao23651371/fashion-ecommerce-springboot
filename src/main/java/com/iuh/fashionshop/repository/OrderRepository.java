@@ -23,6 +23,26 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     long countByUserProfileId(Long profileId);
     boolean existsByUserProfileIdAndStatusIn(Long profileId, List<OrderStatus> statuses);
 
+    long countByUserProfileIdAndCouponIdAndStatusNot(Long profileId, Long couponId, OrderStatus status);
+
+    interface CouponStatProjection {
+        Long getCouponId();
+        Long getOrderCount();
+        java.math.BigDecimal getTotalDiscount();
+        java.math.BigDecimal getTotalRevenue();
+    }
+
+    @Query("""
+        select o.coupon.id as couponId,
+               count(o.id) as orderCount,
+               coalesce(sum(o.discountAmount), 0) as totalDiscount,
+               coalesce(sum(o.totalAmount), 0) as totalRevenue
+        from Order o
+        where o.coupon is not null and o.status != 'CANCELLED'
+        group by o.coupon.id
+        """)
+    List<CouponStatProjection> getCouponUsageStats();
+
     long countByStatus(OrderStatus status);
 
     Optional<Order> findByOrderCode(String orderCode);

@@ -203,14 +203,14 @@
                         <div class="coupon-list" id="couponList">
                             <button type="button" class="coupon-chip"
                                     th:each="c : ${availableCoupons}"
-                                    th:attr="data-code=${c.code}, data-discount=${c.discount}"
+                                    th:attr="data-code=${c.code}, data-discount=${c.discount}, data-reason=${c.reason}"
                                     th:disabled="${!c.eligible}"
                                     th:classappend="${!c.eligible} ? ' is-disabled'">
                                 <span class="coupon-chip-code" th:text="${c.code}">SALE10</span>
                                 <span class="coupon-chip-desc" th:text="${c.description}">Giảm 10%</span>
                                 <span class="coupon-chip-meta">
                                 <span th:if="${c.eligible}" th:text="${c.expiry}">HSD</span>
-                                <span th:if="${!c.eligible}" class="coupon-chip-reason" th:text="${c.reason}">Đơn tối thiểu</span>
+                                <span th:if="${!c.eligible}" class="coupon-chip-reason" th:text="${c.reason}">Mã đã hết lượt sử dụng</span>
                             </span>
                             </button>
                         </div>
@@ -296,12 +296,13 @@
             border: 1px dashed #c9bfa9; cursor: pointer; transition: .15s ease; }
         .coupon-chip:hover:not(:disabled) { border-color: #121212; background: #fff; }
         .coupon-chip.is-selected { border: 1px solid #121212; background: #fff; box-shadow: inset 0 0 0 1px #121212; }
-        .coupon-chip.is-disabled, .coupon-chip:disabled { opacity: .55; cursor: not-allowed; }
+        .coupon-chip.is-disabled, .coupon-chip:disabled { opacity: .6; cursor: not-allowed; background: #f8f9fa; border-color: #dee2e6; }
+        .coupon-chip.is-disabled .coupon-chip-code, .coupon-chip:disabled .coupon-chip-code { background: #888; }
         .coupon-chip-code { grid-row: 1 / span 2; align-self: center; font-weight: 700; letter-spacing: .06em;
             font-size: .85rem; background: #121212; color: #fff; padding: 4px 10px; }
         .coupon-chip-desc { font-size: .88rem; font-weight: 600; }
         .coupon-chip-meta { font-size: .75rem; color: #888; }
-        .coupon-chip-reason { color: #b45309; }
+        .coupon-chip-reason { color: #dc3545; font-weight: 600; }
         .coupon-hint.is-error { color: #b02a37; }
         .addr-options { display: grid; gap: 10px; }
         .addr-option { cursor: pointer; margin: 0; }
@@ -403,7 +404,8 @@
                     select(found);
                 } else if (found) {
                     select(null);
-                    showHint('Đơn hàng chưa đủ điều kiện dùng mã này.', true);
+                    var reason = found.getAttribute('data-reason') || 'Mã không đủ điều kiện sử dụng.';
+                    showHint(reason, true);
                 } else {
                     select(null);
                     showHint('Mã không có trong danh sách. Hệ thống sẽ kiểm tra lại khi đặt hàng.', true);

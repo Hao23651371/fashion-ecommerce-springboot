@@ -2,6 +2,7 @@ package com.iuh.fashionshop.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record AdminStatisticsDto(
@@ -32,7 +33,28 @@ public record AdminStatisticsDto(
         }
     }
 
-    public record WeeklyData(String label, BigDecimal revenue, long orderCount) {
+    public record SoldItemDetail(
+            String orderCode,
+            String productName,
+            String color,
+            String size,
+            BigDecimal unitPrice,
+            int quantity,
+            BigDecimal totalPrice,
+            LocalDateTime soldAt,
+            String formattedSoldDate
+    ) {
+    }
+
+    public record WeeklyData(
+            String label,
+            BigDecimal revenue,
+            long orderCount,
+            List<SoldItemDetail> items
+    ) {
+        public WeeklyData(String label, BigDecimal revenue, long orderCount) {
+            this(label, revenue, orderCount, List.of());
+        }
     }
 
     public record CategoryRevenue(String name, BigDecimal revenue, double share) {

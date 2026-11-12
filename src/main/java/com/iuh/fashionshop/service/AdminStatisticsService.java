@@ -61,7 +61,7 @@ public class AdminStatisticsService {
         BigDecimal prevAov = prevOrders == 0 ? BigDecimal.ZERO
                 : prevRevenue.divide(BigDecimal.valueOf(prevOrders), 0, RoundingMode.HALF_UP);
 
-        List<AdminStatisticsDto.WeeklyData> weeklyData = buildWeeklyData(start, end);
+        List<AdminStatisticsDto.WeeklyData> weeklyData = buildWeeklyData(start, end, startAt, endAt);
         AdminStatisticsDto.WeeklyData bestPeriod = weeklyData.stream()
                 .filter(w -> w.revenue().compareTo(BigDecimal.ZERO) > 0 || w.orderCount() > 0)
                 .max((a, b) -> a.revenue().compareTo(b.revenue()))
@@ -99,10 +99,16 @@ public class AdminStatisticsService {
         );
     }
 
-    private List<AdminStatisticsDto.WeeklyData> buildWeeklyData(LocalDate start, LocalDate end) {
+    private List<AdminStatisticsDto.WeeklyData> buildWeeklyData(LocalDate start, LocalDate end, LocalDateTime startAt, LocalDateTime endAt) {
         List<AdminStatisticsDto.WeeklyData> rows = new ArrayList<>();
         long totalDays = ChronoUnit.DAYS.between(start, end) + 1;
         int step = (totalDays <= 10) ? 1 : 7;
+
+        List<AdminStatisticsRepository.SoldItemAggregate> allSoldItems = statisticsRepository.findSoldItems(
+                SUCCESS_STATUSES, startAt, endAt
+        );
+
+        DateTimeFormatter itemDateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
         LocalDate cursor = start;
         while (!cursor.isAfter(end)) {
@@ -110,11 +116,29 @@ public class AdminStatisticsService {
             if (segmentEnd.isAfter(end)) {
                 segmentEnd = end;
             }
+            LocalDateTime segStart = cursor.atStartOfDay();
+            LocalDateTime segEnd = segmentEnd.plusDays(1).atStartOfDay();
+
             AdminStatisticsRepository.WeeklyAggregate aggregate = statisticsRepository.aggregateWeek(
                     SUCCESS_STATUSES,
-                    cursor.atStartOfDay(),
-                    segmentEnd.plusDays(1).atStartOfDay()
+                    segStart,
+                    segEnd
             );
+
+            List<AdminStatisticsDto.SoldItemDetail> segmentItems = allSoldItems.stream()
+                    .filter(item -> !item.createdAt().isBefore(segStart) && item.createdAt().isBefore(segEnd))
+                    .map(item -> new AdminStatisticsDto.SoldItemDetail(
+                            item.orderCode(),
+                            item.productName(),
+                            item.color(),
+                            item.size(),
+                            item.unitPrice(),
+                            item.quantity(),
+                            item.unitPrice().multiply(BigDecimal.valueOf(item.quantity())),
+                            item.createdAt(),
+                            item.createdAt().format(itemDateFormat)
+                    ))
+                    .toList();
 
             String label = (cursor.equals(segmentEnd))
                     ? WEEK_LABEL.format(cursor)
@@ -123,7 +147,8 @@ public class AdminStatisticsService {
             rows.add(new AdminStatisticsDto.WeeklyData(
                     label,
                     nonNull(aggregate.revenue()),
-                    aggregate.orderCount()
+                    aggregate.orderCount(),
+                    segmentItems
             ));
             cursor = segmentEnd.plusDays(1);
         }

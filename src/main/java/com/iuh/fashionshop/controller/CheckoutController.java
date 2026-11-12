@@ -8,6 +8,7 @@ import com.iuh.fashionshop.model.ProductVariant;
 import com.iuh.fashionshop.model.ShippingAddress;
 import com.iuh.fashionshop.model.UserProfile;
 import com.iuh.fashionshop.model.enums.CouponStatus;
+import com.iuh.fashionshop.model.enums.CustomerTargetType;
 import com.iuh.fashionshop.model.enums.DiscountType;
 import com.iuh.fashionshop.model.enums.OrderStatus;
 import com.iuh.fashionshop.model.enums.PaymentMethod;
@@ -150,10 +151,11 @@ public class CheckoutController {
         model.addAttribute("bankMemo", bankMemo);
         model.addAttribute("bankQrUrl", buildQrUrl(subtotal.add(SHIPPING_FEE)));
 
-        // Danh sách mã giảm giá đang dùng được để khách chọn nhanh
-        model.addAttribute("availableCoupons", buildCouponOptions(subtotal));
         UserProfile profile = cartService.getOrCreateProfile(auth);
         model.addAttribute("profile", profile);
+
+        // Danh sách mã giảm giá đang dùng được để khách chọn nhanh (đã kiểm tra lượt dùng của tài khoản)
+        model.addAttribute("availableCoupons", buildCouponOptions(subtotal, profile));
         // Địa chỉ đã lưu: mặc định đứng đầu
         model.addAttribute("addresses", profile == null
                 ? List.<ShippingAddress>of()
@@ -167,7 +169,7 @@ public class CheckoutController {
      *  - Không có: tạo đơn từ toàn bộ giỏ hàng rồi xoá giỏ.
      */
     @PostMapping
-    @Transactional
+    @Transactional(noRollbackFor = {IllegalArgumentException.class})
     public String placeOrder(@RequestParam String recipientName,
                              @RequestParam String recipientPhone,
                              @RequestParam(required = false) String addressOption,   // id địa chỉ đã lưu, hoặc "new"
@@ -302,12 +304,18 @@ public class CheckoutController {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         Coupon coupon = null;
         if (couponCode != null && !couponCode.isBlank()) {
-            coupon = couponRepository.findByCodeIgnoreCase(couponCode.trim()).orElse(null);
-            if (coupon == null || !coupon.isValid(subtotal)) {
-                ra.addFlashAttribute("errorMessage", "Mã giảm giá không hợp lệ hoặc không đủ điều kiện áp dụng.");
+            List<Long> catIds = variants.stream()
+                    .filter(v -> v.getProduct() != null && v.getProduct().getCategory() != null)
+                    .map(v -> v.getProduct().getCategory().getId())
+                    .distinct()
+                    .toList();
+            try {
+                coupon = orderService.validateCoupon(couponCode.trim(), subtotal, profile, catIds);
+                order.setCoupon(coupon);
+            } catch (Exception e) {
+                ra.addFlashAttribute("errorMessage", e.getMessage());
                 return backUrl;
             }
-            order.setCoupon(coupon);
         }
 
         order.recalculateTotal();
@@ -461,10 +469,54 @@ public class CheckoutController {
         public long getDiscount() { return discount; }
     }
 
-    private List<CouponOption> buildCouponOptions(BigDecimal subtotal) {
+    private List<CouponOption> buildCouponOptions(BigDecimal subtotal, UserProfile profile) {
         List<CouponOption> result = new ArrayList<>();
-        for (Coupon c : couponRepository.findActiveCoupons(CouponStatus.ACTIVE, LocalDateTime.now())) {
-            boolean eligible = c.isValid(subtotal);
+        LocalDateTime now = LocalDateTime.now();
+        List<Coupon> activeCoupons = couponRepository.findActiveCoupons(CouponStatus.ACTIVE, now);
+
+        for (Coupon c : activeCoupons) {
+            boolean eligible = true;
+            String reason = null;
+
+            // 1. Kiểm tra số lượng mã toàn hệ thống
+            if (c.getQuantity() > 0 && c.getUsedCount() >= c.getQuantity()) {
+                eligible = false;
+                reason = "Mã đã hết lượt sử dụng";
+            }
+
+            // 2. Kiểm tra giới hạn số lần dùng của từng khách hàng (per_user_limit)
+            if (eligible && profile != null && profile.getId() != null) {
+                int limit = c.getPerUserLimit() > 0 ? c.getPerUserLimit() : 1;
+                long usedByUser = orderRepository.countByUserProfileIdAndCouponIdAndStatusNot(
+                        profile.getId(), c.getId(), OrderStatus.CANCELLED);
+                if (usedByUser >= limit) {
+                    eligible = false;
+                    reason = "Mã đã hết lượt sử dụng";
+                }
+            }
+
+            // 3. Kiểm tra đối tượng khách hàng (CustomerTargetType)
+            if (eligible && profile != null && profile.getId() != null) {
+                if (c.getTargetCustomerType() == CustomerTargetType.NEW_CUSTOMER) {
+                    long totalOrders = orderRepository.countByUserProfileId(profile.getId());
+                    if (totalOrders > 0) {
+                        eligible = false;
+                        reason = "Chỉ cho khách hàng mới";
+                    }
+                }
+            }
+
+            // 4. Kiểm tra đơn hàng tối thiểu
+            if (eligible && c.getMinOrderValue() != null && subtotal.compareTo(c.getMinOrderValue()) < 0) {
+                eligible = false;
+                reason = "Đơn tối thiểu " + money(c.getMinOrderValue());
+            }
+
+            // 5. Kiểm tra thời gian bắt đầu
+            if (eligible && c.getStartDate() != null && now.isBefore(c.getStartDate())) {
+                eligible = false;
+                reason = "Chưa đến thời gian áp dụng";
+            }
 
             String desc;
             if (c.getDiscountType() == DiscountType.PERCENT) {
@@ -472,24 +524,30 @@ public class CheckoutController {
                 if (c.getMaxDiscount() != null) {
                     desc += " (tối đa " + money(c.getMaxDiscount()) + ")";
                 }
+            } else if (c.getDiscountType() == DiscountType.FREESHIP) {
+                if (c.getDiscountValue() == null || c.getDiscountValue().compareTo(BigDecimal.ZERO) <= 0) {
+                    desc = "Freeship 100%";
+                } else {
+                    desc = "Freeship tối đa " + money(c.getDiscountValue());
+                }
             } else {
                 desc = "Giảm " + money(c.getDiscountValue());
             }
 
-            String reason = null;
-            if (!eligible && c.getMinOrderValue() != null && subtotal.compareTo(c.getMinOrderValue()) < 0) {
-                reason = "Đơn tối thiểu " + money(c.getMinOrderValue());
-            } else if (!eligible) {
-                reason = "Chưa đủ điều kiện";
-            } else if (c.getMinOrderValue() != null && c.getMinOrderValue().signum() > 0) {
+            if (eligible && c.getMinOrderValue() != null && c.getMinOrderValue().signum() > 0) {
                 desc += " · đơn từ " + money(c.getMinOrderValue());
             }
 
-            long discount = eligible ? c.calculateDiscount(subtotal).longValue() : 0L;
+            long discount = eligible
+                    ? (c.getDiscountType() == DiscountType.FREESHIP
+                        ? c.calculateShippingDiscount(SHIPPING_FEE).longValue()
+                        : c.calculateDiscount(subtotal).longValue())
+                    : 0L;
+
             String expiry = "HSD " + c.getEndDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
             result.add(new CouponOption(c.getCode(), c.getName(), desc, expiry, eligible, reason, discount));
         }
-        // Mã dùng được lên trước
+        // Mã dùng được lên trước, mã không dùng được xuống sau
         result.sort((a, b) -> Boolean.compare(b.isEligible(), a.isEligible()));
         return result;
     }
