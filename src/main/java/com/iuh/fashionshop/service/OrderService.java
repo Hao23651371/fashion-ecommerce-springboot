@@ -20,6 +20,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -65,17 +66,72 @@ public class OrderService {
                 : DEFAULT_SHIPPING_FEE;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, noRollbackFor = {IllegalArgumentException.class})
     public Coupon validateCoupon(String code, BigDecimal subtotal) {
+        return validateCoupon(code, subtotal, null, null);
+    }
+
+    @Transactional(readOnly = true, noRollbackFor = {IllegalArgumentException.class})
+    public Coupon validateCoupon(String code, BigDecimal subtotal, UserProfile profile, List<Long> categoryIds) {
         if (code == null || code.isBlank()) {
             return null;
         }
         Coupon coupon = couponRepository.findByCodeIgnoreCase(code.trim())
-                .orElseThrow(() -> new IllegalArgumentException("Mã giảm giá không tồn tại"));
-        if (!coupon.isValid(subtotal)) {
-            throw new IllegalArgumentException(
-                    "Mã giảm giá không hợp lệ, đã hết hạn hoặc chưa đủ điều kiện áp dụng");
+                .orElseThrow(() -> new IllegalArgumentException("Mã giảm giá \"" + code.trim() + "\" không tồn tại trên hệ thống"));
+
+        com.iuh.fashionshop.model.enums.CouponStatus computed = coupon.getComputedStatus();
+        if (computed == com.iuh.fashionshop.model.enums.CouponStatus.PAUSED) {
+            throw new IllegalArgumentException("Mã giảm giá \"" + coupon.getCode() + "\" hiện đang tạm dừng áp dụng");
         }
+        if (computed == com.iuh.fashionshop.model.enums.CouponStatus.UPCOMING) {
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            throw new IllegalArgumentException("Mã giảm giá \"" + coupon.getCode() + "\" chưa đến thời gian áp dụng (bắt đầu từ "
+                    + (coupon.getStartDate() != null ? coupon.getStartDate().format(fmt) : "") + ")");
+        }
+        if (computed == com.iuh.fashionshop.model.enums.CouponStatus.EXPIRED) {
+            if (coupon.getQuantity() > 0 && coupon.getUsedCount() >= coupon.getQuantity()) {
+                throw new IllegalArgumentException("Mã giảm giá \"" + coupon.getCode() + "\" đã hết lượt sử dụng trên toàn hệ thống");
+            }
+            throw new IllegalArgumentException("Mã giảm giá \"" + coupon.getCode() + "\" đã hết hạn sử dụng");
+        }
+
+        if (coupon.getMinOrderValue() != null && subtotal != null && subtotal.compareTo(coupon.getMinOrderValue()) < 0) {
+            throw new IllegalArgumentException("Đơn hàng chưa đạt giá trị tối thiểu "
+                    + java.text.NumberFormat.getNumberInstance(java.util.Locale.forLanguageTag("vi-VN")).format(coupon.getMinOrderValue())
+                    + " ₫ để dùng mã \"" + coupon.getCode() + "\"");
+        }
+
+        // Kiểm tra giới hạn dùng của từng khách hàng (Per User Limit)
+        if (profile != null && profile.getId() != null) {
+            int perUserLimit = coupon.getPerUserLimit() > 0 ? coupon.getPerUserLimit() : 1;
+            long usedByUser = orderRepository.countByUserProfileIdAndCouponIdAndStatusNot(
+                    profile.getId(), coupon.getId(), OrderStatus.CANCELLED);
+            if (usedByUser >= perUserLimit) {
+                throw new IllegalArgumentException("Bạn đã dùng mã này " + usedByUser + "/" + perUserLimit
+                        + " lần. Mỗi tài khoản chỉ được áp dụng tối đa " + perUserLimit + " lần");
+            }
+
+            // Kiểm tra đối tượng khách hàng (Target Customer Type)
+            if (coupon.getTargetCustomerType() == com.iuh.fashionshop.model.enums.CustomerTargetType.NEW_CUSTOMER) {
+                long totalOrders = orderRepository.countByUserProfileId(profile.getId());
+                if (totalOrders > 0) {
+                    throw new IllegalArgumentException("Mã giảm giá \"" + coupon.getCode()
+                            + "\" chỉ dành riêng cho khách hàng mới đặt đơn hàng đầu tiên");
+                }
+            }
+        }
+
+        // Kiểm tra giới hạn danh mục sản phẩm (Category Restriction)
+        if (coupon.getApplicableCategory() != null && categoryIds != null && !categoryIds.isEmpty()) {
+            Long targetCatId = coupon.getApplicableCategory().getId();
+            boolean matchCategory = categoryIds.contains(targetCatId);
+            if (!matchCategory) {
+                throw new IllegalArgumentException("Mã giảm giá \"" + coupon.getCode()
+                        + "\" chỉ áp dụng cho sản phẩm thuộc danh mục \""
+                        + coupon.getApplicableCategory().getName() + "\"");
+            }
+        }
+
         return coupon;
     }
 
@@ -106,12 +162,37 @@ public class OrderService {
 
         Coupon coupon = null;
         BigDecimal discount = BigDecimal.ZERO;
+        BigDecimal shippingFee = calculateShippingFee(subtotal);
+
         if (form.getCouponCode() != null && !form.getCouponCode().isBlank()) {
-            coupon = validateCoupon(form.getCouponCode(), subtotal);
-            discount = coupon.calculateDiscount(subtotal);
+            List<Long> catIds = cartItems.stream()
+                    .filter(ci -> ci.getVariant() != null && ci.getVariant().getProduct() != null && ci.getVariant().getProduct().getCategory() != null)
+                    .map(ci -> ci.getVariant().getProduct().getCategory().getId())
+                    .distinct()
+                    .toList();
+            coupon = validateCoupon(form.getCouponCode(), subtotal, profile, catIds);
+            if (coupon.getDiscountType() == com.iuh.fashionshop.model.enums.DiscountType.FREESHIP) {
+                discount = coupon.calculateShippingDiscount(shippingFee);
+            } else {
+                // QUY TẮC NGHIỆP VỤ HẠN CHẾ DANH MỤC (Category Restriction):
+                // Mức giảm chỉ được tính trên tổng giá trị các sản phẩm hợp lệ thuộc danh mục đó trong giỏ hàng,
+                // không tính trên toàn bộ đơn hàng.
+                // Ví dụ: Khách mua đơn 500k (Áo sơ mi 200k + Quần jean 300k), mã giảm 10% cho Áo sơ mi
+                // -> Mức giảm = 10% x 200k = 20k (không giảm 50k trên tổng 500k).
+                BigDecimal eligibleSubtotal = subtotal;
+                if (coupon.getApplicableCategory() != null) {
+                    Long targetCatId = coupon.getApplicableCategory().getId();
+                    eligibleSubtotal = cartItems.stream()
+                            .filter(ci -> ci.getVariant() != null && ci.getVariant().getProduct() != null
+                                    && ci.getVariant().getProduct().getCategory() != null
+                                    && Objects.equals(ci.getVariant().getProduct().getCategory().getId(), targetCatId))
+                            .map(CartItem::calculateSubtotal)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                }
+                discount = coupon.calculateDiscount(eligibleSubtotal);
+            }
         }
 
-        BigDecimal shippingFee = calculateShippingFee(subtotal);
         BigDecimal total = subtotal.subtract(discount).add(shippingFee);
 
         Order order = new Order();

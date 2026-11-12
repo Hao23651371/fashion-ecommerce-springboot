@@ -27,6 +27,17 @@ public class AdminStatisticsRepository {
     public record ProductAggregate(String productName, String categoryName, long soldQuantity, BigDecimal revenue) {
     }
 
+    public record SoldItemAggregate(
+            String orderCode,
+            String productName,
+            String color,
+            String size,
+            BigDecimal unitPrice,
+            int quantity,
+            LocalDateTime createdAt
+    ) {
+    }
+
     private final JdbcTemplate jdbc;
 
     public AdminStatisticsRepository(JdbcTemplate jdbc) {
@@ -70,6 +81,33 @@ public class AdminStatisticsRepository {
                 """.formatted(inClause), (rs, i) -> new WeeklyAggregate(
                 rs.getBigDecimal("revenue"),
                 rs.getLong("orderCount")), startInclusive, endExclusive);
+    }
+
+    public List<SoldItemAggregate> findSoldItems(List<String> successStatuses, LocalDateTime startInclusive, LocalDateTime endExclusive) {
+        String inClause = inClause(successStatuses);
+        return jdbc.query("""
+                SELECT o.order_code AS orderCode,
+                       oi.product_name AS productName,
+                       COALESCE(oi.color, '') AS color,
+                       COALESCE(oi.size, '') AS size,
+                       oi.unit_price AS unitPrice,
+                       oi.quantity AS quantity,
+                       o.created_at AS createdAt
+                FROM order_item oi
+                JOIN orders o ON o.id = oi.order_id
+                WHERE o.status IN (%s)
+                  AND o.created_at >= ?
+                  AND o.created_at < ?
+                ORDER BY o.created_at DESC, oi.id ASC
+                """.formatted(inClause), (rs, i) -> new SoldItemAggregate(
+                rs.getString("orderCode"),
+                rs.getString("productName"),
+                rs.getString("color"),
+                rs.getString("size"),
+                rs.getBigDecimal("unitPrice"),
+                rs.getInt("quantity"),
+                rs.getTimestamp("createdAt").toLocalDateTime()
+        ), startInclusive, endExclusive);
     }
 
     public List<CategoryAggregate> categoryRevenue(List<String> successStatuses, LocalDateTime startInclusive, LocalDateTime endExclusive, int limit) {
