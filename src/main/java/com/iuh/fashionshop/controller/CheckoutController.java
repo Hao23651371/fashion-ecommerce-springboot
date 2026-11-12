@@ -155,7 +155,7 @@ public class CheckoutController {
         model.addAttribute("profile", profile);
 
         // Danh sách mã giảm giá đang dùng được để khách chọn nhanh (đã kiểm tra lượt dùng của tài khoản)
-        model.addAttribute("availableCoupons", buildCouponOptions(subtotal, profile));
+        model.addAttribute("availableCoupons", buildCouponOptions(subtotal, profile, items));
         // Địa chỉ đã lưu: mặc định đứng đầu
         model.addAttribute("addresses", profile == null
                 ? List.<ShippingAddress>of()
@@ -448,9 +448,10 @@ public class CheckoutController {
         private final boolean eligible;
         private final String reason;   // lý do chưa áp dụng được (nếu có)
         private final long discount;   // số tiền giảm ước tính cho đơn hiện tại
+        private final DiscountType discountType;
 
         public CouponOption(String code, String name, String description, String expiry,
-                            boolean eligible, String reason, long discount) {
+                            boolean eligible, String reason, long discount, DiscountType discountType) {
             this.code = code;
             this.name = name;
             this.description = description;
@@ -458,6 +459,7 @@ public class CheckoutController {
             this.eligible = eligible;
             this.reason = reason;
             this.discount = discount;
+            this.discountType = discountType;
         }
 
         public String getCode() { return code; }
@@ -467,9 +469,11 @@ public class CheckoutController {
         public boolean isEligible() { return eligible; }
         public String getReason() { return reason; }
         public long getDiscount() { return discount; }
+        public DiscountType getDiscountType() { return discountType; }
     }
 
-    private List<CouponOption> buildCouponOptions(BigDecimal subtotal, UserProfile profile) {
+    private List<CouponOption> buildCouponOptions(BigDecimal subtotal, UserProfile profile,
+                                                   List<CartItem> cartItems) {
         List<CouponOption> result = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
         List<Coupon> activeCoupons = couponRepository.findActiveCoupons(CouponStatus.ACTIVE, now);
@@ -512,6 +516,24 @@ public class CheckoutController {
                 reason = "Đơn tối thiểu " + money(c.getMinOrderValue());
             }
 
+            // Mã giới hạn danh mục phải bị vô hiệu hóa ngay khi hiển thị nếu
+            // giỏ hàng không có sản phẩm thuộc danh mục đó.
+            BigDecimal eligibleSubtotal = subtotal;
+            if (eligible && c.getApplicableCategory() != null) {
+                Long targetCategoryId = c.getApplicableCategory().getId();
+                eligibleSubtotal = cartItems.stream()
+                        .filter(item -> item.getVariant() != null
+                                && item.getVariant().getProduct() != null
+                                && item.getVariant().getProduct().getCategory() != null
+                                && targetCategoryId.equals(item.getVariant().getProduct().getCategory().getId()))
+                        .map(CartItem::calculateSubtotal)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                if (eligibleSubtotal.signum() <= 0) {
+                    eligible = false;
+                    reason = "Không áp dụng cho sản phẩm trong đơn";
+                }
+            }
+
             // 5. Kiểm tra thời gian bắt đầu
             if (eligible && c.getStartDate() != null && now.isBefore(c.getStartDate())) {
                 eligible = false;
@@ -541,11 +563,12 @@ public class CheckoutController {
             long discount = eligible
                     ? (c.getDiscountType() == DiscountType.FREESHIP
                         ? c.calculateShippingDiscount(SHIPPING_FEE).longValue()
-                        : c.calculateDiscount(subtotal).longValue())
+                        : c.calculateDiscount(eligibleSubtotal).longValue())
                     : 0L;
 
             String expiry = "HSD " + c.getEndDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-            result.add(new CouponOption(c.getCode(), c.getName(), desc, expiry, eligible, reason, discount));
+            result.add(new CouponOption(c.getCode(), c.getName(), desc, expiry, eligible, reason, discount,
+                    c.getDiscountType()));
         }
         // Mã dùng được lên trước, mã không dùng được xuống sau
         result.sort((a, b) -> Boolean.compare(b.isEligible(), a.isEligible()));

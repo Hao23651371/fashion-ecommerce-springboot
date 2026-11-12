@@ -160,13 +160,13 @@
                                         <button type="submit" class="dropdown-item">Xác nhận (CONFIRMED)</button>
                                     </form>
                                 </li>
-                                <li th:if="${o.status != null and (o.status.name() == 'PENDING' or o.status.name() == 'CONFIRMED')}">
+                                <li th:if="${o.status != null and o.status.name() == 'CONFIRMED'}">
                                     <form th:action="@{/admin/orders/{id}/status(id=${o.id})}" method="post">
                                         <input type="hidden" name="status" value="SHIPPING">
                                         <button type="submit" class="dropdown-item">Đang giao</button>
                                     </form>
                                 </li>
-                                <li th:if="${o.status != null and (o.status.name() == 'CONFIRMED' or o.status.name() == 'SHIPPING')}">
+                                <li th:if="${o.status != null and o.status.name() == 'SHIPPING'}">
                                     <form th:action="@{/admin/orders/{id}/status(id=${o.id})}" method="post">
                                         <input type="hidden" name="status" value="COMPLETED">
                                         <button type="submit" class="dropdown-item">Hoàn tất (+ PAID)</button>
