@@ -65,7 +65,25 @@
         </tr>
         <tr th:if="${products.empty}"><td colspan="8" class="empty-state">Chưa có sản phẩm nào.</td></tr>
         </tbody></table></div>
-        <div class="catalog-footer"><span>Hiển thị <b th:text="${products.numberOfElements}">0</b> trên tổng số <b th:text="${products.totalElements}">0</b> sản phẩm</span><div class="pagination"><a th:if="${products.hasPrevious()}" th:href="@{/admin/products(page=${products.number - 1},size=${products.size},keyword=${keyword},categoryId=${selectedCategory},status=${selectedStatus},stock=${selectedStock})}">‹ Trước</a><a th:each="i : ${#numbers.sequence(0, products.totalPages - 1)}" th:if="${products.totalPages > 0}" th:classappend="${i == products.number ? 'current' : ''}" th:href="@{/admin/products(page=${i},size=${products.size},keyword=${keyword},categoryId=${selectedCategory},status=${selectedStatus},stock=${selectedStock})}" th:text="${i + 1}">1</a><a th:if="${products.hasNext()}" th:href="@{/admin/products(page=${products.number + 1},size=${products.size},keyword=${keyword},categoryId=${selectedCategory},status=${selectedStatus},stock=${selectedStock})}">Sau ›</a></div></div>
+        <div class="catalog-footer">
+            <span>Hiển thị <b th:text="${products.numberOfElements}">0</b> trên tổng số <b th:text="${products.totalElements}">0</b> sản phẩm</span>
+            <div class="pagination" th:if="${products.totalPages > 1}">
+                <a th:if="${products.hasPrevious()}"
+                   th:href="@{/admin/products(page=${products.number - 1},size=${products.size},keyword=${keyword},categoryId=${selectedCategory},status=${selectedStatus},stock=${selectedStock})}">‹ Trước</a>
+                <th:block th:each="i : ${#numbers.sequence(0, products.totalPages - 1)}">
+                    <span class="pagination-ellipsis" aria-hidden="true"
+                          th:if="${products.totalPages > 7 and i == 1 and products.number > 3}">...</span>
+                    <span class="pagination-ellipsis" aria-hidden="true"
+                          th:if="${products.totalPages > 7 and ((products.number <= 2 and i == 3) or (products.number > 2 and products.number < products.totalPages - 4 and i == products.number + 3))}">...</span>
+                    <a th:if="${products.totalPages <= 7 or i == 0 or i == products.totalPages - 1 or (products.number <= 2 and i <= 2) or (products.number >= products.totalPages - 4 and i >= products.totalPages - 4) or (products.number > 2 and products.number < products.totalPages - 4 and i >= products.number - 2 and i <= products.number + 2)}"
+                       th:classappend="${i == products.number ? 'current' : ''}"
+                       th:href="@{/admin/products(page=${i},size=${products.size},keyword=${keyword},categoryId=${selectedCategory},status=${selectedStatus},stock=${selectedStock})}"
+                       th:text="${i + 1}">1</a>
+                </th:block>
+                <a th:if="${products.hasNext()}"
+                   th:href="@{/admin/products(page=${products.number + 1},size=${products.size},keyword=${keyword},categoryId=${selectedCategory},status=${selectedStatus},stock=${selectedStock})}">Sau ›</a>
+            </div>
+        </div>
     </section>
 
     <!-- MODAL: XÁC NHẬN XÓA SẢN PHẨM -->

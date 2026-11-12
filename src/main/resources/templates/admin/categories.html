@@ -201,10 +201,16 @@
                    th:href="@{/admin/categories(page=${categories.number - 1}, size=${categories.size}, keyword=${keyword}, status=${selectedStatus})}">
                     ‹ Trước
                 </a>
-                <a th:each="i : ${#numbers.sequence(0, categories.totalPages - 1)}"
-                   th:classappend="${i == categories.number ? 'current' : ''}"
-                   th:href="@{/admin/categories(page=${i}, size=${categories.size}, keyword=${keyword}, status=${selectedStatus})}"
-                   th:text="${i + 1}">1</a>
+                <th:block th:each="i : ${#numbers.sequence(0, categories.totalPages - 1)}">
+                    <span class="pagination-ellipsis" aria-hidden="true"
+                          th:if="${categories.totalPages > 7 and i == 1 and categories.number > 3}">...</span>
+                    <span class="pagination-ellipsis" aria-hidden="true"
+                          th:if="${categories.totalPages > 7 and ((categories.number <= 2 and i == 3) or (categories.number > 2 and categories.number < categories.totalPages - 4 and i == categories.number + 3))}">...</span>
+                    <a th:if="${categories.totalPages <= 7 or i == 0 or i == categories.totalPages - 1 or (categories.number <= 2 and i <= 2) or (categories.number >= categories.totalPages - 4 and i >= categories.totalPages - 4) or (categories.number > 2 and categories.number < categories.totalPages - 4 and i >= categories.number - 2 and i <= categories.number + 2)}"
+                       th:classappend="${i == categories.number ? 'current' : ''}"
+                       th:href="@{/admin/categories(page=${i}, size=${categories.size}, keyword=${keyword}, status=${selectedStatus})}"
+                       th:text="${i + 1}">1</a>
+                </th:block>
                 <a th:if="${categories.hasNext()}"
                    th:href="@{/admin/categories(page=${categories.number + 1}, size=${categories.size}, keyword=${keyword}, status=${selectedStatus})}">
                     Sau ›
