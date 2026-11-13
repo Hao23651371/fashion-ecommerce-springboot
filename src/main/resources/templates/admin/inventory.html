@@ -239,10 +239,16 @@
                        th:href="@{/admin/inventory(tab='stock', page=${items.number - 1}, size=${items.size}, keyword=${keyword}, categoryId=${selectedCategory}, stockStatus=${selectedStock})}">
                         ‹ Trước
                     </a>
-                    <a th:each="i : ${#numbers.sequence(0, items.totalPages - 1)}"
-                       th:classappend="${i == items.number} ? 'current' : ''"
-                       th:href="@{/admin/inventory(tab='stock', page=${i}, size=${items.size}, keyword=${keyword}, categoryId=${selectedCategory}, stockStatus=${selectedStock})}"
-                       th:text="${i + 1}">1</a>
+                    <th:block th:each="i : ${#numbers.sequence(0, items.totalPages - 1)}">
+                        <span class="pagination-ellipsis" aria-hidden="true"
+                              th:if="${items.totalPages > 7 and i == 1 and items.number > 3}">...</span>
+                        <span class="pagination-ellipsis" aria-hidden="true"
+                              th:if="${items.totalPages > 7 and ((items.number <= 2 and i == 3) or (items.number > 2 and items.number < items.totalPages - 4 and i == items.number + 3))}">...</span>
+                        <a th:if="${items.totalPages <= 7 or i == 0 or i == items.totalPages - 1 or (items.number <= 2 and i <= 2) or (items.number >= items.totalPages - 4 and i >= items.totalPages - 4) or (items.number > 2 and items.number < items.totalPages - 4 and i >= items.number - 2 and i <= items.number + 2)}"
+                           th:classappend="${i == items.number} ? 'current' : ''"
+                           th:href="@{/admin/inventory(tab='stock', page=${i}, size=${items.size}, keyword=${keyword}, categoryId=${selectedCategory}, stockStatus=${selectedStock})}"
+                           th:text="${i + 1}">1</a>
+                    </th:block>
                     <a th:if="${items.hasNext()}"
                        th:href="@{/admin/inventory(tab='stock', page=${items.number + 1}, size=${items.size}, keyword=${keyword}, categoryId=${selectedCategory}, stockStatus=${selectedStock})}">
                         Sau ›
@@ -367,10 +373,16 @@
                        th:href="@{/admin/inventory(tab='history', page=${historyPage.number - 1}, size=${historyPage.size}, historyKeyword=${historyKeyword}, startDate=${startDate}, endDate=${endDate}, movementType=${movementType}, performer=${selectedPerformer})}">
                         ‹ Trước
                     </a>
-                    <a th:each="i : ${#numbers.sequence(0, historyPage.totalPages - 1)}"
-                       th:classappend="${i == historyPage.number} ? 'current' : ''"
-                       th:href="@{/admin/inventory(tab='history', page=${i}, size=${historyPage.size}, historyKeyword=${historyKeyword}, startDate=${startDate}, endDate=${endDate}, movementType=${movementType}, performer=${selectedPerformer})}"
-                       th:text="${i + 1}">1</a>
+                    <th:block th:each="i : ${#numbers.sequence(0, historyPage.totalPages - 1)}">
+                        <span class="pagination-ellipsis" aria-hidden="true"
+                              th:if="${historyPage.totalPages > 7 and i == 1 and historyPage.number > 3}">...</span>
+                        <span class="pagination-ellipsis" aria-hidden="true"
+                              th:if="${historyPage.totalPages > 7 and ((historyPage.number <= 2 and i == 3) or (historyPage.number > 2 and historyPage.number < historyPage.totalPages - 4 and i == historyPage.number + 3))}">...</span>
+                        <a th:if="${historyPage.totalPages <= 7 or i == 0 or i == historyPage.totalPages - 1 or (historyPage.number <= 2 and i <= 2) or (historyPage.number >= historyPage.totalPages - 4 and i >= historyPage.totalPages - 4) or (historyPage.number > 2 and historyPage.number < historyPage.totalPages - 4 and i >= historyPage.number - 2 and i <= historyPage.number + 2)}"
+                           th:classappend="${i == historyPage.number} ? 'current' : ''"
+                           th:href="@{/admin/inventory(tab='history', page=${i}, size=${historyPage.size}, historyKeyword=${historyKeyword}, startDate=${startDate}, endDate=${endDate}, movementType=${movementType}, performer=${selectedPerformer})}"
+                           th:text="${i + 1}">1</a>
+                    </th:block>
                     <a th:if="${historyPage.hasNext()}"
                        th:href="@{/admin/inventory(tab='history', page=${historyPage.number + 1}, size=${historyPage.size}, historyKeyword=${historyKeyword}, startDate=${startDate}, endDate=${endDate}, movementType=${movementType}, performer=${selectedPerformer})}">
                         Sau ›
