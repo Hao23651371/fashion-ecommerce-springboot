@@ -621,5 +621,146 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // =========================================================================
+    // 6. RÀNG BUỘC CẬP NHẬT THÔNG TIN CÁ NHÂN (SỐ ĐIỆN THOẠI & NGÀY SINH)
+    // =========================================================================
+    const formUpdateProfile = document.getElementById('formUpdateProfile');
+    const inputBirthDate = document.getElementById('profileBirthDate');
+
+    // Giới hạn max trên datepicker: không chọn được ngày tương lai
+    if (inputBirthDate) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        inputBirthDate.setAttribute('max', todayStr);
+    }
+
+    if (formUpdateProfile) {
+        formUpdateProfile.addEventListener('submit', function (e) {
+            const fullNameInput = document.getElementById('profileFullName');
+            const phoneInput = document.getElementById('profilePhone');
+            const birthDateInput = document.getElementById('profileBirthDate');
+
+            let isValid = true;
+
+            // Xóa trạng thái lỗi cũ
+            [fullNameInput, phoneInput, birthDateInput].forEach(inp => {
+                if (inp) inp.classList.remove('is-invalid');
+            });
+
+            // 1. Kiểm tra Họ và tên
+            const fullNameVal = fullNameInput ? fullNameInput.value.trim() : '';
+            if (!fullNameVal || fullNameVal.length < 2 || fullNameVal.length > 100) {
+                if (fullNameInput) {
+                    fullNameInput.classList.add('is-invalid');
+                    const fb = document.getElementById('fullNameFeedback');
+                    if (fb) fb.textContent = 'Họ và tên không được để trống (từ 2 đến 100 ký tự).';
+                }
+                isValid = false;
+            }
+
+            // 2. Kiểm tra Số điện thoại
+            const rawPhone = phoneInput ? phoneInput.value.trim().replace(/[\s.-]/g, '') : '';
+            // Chuẩn hóa +84 thành 0
+            const normalizedPhone = rawPhone.startsWith('+84') ? '0' + rawPhone.substring(3) : rawPhone;
+            // 10 chữ số, bắt đầu bằng các đầu số di động VN: 03, 05, 07, 08, 09
+            const phoneRegex = /^0[35789]\d{8}$/;
+
+            if (!rawPhone) {
+                if (phoneInput) {
+                    phoneInput.classList.add('is-invalid');
+                    const fb = document.getElementById('phoneFeedback');
+                    if (fb) fb.textContent = 'Số điện thoại không được để trống.';
+                }
+                isValid = false;
+            } else if (!phoneRegex.test(normalizedPhone)) {
+                if (phoneInput) {
+                    phoneInput.classList.add('is-invalid');
+                    const fb = document.getElementById('phoneFeedback');
+                    if (fb) fb.textContent = 'Số điện thoại không hợp lệ (phải gồm 10 chữ số và bắt đầu bằng 03, 05, 07, 08 hoặc 09).';
+                }
+                isValid = false;
+            }
+
+            // 3. Kiểm tra Ngày sinh
+            const birthVal = birthDateInput ? birthDateInput.value.trim() : '';
+            if (!birthVal) {
+                if (birthDateInput) {
+                    birthDateInput.classList.add('is-invalid');
+                    const fb = document.getElementById('birthDateFeedback');
+                    if (fb) fb.textContent = 'Ngày sinh không được để trống.';
+                }
+                isValid = false;
+            } else {
+                const birthParts = birthVal.split('-');
+                if (birthParts.length !== 3) {
+                    if (birthDateInput) {
+                        birthDateInput.classList.add('is-invalid');
+                        const fb = document.getElementById('birthDateFeedback');
+                        if (fb) fb.textContent = 'Ngày sinh không đúng định dạng.';
+                    }
+                    isValid = false;
+                } else {
+                    const birthYear = parseInt(birthParts[0], 10);
+                    const birthMonth = parseInt(birthParts[1], 10) - 1;
+                    const birthDay = parseInt(birthParts[2], 10);
+                    const birthDate = new Date(birthYear, birthMonth, birthDay);
+
+                    const now = new Date();
+                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+                    if (isNaN(birthDate.getTime())) {
+                        if (birthDateInput) {
+                            birthDateInput.classList.add('is-invalid');
+                            const fb = document.getElementById('birthDateFeedback');
+                            if (fb) fb.textContent = 'Ngày sinh không hợp lệ.';
+                        }
+                        isValid = false;
+                    } else if (birthDate > today) {
+                        if (birthDateInput) {
+                            birthDateInput.classList.add('is-invalid');
+                            const fb = document.getElementById('birthDateFeedback');
+                            if (fb) fb.textContent = 'Ngày sinh không thể là ngày trong tương lai.';
+                        }
+                        isValid = false;
+                    } else if (birthDate.getTime() === today.getTime()) {
+                        if (birthDateInput) {
+                            birthDateInput.classList.add('is-invalid');
+                            const fb = document.getElementById('birthDateFeedback');
+                            if (fb) fb.textContent = 'Ngày sinh phải trước ngày hiện tại.';
+                        }
+                        isValid = false;
+                    } else {
+                        // Tính tuổi chính xác
+                        let age = today.getFullYear() - birthYear;
+                        const m = today.getMonth() - birthMonth;
+                        if (m < 0 || (m === 0 && today.getDate() < birthDay)) {
+                            age--;
+                        }
+
+                        if (age < 15) {
+                            if (birthDateInput) {
+                                birthDateInput.classList.add('is-invalid');
+                                const fb = document.getElementById('birthDateFeedback');
+                                if (fb) fb.textContent = 'Khách hàng phải từ đủ 15 tuổi trở lên.';
+                            }
+                            isValid = false;
+                        } else if (age > 120) {
+                            if (birthDateInput) {
+                                birthDateInput.classList.add('is-invalid');
+                                const fb = document.getElementById('birthDateFeedback');
+                                if (fb) fb.textContent = 'Ngày sinh không hợp lệ (vượt quá 120 tuổi).';
+                            }
+                            isValid = false;
+                        }
+                    }
+                }
+            }
+
+            if (!isValid) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+    }
+
 });
 

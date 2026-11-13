@@ -92,7 +92,71 @@
     font-size: 0.95rem;
 }
 
-/* Voucher / Coupon Section */
+/* Voucher / Coupon Section (Carousel Trượt Ngang) */
+.coupon-carousel-track {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 6px 2px 14px 2px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+.coupon-carousel-track::-webkit-scrollbar {
+    height: 6px;
+}
+.coupon-carousel-track::-webkit-scrollbar-track {
+    background: #f1ede8;
+    border-radius: 999px;
+}
+.coupon-carousel-track::-webkit-scrollbar-thumb {
+    background: #d1c7bc;
+    border-radius: 999px;
+}
+.coupon-carousel-track::-webkit-scrollbar-thumb:hover {
+    background: #b5a99c;
+}
+.coupon-carousel-item {
+    flex: 0 0 350px;
+    max-width: 380px;
+    min-width: 290px;
+    scroll-snap-align: start;
+}
+@media (max-width: 768px) {
+    .coupon-carousel-item {
+        flex: 0 0 300px;
+    }
+}
+@media (max-width: 480px) {
+    .coupon-carousel-item {
+        flex: 0 0 85%;
+    }
+}
+.btn-carousel-nav {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid #d1c7bc;
+    background: #ffffff;
+    color: #18181b;
+    font-size: 0.82rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.btn-carousel-nav:hover:not(:disabled) {
+    background: #18181b;
+    color: #ffffff;
+    border-color: #18181b;
+}
+.btn-carousel-nav:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    border-color: #e5e7eb;
+}
+
 .coupon-card {
     background: #ffffff;
     border: 1px dashed #d1c7bc;
