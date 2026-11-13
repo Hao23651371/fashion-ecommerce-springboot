@@ -5,7 +5,40 @@ function onSortChange(sortVal) {
     window.location.href = '/sale?gender=' + encodeURIComponent(currentGender) + '&sort=' + encodeURIComponent(sortVal);
 }
 
-// Sao chép coupon
+// Carousel điều hướng voucher trượt ngang
+document.addEventListener('DOMContentLoaded', function () {
+    const track = document.getElementById('couponCarouselTrack');
+    const btnPrev = document.getElementById('btnCouponPrev');
+    const btnNext = document.getElementById('btnCouponNext');
+
+    if (track && (btnPrev || btnNext)) {
+        const updateNavButtons = () => {
+            const maxScroll = track.scrollWidth - track.clientWidth;
+            if (btnPrev) btnPrev.disabled = track.scrollLeft <= 5;
+            if (btnNext) btnNext.disabled = track.scrollLeft >= maxScroll - 5;
+        };
+
+        if (btnPrev) {
+            btnPrev.addEventListener('click', () => {
+                const item = track.querySelector('.coupon-carousel-item');
+                const scrollStep = item ? (item.offsetWidth + 16) : 360;
+                track.scrollBy({ left: -scrollStep, behavior: 'smooth' });
+            });
+        }
+
+        if (btnNext) {
+            btnNext.addEventListener('click', () => {
+                const item = track.querySelector('.coupon-carousel-item');
+                const scrollStep = item ? (item.offsetWidth + 16) : 360;
+                track.scrollBy({ left: scrollStep, behavior: 'smooth' });
+            });
+        }
+
+        track.addEventListener('scroll', updateNavButtons, { passive: true });
+        window.addEventListener('resize', updateNavButtons);
+        updateNavButtons();
+    }
+});
 let saleToastTimer = null;
 function copyCouponCode(btn) {
     const code = btn.getAttribute('data-code');

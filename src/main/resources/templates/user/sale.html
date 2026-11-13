@@ -52,9 +52,9 @@
         </div>
     </div>
 
-    <!-- 3. Khu vực Mã Ưu Đãi / Coupon (Chỉ hiện khi có coupon kích hoạt) -->
+    <!-- 3. Khu vực Mã Ưu Đãi / Coupon (Dạng Carousel trượt ngang gọn gàng) -->
     <div class="mb-4" th:if="${!#lists.isEmpty(coupons)}">
-        <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-ticket-perforated fs-5 text-danger"></i>
                 <h2 class="font-serif fs-5 fw-bold mb-0">
@@ -63,11 +63,21 @@
                           th:text="${#lists.size(coupons)} + ' mã'">3 mã</span>
                 </h2>
             </div>
-            <span class="fs-8 text-muted">Bấm sao chép và nhập tại bước thanh toán</span>
+            <div class="d-flex align-items-center gap-2">
+                <span class="fs-8 text-muted d-none d-sm-inline">Bấm sao chép và nhập tại bước thanh toán</span>
+                <div class="coupon-carousel-nav d-flex gap-1" th:if="${#lists.size(coupons) > 2}">
+                    <button type="button" class="btn-carousel-nav" id="btnCouponPrev" title="Xem mã trước" aria-label="Xem mã trước">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <button type="button" class="btn-carousel-nav" id="btnCouponNext" title="Xem mã tiếp theo" aria-label="Xem mã tiếp theo">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
         </div>
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-            <div class="col" th:each="c : ${coupons}">
-                <div class="coupon-card">
+        <div class="coupon-carousel-track" id="couponCarouselTrack">
+            <div class="coupon-carousel-item" th:each="c : ${coupons}">
+                <div class="coupon-card h-100">
                     <div class="flex-grow-1">
                         <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
                             <span class="coupon-badge-code" th:text="${c.code}">ATELIER10</span>
