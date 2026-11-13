@@ -57,10 +57,8 @@ public class AdminOrderController {
             model.addAttribute("pageTitle", "Đơn " + order.getOrderCode());
             model.addAttribute("order", order);
             model.addAttribute("canConfirm", order.getStatus() == OrderStatus.PENDING);
-            model.addAttribute("canShip", order.getStatus() == OrderStatus.PENDING
-                    || order.getStatus() == OrderStatus.CONFIRMED);
-            model.addAttribute("canComplete", order.getStatus() == OrderStatus.CONFIRMED
-                    || order.getStatus() == OrderStatus.SHIPPING);
+            model.addAttribute("canShip", order.getStatus() == OrderStatus.CONFIRMED);
+            model.addAttribute("canComplete", order.getStatus() == OrderStatus.SHIPPING);
             model.addAttribute("canCancel", order.getStatus() == OrderStatus.PENDING
                     || order.getStatus() == OrderStatus.CONFIRMED);
 

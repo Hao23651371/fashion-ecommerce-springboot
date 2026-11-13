@@ -408,8 +408,8 @@ public class OrderService {
     }
 
     private void validateTransition(OrderStatus from, OrderStatus to) {
-        boolean ok = (from == OrderStatus.PENDING && (to == OrderStatus.CONFIRMED || to == OrderStatus.SHIPPING))
-                || (from == OrderStatus.CONFIRMED && (to == OrderStatus.SHIPPING || to == OrderStatus.COMPLETED))
+        boolean ok = (from == OrderStatus.PENDING && to == OrderStatus.CONFIRMED)
+                || (from == OrderStatus.CONFIRMED && to == OrderStatus.SHIPPING)
                 || (from == OrderStatus.SHIPPING && to == OrderStatus.COMPLETED);
         if (!ok) {
             throw new IllegalStateException(

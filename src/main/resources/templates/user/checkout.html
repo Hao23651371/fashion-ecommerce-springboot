@@ -214,6 +214,10 @@
                             </span>
                             </button>
                         </div>
+                        <div class="coupon-selected" id="selectedCoupon" hidden>
+                            <span></span>
+                            <button type="button" class="coupon-remove-btn" id="removeCouponBtn">Bỏ chọn mã</button>
+                        </div>
                     </div>
                 </section>
 
@@ -261,13 +265,13 @@
                         <span th:text="${cartSubtotal != null ? #numbers.formatDecimal(cartSubtotal, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0 ₫</span>
                     </div>
                     <div class="sum-line">
+                        <span>Phí vận chuyển</span>
+                        <span th:text="${shippingFee != null ? #numbers.formatDecimal(shippingFee, 0, 'COMMA', 0, 'POINT') + ' ₫' : '30.000 ₫'}">30.000 ₫</span>
+                    </div>
+                    <div class="sum-line">
                         <span>Giảm giá</span>
                         <span class="text-success" id="sumDiscount"
                               th:text="${discountAmount != null and discountAmount > 0 ? ('− ' + #numbers.formatDecimal(discountAmount, 0, 'COMMA', 0, 'POINT') + ' ₫') : '0 ₫'}">0 ₫</span>
-                    </div>
-                    <div class="sum-line">
-                        <span>Phí vận chuyển</span>
-                        <span th:text="${shippingFee != null ? #numbers.formatDecimal(shippingFee, 0, 'COMMA', 0, 'POINT') + ' ₫' : '30.000 ₫'}">30.000 ₫</span>
                     </div>
                     <div class="sum-line sum-grand">
                         <span>Tổng thanh toán</span>
@@ -303,6 +307,11 @@
         .coupon-chip-desc { font-size: .88rem; font-weight: 600; }
         .coupon-chip-meta { font-size: .75rem; color: #888; }
         .coupon-chip-reason { color: #dc3545; font-weight: 600; }
+        .coupon-selected { display: flex; justify-content: space-between; align-items: center; gap: 8px;
+            margin-top: 8px; padding: 8px 10px; background: #eef8f0; border: 1px solid #b7dfc0;
+            color: #176b2c; font-size: .82rem; font-weight: 600; }
+        .coupon-remove-btn { border: 0; background: transparent; color: #b02a37; font-weight: 600;
+            font-size: .78rem; cursor: pointer; padding: 2px 4px; }
         .coupon-hint.is-error { color: #b02a37; }
         .addr-options { display: grid; gap: 10px; }
         .addr-option { cursor: pointer; margin: 0; }
@@ -331,7 +340,10 @@
 
             function fmt(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 
-            function setTotals(discount) {
+            var selected = null;
+
+            function setTotals() {
+                var discount = selected ? selected.discount : 0;
                 var total = Math.max(0, subtotal - discount + shipping);
                 var d = document.getElementById('sumDiscount');
                 var g = document.getElementById('sumGrand');
@@ -358,62 +370,74 @@
             function setOpen(open) {
                 if (!picker) return;
                 picker.classList.toggle('is-open', open);
-                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
             }
             if (toggle) {
                 toggle.addEventListener('click', function () {
                     setOpen(!picker.classList.contains('is-open'));
                 });
                 document.addEventListener('click', function (e) {
-                    if (!picker.contains(e.target)) setOpen(false);   // bấm ra ngoài thì đóng
+                    if (!picker.contains(e.target)) setOpen(false);
                 });
             }
 
-            function select(chip) {
+            function updateSelected(chip) {
+                var box = document.getElementById('selectedCoupon');
+                if (!chip) {
+                    selected = null;
+                    input.value = '';
+                    if (box) box.hidden = true;
+                    setTotals();
+                    return;
+                }
+                selected = {
+                    code: chip.getAttribute('data-code'),
+                    discount: parseInt(chip.getAttribute('data-discount') || '0', 10)
+                };
                 chips.forEach(function (c) { c.classList.remove('is-selected'); });
-                if (!chip) { setTotals(0); return; }
                 chip.classList.add('is-selected');
-                input.value = chip.getAttribute('data-code');
-                var discount = parseInt(chip.getAttribute('data-discount') || '0', 10);
-                setTotals(discount);
-                showHint('Đã áp dụng mã ' + input.value + ': giảm ' + fmt(discount) + ' ₫', false);
+                input.value = selected.code;
+                if (box) {
+                    box.hidden = false;
+                    box.querySelector('span').textContent = 'Đang dùng mã ' + selected.code
+                        + ' (− ' + fmt(selected.discount) + ' ₫)';
+                }
+                setTotals();
+                showHint('Đã áp dụng mã ' + selected.code + '.', false);
             }
 
             chips.forEach(function (chip) {
                 chip.addEventListener('click', function () {
                     if (chip.disabled) return;
-                    if (chip.classList.contains('is-selected')) {   // bấm lại để bỏ chọn
-                        input.value = '';
-                        select(null);
-                        showHint('Đã bỏ mã giảm giá.', false);
-                    } else {
-                        select(chip);
-                    }
+                    updateSelected(chip);
                     setOpen(false);   // chọn xong thì thu danh sách lại
                 });
             });
 
             function applyTyped() {
                 var code = input.value.trim().toUpperCase();
-                if (!code) { select(null); showHint('', false); return; }
+                if (!code) { updateSelected(null); showHint('', false); return; }
                 var found = null;
                 chips.forEach(function (c) {
                     if (c.getAttribute('data-code').toUpperCase() === code) found = c;
                 });
                 if (found && !found.disabled) {
-                    select(found);
+                    updateSelected(found);
                 } else if (found) {
-                    select(null);
                     var reason = found.getAttribute('data-reason') || 'Mã không đủ điều kiện sử dụng.';
                     showHint(reason, true);
                 } else {
-                    select(null);
                     showHint('Mã không có trong danh sách. Hệ thống sẽ kiểm tra lại khi đặt hàng.', true);
                 }
             }
             applyBtn.addEventListener('click', applyTyped);
             input.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') { e.preventDefault(); applyTyped(); }
+            });
+            var removeBtn = document.getElementById('removeCouponBtn');
+            if (removeBtn) removeBtn.addEventListener('click', function () {
+                updateSelected(null);
+                showHint('Đã bỏ chọn mã giảm giá.', false);
             });
         })();
         (function () {
