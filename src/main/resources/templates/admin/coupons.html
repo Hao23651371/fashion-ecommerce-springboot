@@ -2,165 +2,524 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layouts/admin-base :: adminLayout(~{::title}, ~{::#admin-content}, 'coupons')}">
 <head>
-    <title>Quản lý khuyến mãi | Fashion Shop Admin</title>
+    <title>Quản lý mã giảm giá | Fashion Shop Admin</title>
 </head>
 <body>
 <div id="admin-content" class="coupon-page">
     <link rel="stylesheet" th:href="@{/css/admin/coupons.css}">
 
-    <div class="coupon-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+    <!-- Toast container for instant on-screen notifications -->
+    <div id="couponToastContainer" class="coupon-toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Flash message alerts -->
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <span th:text="${successMessage}">Thao tác thành công</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span th:text="${errorMessage}">Đã xảy ra lỗi</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- Hero Header -->
+    <div class="coupon-hero d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
         <div>
-            <div class="eyebrow"><i class="bi bi-ticket-perforated-fill"></i> MÃ KHUYẾN MÃI & ƯU ĐÃI</div>
-            <h1>Quản lý mã khuyến mãi</h1>
-            <p>Thiết lập, theo dõi và quản lý các chiến dịch khuyến mãi trên toàn hệ thống.</p>
+            <div class="eyebrow"><i class="bi bi-ticket-perforated-fill"></i> HỆ THỐNG MARKETING & KHUYẾN MÃI</div>
+            <h1>Quản lý mã giảm giá (Vouchers)</h1>
+            <p>Khởi tạo, kiểm soát điều kiện sử dụng, theo dõi vòng đời và đo lường doanh thu mang lại từ các chiến dịch mã ưu đãi.</p>
         </div>
         <div class="coupon-actions d-flex flex-wrap gap-2">
-            <button type="button" class="btn coupon-secondary-btn"><i class="bi bi-download"></i> Xuất danh sách</button>
-            <button type="button" class="btn coupon-secondary-btn"><i class="bi bi-clock-history"></i> Lịch sử khuyến mãi</button>
-            <a href="#create-coupon-form" class="btn coupon-primary-btn"><i class="bi bi-plus-lg"></i> Tạo mã mới</a>
+            <a th:href="@{/admin/coupons/export}" class="btn coupon-secondary-btn" title="Xuất toàn bộ danh sách mã ra file Excel">
+                <i class="bi bi-file-earmark-excel-fill text-success"></i> Xuất file Excel
+            </a>
+            <button type="button" class="btn coupon-primary-btn" id="toggleCreateFormBtn">
+                <i class="bi bi-plus-lg"></i> Tạo mã mới
+            </button>
         </div>
     </div>
 
-    <section id="create-coupon-form" class="create-coupon-form">
-        <div class="create-form-heading"><div><h2>Tạo mã khuyến mãi mới</h2><p>Thiết lập nhanh một mã ưu đãi cho khách hàng.</p></div></div>
-        <form method="post" th:action="@{/admin/coupons}">
-            <div class="row g-3">
-                <div class="col-md-3"><label class="form-label">Mã code</label><input class="form-control" name="code" required maxlength="50" placeholder="VD: GIAM20"></div>
-                <div class="col-md-5"><label class="form-label">Tên chương trình</label><input class="form-control" name="name" required maxlength="150" placeholder="Giảm giá mùa hè"></div>
-                <div class="col-md-2"><label class="form-label">Hình thức</label><select class="form-select" name="discountType" required><option value="PERCENT">Phần trăm</option><option value="FIXED_AMOUNT">Tiền cố định</option></select></div>
-                <div class="col-md-2"><label class="form-label">Giá trị giảm</label><input class="form-control" name="discountValue" type="number" min="0" step="0.01" required></div>
-                <div class="col-md-3"><label class="form-label">Giảm tối đa</label><input class="form-control" name="maxDiscount" type="number" min="0" step="0.01"></div>
-                <div class="col-md-3"><label class="form-label">Đơn tối thiểu</label><input class="form-control" name="minOrderValue" type="number" min="0" step="0.01"></div>
-                <div class="col-md-2"><label class="form-label">Số lượt dùng</label><input class="form-control" name="quantity" type="number" min="1" required></div>
-                <div class="col-md-2"><label class="form-label">Bắt đầu</label><input class="form-control" name="startDate" type="datetime-local" required></div>
-                <div class="col-md-2"><label class="form-label">Kết thúc</label><input class="form-control" name="endDate" type="datetime-local" required></div>
-                <div class="col-md-12 text-end"><button type="submit" class="btn coupon-primary-btn">Lưu mã khuyến mãi</button></div>
-            </div>
-        </form>
-    </section>
-
+    <!-- Analytics & KPI Cards (Nghiệp vụ 4) -->
     <div class="coupon-stats row g-3 mb-4">
-        <div class="col-12 col-md-6 col-xl-3">
+        <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card">
-                <div class="stat-heading"><span>Tổng mã đang chạy</span><i class="bi bi-ticket-perforated"></i></div>
-                <div class="stat-value" th:text="${activeCoupons}">0</div>
-                <div class="stat-note"><span class="trend">↑</span> mã khuyến mãi hoạt động</div>
+                <div class="stat-heading">
+                    <span>MÃ ĐANG HOẠT ĐỘNG</span>
+                    <i class="bi bi-broadcast"></i>
+                </div>
+                <div class="stat-value text-primary" id="kpiActiveCoupons" th:text="${activeCoupons}">0</div>
+                <div class="stat-note">
+                    <span class="text-success fw-bold" id="kpiUpcomingCoupons" th:text="${upcomingCoupons} + ' sắp tới'">0 sắp tới</span> • 
+                    <span class="text-muted" id="kpiExpiredCoupons" th:text="${expiredCoupons} + ' hết hạn'">0 hết hạn</span>
+                </div>
                 <div class="stat-line purple"></div>
             </div>
         </div>
-        <div class="col-12 col-md-6 col-xl-3">
+
+        <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card">
-                <div class="stat-heading"><span>Lượt đã sử dụng</span><i class="bi bi-bag-check"></i></div>
-                <div class="stat-value" th:text="${totalUses}">0</div>
-                <div class="stat-note"><span class="trend">↑</span> lượt dùng mã giảm giá</div>
+                <div class="stat-heading">
+                    <span>LƯỢT ĐÃ ÁP DỤNG</span>
+                    <i class="bi bi-bag-check"></i>
+                </div>
+                <div class="stat-value text-teal" id="kpiTotalUses" th:text="${#numbers.formatInteger(totalUses, 0, 'COMMA')}">0</div>
+                <div class="stat-note">
+                    Trên tổng số <strong id="kpiTotalQuota" th:text="${#numbers.formatInteger(totalQuota, 0, 'COMMA')}">0</strong> lượt phát hành
+                </div>
                 <div class="stat-line teal"></div>
             </div>
         </div>
-        <div class="col-12 col-md-6 col-xl-3">
+
+        <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card">
-                <div class="stat-heading"><span>Mã còn khả dụng</span><i class="bi bi-stars"></i></div>
-                <div class="stat-value" th:text="${totalQuota - totalUses}">0</div>
-                <div class="stat-note">lượt sử dụng còn lại trên hệ thống</div>
-                <div class="stat-line purple"></div>
+                <div class="stat-heading">
+                    <span>TỔNG TIỀN ĐÃ GIẢM</span>
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+                <div class="stat-value text-danger" id="kpiTotalDiscount" th:text="${formattedTotalDiscount}">0 ₫</div>
+                <div class="stat-note">
+                    Ngân sách đã chiết khấu cho khách hàng
+                </div>
+                <div class="stat-line red"></div>
             </div>
         </div>
-        <div class="col-12 col-md-6 col-xl-3">
+
+        <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card">
-                <div class="stat-heading"><span>Tổng số chiến dịch</span><i class="bi bi-megaphone"></i></div>
-                <div class="stat-value" th:text="${totalCoupons}">0</div>
-                <div class="stat-note">mã ưu đãi đã được thiết lập</div>
-                <div class="stat-line slate"></div>
+                <div class="stat-heading">
+                    <span>DOANH THU MANG LẠI</span>
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <div class="stat-value text-success" id="kpiTotalRevenue" th:text="${formattedTotalRevenue}">0 ₫</div>
+                <div class="stat-note">
+                    Tổng giá trị các đơn hàng có dùng mã
+                </div>
+                <div class="stat-line green"></div>
             </div>
         </div>
     </div>
 
-    <section class="coupon-table-card">
-        <div class="coupon-toolbar">
-            <div class="coupon-tabs">
-                <button class="coupon-tab active" type="button" data-filter="all">Tất cả mã <b th:text="${totalCoupons}">0</b></button>
-                <button class="coupon-tab" type="button" data-filter="active">Đang hoạt động <b th:text="${activeCoupons}">0</b></button>
-                <button class="coupon-tab" type="button" data-filter="inactive">Đã tắt</button>
+    <!-- Section: Create Coupon Form (Nghiệp vụ 1 & 2) -->
+    <section id="create-coupon-section" class="create-coupon-form card shadow-sm border-0 mb-4" style="display: none;">
+        <div class="card-body p-4">
+            <div class="create-form-heading d-flex justify-content-between align-items-center pb-3 mb-4 border-bottom">
+                <div>
+                    <h3 class="mb-1 text-dark fw-bold"><i class="bi bi-ticket-detailed me-2 text-primary"></i>Thiết lập & Tạo mới mã giảm giá</h3>
+                    <p class="text-muted mb-0 small">Điền các thuộc tính định danh, loại giảm giá, điều kiện áp dụng và giới hạn sử dụng theo quy định.</p>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="closeCreateFormBtn">
+                    <i class="bi bi-x-lg"></i> Thu gọn
+                </button>
             </div>
-            <div class="coupon-filters">
-                <label class="coupon-search"><i class="bi bi-search"></i><input id="couponSearch" type="search" placeholder="Tìm mã..." aria-label="Tìm mã giảm giá"></label>
-                <select id="couponType" class="coupon-select" aria-label="Lọc hình thức">
+
+            <form method="post" th:action="@{/admin/coupons}" id="newCouponForm">
+                <!-- Nhóm 1: Thông tin định danh -->
+                <div class="form-section-title"><i class="bi bi-info-circle me-1"></i> 1. Thông tin định danh</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Mã code <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input class="form-control text-uppercase font-monospace fw-bold" name="code" id="couponCodeInput" required maxlength="50" placeholder="VD: SUMMER2026">
+                            <button type="button" class="btn btn-outline-secondary" id="generateCodeBtn" title="Tạo mã ngẫu nhiên"><i class="bi bi-magic"></i></button>
+                        </div>
+                        <small class="text-muted">Chữ cái và số, tự động viết hoa.</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Tên chương trình ưu đãi <span class="text-danger">*</span></label>
+                        <input class="form-control" name="name" required maxlength="150" placeholder="VD: Siêu Sale Thời Trang Hè 2026">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">Mô tả chi tiết</label>
+                        <input class="form-control" name="description" placeholder="VD: Áp dụng cho khách hàng mua từ 2 món trở lên...">
+                    </div>
+                </div>
+
+                <!-- Nhóm 2: Loại & Mức giảm giá -->
+                <div class="form-section-title"><i class="bi bi-tags me-1"></i> 2. Hình thức & Mức giảm giá</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Loại giảm giá <span class="text-danger">*</span></label>
+                        <select class="form-select" name="discountType" id="discountTypeSelect" required>
+                            <option value="PERCENT">Theo phần trăm (%)</option>
+                            <option value="FIXED_AMOUNT">Theo số tiền cố định (VNĐ)</option>
+                            <option value="FREESHIP">Miễn phí vận chuyển (Freeship)</option>
+                        </select>
+                        <small class="text-muted d-block mt-1" id="discountTypeHint">Giảm % đơn, số tiền cố định hoặc miễn/giảm phí ship.</small>
+                    </div>
+                    <div class="col-md-3" id="discountValueCol">
+                        <label class="form-label fw-semibold" id="discountValueLabel">Mức giảm (%) <span class="text-danger">*</span></label>
+                        <input class="form-control" name="discountValue" id="discountValueInput" type="number" min="0" step="0.01" required placeholder="Nhập % giảm (VD: 20)">
+                        <small class="text-muted d-block mt-1" id="discountValueHelp">Tỷ lệ % giảm giá trên sản phẩm hợp lệ.</small>
+                    </div>
+                    <div class="col-md-3" id="maxDiscountCol">
+                        <label class="form-label fw-semibold">Mức giảm tối đa (VNĐ)</label>
+                        <div class="input-group">
+                            <input class="form-control" name="maxDiscount" id="maxDiscountInput" type="number" min="0" step="1000" placeholder="VD: 50000 (Để trống: không giới hạn)">
+                            <span class="input-group-text">₫</span>
+                        </div>
+                        <small class="text-muted d-block mt-1" id="maxDiscountHelp">Chặn mức trần giảm khi tính theo % (VD: Giảm 20% tối đa 50k).</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Đơn hàng tối thiểu (VNĐ)</label>
+                        <div class="input-group">
+                            <input class="form-control" name="minOrderValue" type="number" min="0" step="1000" placeholder="VD: 300000 (0 = không yêu cầu)">
+                            <span class="input-group-text">₫</span>
+                        </div>
+                        <small class="text-muted d-block mt-1">Đơn đạt mức này mới được áp dụng mã.</small>
+                    </div>
+                </div>
+
+                <!-- Nhóm 3: Điều kiện áp dụng & Phân khúc khách hàng -->
+                <div class="form-section-title"><i class="bi bi-people me-1"></i> 3. Điều kiện áp dụng & Đối tượng khách hàng</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Hạn chế danh mục sản phẩm</label>
+                        <select class="form-select" name="categoryId" id="newCouponCategory">
+                            <option value="">Toàn bộ cửa hàng (Tất cả sản phẩm)</option>
+                            <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.name}">Áo sơ mi</option>
+                        </select>
+                        <div class="form-text text-primary small mt-1">
+                            <i class="bi bi-info-circle-fill me-1"></i>
+                            <strong>Quy tắc tính:</strong> Mức giảm chỉ tính trên tổng giá trị các sản phẩm hợp lệ thuộc danh mục được chọn trong giỏ hàng (không tính trên toàn bộ đơn hàng).
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Đối tượng khách hàng</label>
+                        <select class="form-select" name="targetCustomerType">
+                            <option value="ALL">Tất cả khách hàng (Công khai toàn sàn)</option>
+                            <option value="NEW_CUSTOMER">Khách hàng mới (Đơn hàng đầu tiên)</option>
+                            <option value="VIP">Khách hàng V.I.P</option>
+                        </select>
+                        <small class="text-muted d-block mt-1">Kiểm soát phân khúc khách được phép sử dụng.</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Giới hạn trên từng khách hàng</label>
+                        <input class="form-control" name="perUserLimit" type="number" min="1" value="1" required>
+                        <small class="text-muted d-block mt-1">Số lượt tối đa 1 tài khoản được áp dụng mã này.</small>
+                    </div>
+                </div>
+
+                <!-- Nhóm 4: Giới hạn số lượng & Thời hạn hiệu lực -->
+                <div class="form-section-title"><i class="bi bi-clock-history me-1"></i> 4. Giới hạn số lượng & Thời gian hiệu lực</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Tổng số lượt phát hành (Hệ thống) <span class="text-danger">*</span></label>
+                        <input class="form-control" name="quantity" type="number" min="1" value="100" required>
+                        <small class="text-muted">Tổng số lần mã có thể được sử dụng thành công.</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Ngày & Giờ bắt đầu <span class="text-danger">*</span></label>
+                        <input class="form-control" name="startDate" id="newStartDate" type="datetime-local" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Ngày & Giờ kết thúc <span class="text-danger">*</span></label>
+                        <input class="form-control" name="endDate" id="newEndDate" type="datetime-local" required>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                    <button type="reset" class="btn btn-light px-4">Đặt lại</button>
+                    <button type="submit" class="btn coupon-primary-btn px-4">
+                        <i class="bi bi-check2-circle me-1"></i> Lưu & Kích hoạt mã
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Table Section (Nghiệp vụ 3) -->
+    <section class="coupon-table-card card border-0 shadow-sm">
+        <div class="coupon-toolbar card-header bg-white border-0 py-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <!-- Tabs lọc theo trạng thái -->
+            <div class="coupon-tabs" id="couponStatusTabs">
+                <button class="coupon-tab" type="button" data-filter="all" th:classappend="${selectedTab == 'all' ? 'active' : ''}">
+                    Tất cả <b id="tabCountAll" th:text="${totalCoupons}">0</b>
+                </button>
+                <button class="coupon-tab" type="button" data-filter="active" th:classappend="${selectedTab == 'active' ? 'active' : ''}">
+                    Đang hoạt động <b id="tabCountActive" th:text="${activeCoupons}" class="badge bg-success-subtle text-success">0</b>
+                </button>
+                <button class="coupon-tab" type="button" data-filter="upcoming" th:classappend="${selectedTab == 'upcoming' ? 'active' : ''}">
+                    Sắp diễn ra <b id="tabCountUpcoming" th:text="${upcomingCoupons}" class="badge bg-info-subtle text-info">0</b>
+                </button>
+                <button class="coupon-tab" type="button" data-filter="expired" th:classappend="${selectedTab == 'expired' ? 'active' : ''}">
+                    Hết hạn <b id="tabCountExpired" th:text="${expiredCoupons}" class="badge bg-secondary-subtle text-secondary">0</b>
+                </button>
+                <button class="coupon-tab" type="button" data-filter="paused" th:classappend="${selectedTab == 'paused' ? 'active' : ''}">
+                    Tạm dừng <b id="tabCountPaused" th:text="${pausedCoupons}" class="badge bg-warning-subtle text-warning">0</b>
+                </button>
+            </div>
+
+            <!-- Filters & Search -->
+            <div class="coupon-filters d-flex flex-wrap align-items-center gap-2">
+                <label class="coupon-search mb-0">
+                    <i class="bi bi-search"></i>
+                    <input id="couponSearch" type="search" placeholder="Tìm theo mã, tên ưu đãi..." th:value="${keyword}" aria-label="Tìm mã giảm giá">
+                </label>
+                <select id="couponTypeFilter" class="coupon-select form-select form-select-sm" aria-label="Lọc hình thức">
                     <option value="">Tất cả hình thức</option>
-                    <option value="PERCENT">Giảm theo phần trăm</option>
-                    <option value="FIXED_AMOUNT">Giảm tiền cố định</option>
+                    <option value="PERCENT" th:selected="${selectedType == 'PERCENT'}">Giảm theo %</option>
+                    <option value="FIXED_AMOUNT" th:selected="${selectedType == 'FIXED_AMOUNT'}">Tiền cố định</option>
+                    <option value="FREESHIP" th:selected="${selectedType == 'FREESHIP'}">Miễn phí ship</option>
                 </select>
-                <button class="icon-btn" type="button" title="Làm mới" onclick="window.location.reload()"><i class="bi bi-arrow-clockwise"></i></button>
+                <select id="couponTargetFilter" class="coupon-select form-select form-select-sm" aria-label="Lọc đối tượng">
+                    <option value="">Tất cả đối tượng</option>
+                    <option value="ALL">Công khai toàn sàn</option>
+                    <option value="NEW_CUSTOMER">Khách hàng mới</option>
+                    <option value="VIP">Khách hàng VIP</option>
+                </select>
+                <button class="btn btn-outline-secondary btn-sm" type="button" title="Làm mới bảng" onclick="window.location.href='/admin/coupons'">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
             </div>
         </div>
 
         <div class="table-responsive">
-            <table class="coupon-table">
+            <table class="coupon-table table align-middle mb-0">
                 <thead>
                 <tr>
-                    <th class="check-col"><input type="checkbox" aria-label="Chọn tất cả"></th>
-                    <th>MÃ CODE</th>
-                    <th>CHƯƠNG TRÌNH ƯU ĐÃI</th>
-                    <th>LOẠI & GIÁ TRỊ</th>
+                    <th>MÃ VOUCHER</th>
+                    <th>CHƯƠNG TRÌNH & ĐỐI TƯỢNG</th>
+                    <th>LOẠI & GIÁ TRỊ GIẢM</th>
                     <th>ĐƠN TỐI THIỂU</th>
-                    <th>ĐÃ DÙNG / GIỚI HẠN</th>
+                    <th>LƯỢT DÙNG / TỔNG PHÁT</th>
+                    <th>DOANH THU MANG LẠI</th>
                     <th>THỜI GIAN HIỆU LỰC</th>
                     <th>TRẠNG THÁI</th>
-                    <th>THAO TÁC</th>
+                    <th class="text-end">THAO TÁC</th>
                 </tr>
                 </thead>
                 <tbody id="couponRows">
-                <tr th:each="coupon : ${coupons}"
+                <tr th:each="c : ${coupons}"
+                    th:id="'coupon-row-' + ${c.id}"
                     class="coupon-row"
-                    th:attr="data-status=${coupon.status},data-type=${coupon.discountType},data-search=${coupon.code + ' ' + coupon.name}">
-                    <td><input type="checkbox" aria-label="Chọn mã"></td>
-                    <td><span class="code-badge" th:text="${coupon.code}">WELCOME20</span><button class="copy-code" type="button" th:attr="data-code=${coupon.code}" title="Sao chép mã"><i class="bi bi-copy"></i></button></td>
+                    th:attr="data-id=${c.id},
+                             data-status=${c.computedStatus.name().toLowerCase()},
+                             data-type=${c.discountType.name()},
+                             data-target=${c.targetCustomerType.name()},
+                             data-search=${c.code + ' ' + c.name + ' ' + (c.description != null ? c.description : '')}">
                     <td>
-                        <strong th:text="${coupon.name}">Ưu đãi thời trang</strong>
-                        <small>Áp dụng cho khách hàng trên toàn hệ thống</small>
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="code-badge font-monospace" th:text="${c.code}">SUMMER2026</span>
+                            <button class="btn btn-sm btn-link p-1 copy-code text-secondary" type="button" th:attr="data-code=${c.code}" title="Sao chép mã code">
+                                <i class="bi bi-copy"></i>
+                            </button>
+                        </div>
                     </td>
                     <td>
-                        <span class="discount-value" th:text="${coupon.discountText}">Giảm 20%</span>
-                        <small th:text="${coupon.maxDiscountText}">Tối đa 300.000 đ</small>
+                        <div class="coupon-info-cell">
+                            <strong class="text-dark d-block" th:text="${c.name}">Ưu đãi thời trang hè</strong>
+                            <small class="text-muted d-block text-truncate" style="max-width: 240px;" th:if="${!#strings.isEmpty(c.description)}" th:text="${c.description}"></small>
+                            <div class="coupon-tags mt-1 d-flex flex-wrap gap-1">
+                                <span class="badge badge-target" th:classappend="${c.targetCustomerType.name() == 'VIP' ? 'bg-warning-subtle text-warning-emphasis' : (c.targetCustomerType.name() == 'NEW_CUSTOMER' ? 'bg-info-subtle text-info-emphasis' : 'bg-light text-secondary')}" th:text="${c.targetCustomerText}">Tất cả khách hàng</span>
+                                <span class="badge bg-primary-subtle text-primary border" th:if="${c.applicableCategoryId != null}" th:title="'Mức giảm chỉ tính trên tổng giá trị sản phẩm thuộc danh mục ' + ${c.categoryText}"><i class="bi bi-tag-fill me-1"></i>Chỉ giảm DM: <strong th:text="${c.categoryText}">Áo sơ mi</strong></span>
+                            </div>
+                        </div>
                     </td>
-                    <td th:text="${coupon.minOrderText}">500.000 đ</td>
                     <td>
-                        <div class="usage-count"><b th:text="${coupon.usedCount}">0</b> / <span th:text="${coupon.quantity}">100</span></div>
-                        <div class="usage-bar"><span th:style="${'width:' + coupon.usagePercent + '%'}"></span></div>
+                        <div class="discount-cell">
+                            <span class="discount-value fw-bold" th:classappend="${c.discountType.name() == 'FREESHIP' ? 'text-success' : 'text-primary'}">
+                                <i th:if="${c.discountType.name() == 'FREESHIP'}" class="bi bi-truck me-1"></i>
+                                <span th:text="${c.discountText}">Giảm 20%</span>
+                            </span>
+                            <small class="text-muted d-block" th:if="${c.discountType.name() == 'PERCENT'}" th:text="${c.maxDiscountText}">Tối đa 50.000 đ</small>
+                            <small class="text-success d-block" th:if="${c.discountType.name() == 'FREESHIP'}">Miễn/giảm phí ship</small>
+                        </div>
                     </td>
-                    <td><span th:text="${coupon.startDateText}">01/11/2024</span><br><span th:text="${coupon.endDateText}">30/11/2024</span></td>
-                    <td><span class="status-pill" th:classappend="${coupon.status == 'ACTIVE' ? ' status-active' : ' status-inactive'}" th:text="${coupon.status == 'ACTIVE' ? 'Đang áp dụng' : 'Đã tắt'}">Đang áp dụng</span></td>
-                    <td class="action-cell"><button type="button" title="Chỉnh sửa"><i class="bi bi-pencil"></i></button><button type="button" title="Tạm dừng"><i class="bi bi-pause-circle"></i></button><button type="button" title="Xóa"><i class="bi bi-trash3"></i></button></td>
+                    <td>
+                        <span class="text-dark fw-semibold" th:text="${c.minOrderText}">300.000 đ</span>
+                    </td>
+                    <td>
+                        <div class="usage-box">
+                            <div class="usage-count d-flex justify-content-between small mb-1">
+                                <span><b class="text-dark" th:text="${c.usedCount}">0</b> / <span th:text="${c.quantity}">100</span></span>
+                                <span class="text-muted" th:text="${c.usagePercent} + '%'">0%</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar" role="progressbar" th:style="'width: ' + ${c.usagePercent} + '%'" th:classappend="${c.usagePercent >= 100 ? 'bg-danger' : (c.usagePercent >= 75 ? 'bg-warning' : 'bg-primary')}"></div>
+                            </div>
+                            <small class="text-muted d-block mt-1" th:text="'Tối đa ' + ${c.perUserLimit} + ' lần/khách'">1 lần/khách</small>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="revenue-cell">
+                            <strong class="text-success d-block" th:text="${c.totalRevenueFormatted}">0 ₫</strong>
+                            <small class="text-danger d-block" th:if="${c.totalDiscount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" th:text="'Đã giảm: −' + ${c.totalDiscountFormatted}">Đã giảm 0 ₫</small>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="date-cell small">
+                            <div class="text-secondary"><i class="bi bi-calendar-event me-1"></i><span th:text="${c.startDateText}">01/08/2026 00:00</span></div>
+                            <div class="text-muted"><i class="bi bi-clock me-1"></i><span th:text="${c.endDateText}">30/11/2026 23:59</span></div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-pill badge" th:classappend="${c.statusBadgeClass}" th:text="${c.computedStatusText}">Đang hoạt động</span>
+                    </td>
+                    <td class="text-end">
+                        <div class="action-btn-group d-inline-flex gap-1">
+                            <!-- Nút Tạm dừng / Kích hoạt lại (AJAX không reload) -->
+                            <button type="button" class="btn btn-sm btn-icon toggle-status-btn"
+                                    th:attr="data-id=${c.id}, data-code=${c.code}"
+                                    th:title="${c.status.name() == 'ACTIVE' ? 'Tạm dừng mã này' : 'Kích hoạt lại mã'}">
+                                <i class="bi" th:classappend="${c.status.name() == 'ACTIVE' ? 'bi-pause-circle text-warning' : 'bi-play-circle text-success'}"></i>
+                            </button>
+
+                            <!-- Nút Sửa -->
+                            <button type="button" class="btn btn-sm btn-icon edit-coupon-btn"
+                                    th:attr="data-id=${c.id},
+                                             data-code=${c.code},
+                                             data-name=${c.name},
+                                             data-description=${c.description},
+                                             data-type=${c.discountType.name()},
+                                             data-value=${c.discountValue},
+                                             data-max=${c.maxDiscount},
+                                             data-min=${c.minOrderValue},
+                                             data-quantity=${c.quantity},
+                                             data-peruser=${c.perUserLimit},
+                                             data-target=${c.targetCustomerType.name()},
+                                             data-cat=${c.applicableCategoryId},
+                                             data-start=${c.startDateIso},
+                                             data-end=${c.endDateIso}"
+                                    title="Chỉnh sửa mã">
+                                <i class="bi bi-pencil-square text-primary"></i>
+                            </button>
+
+                            <!-- Nút Xóa (AJAX không reload) -->
+                            <button type="button" class="btn btn-sm btn-icon delete-coupon-btn"
+                                    th:attr="data-id=${c.id}, data-code=${c.code}"
+                                    title="Xóa mã">
+                                <i class="bi bi-trash3 text-danger"></i>
+                            </button>
+                        </div>
+                    </td>
                 </tr>
-                <tr th:if="${#lists.isEmpty(coupons)}"><td colspan="9" class="empty-state"><i class="bi bi-ticket-perforated"></i><strong>Chưa có mã khuyến mãi</strong><span>Hãy tạo mã mới để bắt đầu chương trình ưu đãi.</span></td></tr>
+                <tr id="noResultsRow" style="display: none;">
+                    <td colspan="9" class="text-center py-5 text-muted">
+                        <i class="bi bi-search display-6 d-block mb-2 text-secondary"></i>
+                        <strong>Không tìm thấy mã giảm giá phù hợp</strong>
+                        <p class="small mb-0">Thử tìm kiếm với từ khóa khác hoặc chuyển sang tab Tất cả.</p>
+                    </td>
+                </tr>
+                <tr id="emptyTableState" th:if="${#lists.isEmpty(coupons)}">
+                    <td colspan="9" class="empty-state text-center py-5">
+                        <i class="bi bi-ticket-perforated text-muted display-4 d-block mb-3"></i>
+                        <h5 class="text-dark fw-bold">Chưa có mã giảm giá nào</h5>
+                        <p class="text-muted">Nhấn nút "Tạo mã mới" để bắt đầu chiến dịch khuyến mãi đầu tiên.</p>
+                    </td>
+                </tr>
                 </tbody>
             </table>
         </div>
-        <div class="coupon-footer">
-            <span>Hiển thị <strong th:text="${totalCoupons}">0</strong> mã ưu đãi</span>
-            <div class="pagination"><button type="button" disabled><i class="bi bi-chevron-left"></i></button><button class="current" type="button">1</button><button type="button"><i class="bi bi-chevron-right"></i></button></div>
+
+        <div class="coupon-footer card-footer bg-white border-0 py-3 d-flex flex-wrap justify-content-between align-items-center">
+            <span class="text-muted small">Tổng cộng <strong id="footerTotalCoupons" th:text="${totalCoupons}">0</strong> chiến dịch mã ưu đãi</span>
+            <div class="text-muted small">
+                <i class="bi bi-shield-check me-1 text-success"></i>Áp dụng quy tắc kiểm soát theo thời gian thực tại giỏ hàng & thanh toán
+            </div>
         </div>
     </section>
+
+    <!-- Modal: Chỉnh sửa mã giảm giá -->
+    <div class="modal fade" id="editCouponModal" tabindex="-1" aria-labelledby="editCouponModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold" id="editCouponModalLabel">
+                        <i class="bi bi-pencil-square text-primary me-2"></i>Chỉnh sửa mã giảm giá: <span id="modalEditCode" class="font-monospace text-primary"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" id="editCouponForm">
+                    <div class="modal-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Tên chương trình ưu đãi <span class="text-danger">*</span></label>
+                                <input class="form-control" name="name" id="modalEditName" required maxlength="150">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Mô tả chi tiết</label>
+                                <input class="form-control" name="description" id="modalEditDescription">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Loại giảm giá <span class="text-danger">*</span></label>
+                                <select class="form-select" name="discountType" id="modalEditDiscountType" required>
+                                    <option value="PERCENT">Theo phần trăm (%)</option>
+                                    <option value="FIXED_AMOUNT">Theo số tiền cố định (VNĐ)</option>
+                                    <option value="FREESHIP">Miễn phí vận chuyển (Freeship)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" id="modalEditValueLabel">Mức giảm <span class="text-danger">*</span></label>
+                                <input class="form-control" name="discountValue" id="modalEditDiscountValue" type="number" min="0" step="0.01" required>
+                            </div>
+                            <div class="col-md-4" id="modalEditMaxDiscountCol">
+                                <label class="form-label fw-semibold">Giảm tối đa (VNĐ)</label>
+                                <div class="input-group">
+                                    <input class="form-control" name="maxDiscount" id="modalEditMaxDiscount" type="number" min="0" step="1000" placeholder="VD: 50000">
+                                    <span class="input-group-text">₫</span>
+                                </div>
+                                <small class="text-muted d-block mt-1">Chỉ áp dụng khi giảm theo % (Để trống: Không giới hạn).</small>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Đơn hàng tối thiểu (VNĐ)</label>
+                                <input class="form-control" name="minOrderValue" id="modalEditMinOrder" type="number" min="0" step="1000">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Tổng số lượt phát hành <span class="text-danger">*</span></label>
+                                <input class="form-control" name="quantity" id="modalEditQuantity" type="number" min="1" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Giới hạn/mỗi khách</label>
+                                <input class="form-control" name="perUserLimit" id="modalEditPerUser" type="number" min="1" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Hạn chế danh mục</label>
+                                <select class="form-select" name="categoryId" id="modalEditCategory">
+                                    <option value="">Toàn bộ cửa hàng (Tất cả sản phẩm)</option>
+                                    <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.name}">Áo sơ mi</option>
+                                </select>
+                                <div class="form-text text-primary small mt-1">
+                                    <i class="bi bi-info-circle-fill me-1"></i>
+                                    <strong>Quy tắc tính:</strong> Mức giảm chỉ tính trên tổng giá trị các sản phẩm hợp lệ thuộc danh mục này trong giỏ hàng.
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Đối tượng khách hàng</label>
+                                <select class="form-select" name="targetCustomerType" id="modalEditTarget">
+                                    <option value="ALL">Tất cả khách hàng (Công khai)</option>
+                                    <option value="NEW_CUSTOMER">Khách hàng mới (Đơn hàng đầu tiên)</option>
+                                    <option value="VIP">Khách hàng V.I.P</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Thời gian bắt đầu <span class="text-danger">*</span></label>
+                                <input class="form-control" name="startDate" id="modalEditStartDate" type="datetime-local" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Thời gian kết thúc <span class="text-danger">*</span></label>
+                                <input class="form-control" name="endDate" id="modalEditEndDate" type="datetime-local" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn coupon-primary-btn">
+                            <i class="bi bi-save me-1"></i> Lưu thay đổi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript quản lý mã giảm giá (AJAX mượt mà không reload trang) -->
+    <script th:src="@{/js/admin/coupons.js}"></script>
 </div>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const tabs = document.querySelectorAll('.coupon-tab');
-        const search = document.getElementById('couponSearch');
-        const type = document.getElementById('couponType');
-        const rows = document.querySelectorAll('.coupon-row');
-        function filterRows() {
-            const activeTab = document.querySelector('.coupon-tab.active').dataset.filter;
-            const query = search.value.toLowerCase().trim();
-            rows.forEach(function (row) {
-                const matchesTab = activeTab === 'all' || row.dataset.status.toLowerCase() === activeTab;
-                const matchesSearch = row.dataset.search.toLowerCase().includes(query);
-                const matchesType = !type.value || row.dataset.type === type.value;
-                row.hidden = !(matchesTab && matchesSearch && matchesType);
-            });
-        }
-        tabs.forEach(function (tab) { tab.addEventListener('click', function () { tabs.forEach(t => t.classList.remove('active')); tab.classList.add('active'); filterRows(); }); });
-        search.addEventListener('input', filterRows);
-        type.addEventListener('change', filterRows);
-        document.querySelectorAll('.copy-code').forEach(function (button) { button.addEventListener('click', function () { navigator.clipboard.writeText(button.dataset.code); }); });
-    });
-</script>
+
 </body>
 </html>

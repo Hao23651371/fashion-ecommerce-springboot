@@ -112,20 +112,25 @@ CREATE TABLE product_embedding (
 
 -- ================= 3. MA GIAM GIA =================
 CREATE TABLE coupon (
-                        id               BIGINT        NOT NULL AUTO_INCREMENT,
-                        code             VARCHAR(50)   NOT NULL,
-                        name             VARCHAR(150)  NOT NULL,
-                        discount_type    VARCHAR(20)   NOT NULL,
-                        discount_value   DECIMAL(15,2) NOT NULL,
-                        max_discount     DECIMAL(15,2) NULL,
-                        min_order_value  DECIMAL(15,2) NULL,
-                        quantity         INT           NOT NULL,
-                        used_count       INT           NOT NULL DEFAULT 0,
-                        start_date       DATETIME(6)   NOT NULL,
-                        end_date         DATETIME(6)   NOT NULL,
-                        status           VARCHAR(20)   NOT NULL,
+                        id                      BIGINT        NOT NULL AUTO_INCREMENT,
+                        code                    VARCHAR(50)   NOT NULL,
+                        name                    VARCHAR(150)  NOT NULL,
+                        description             TEXT          NULL,
+                        discount_type           VARCHAR(20)   NOT NULL,
+                        discount_value          DECIMAL(15,2) NOT NULL,
+                        max_discount            DECIMAL(15,2) NULL,
+                        min_order_value         DECIMAL(15,2) NULL,
+                        quantity                INT           NOT NULL,
+                        used_count              INT           NOT NULL DEFAULT 0,
+                        per_user_limit          INT           NOT NULL DEFAULT 1,
+                        target_customer_type    VARCHAR(20)   NOT NULL DEFAULT 'ALL',
+                        applicable_category_id  BIGINT        NULL,
+                        start_date              DATETIME(6)   NOT NULL,
+                        end_date                DATETIME(6)   NOT NULL,
+                        status                  VARCHAR(20)   NOT NULL,
                         PRIMARY KEY (id),
-                        UNIQUE KEY uk_coupon_code (code)
+                        UNIQUE KEY uk_coupon_code (code),
+                        CONSTRAINT fk_coupon_category FOREIGN KEY (applicable_category_id) REFERENCES category (id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- ================= 4. DON HANG =================

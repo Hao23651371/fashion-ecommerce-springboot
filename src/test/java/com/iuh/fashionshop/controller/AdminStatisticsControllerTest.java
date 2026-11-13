@@ -51,6 +51,25 @@ class AdminStatisticsControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "admin1@fashionshop.vn", roles = {"ADMIN"})
+    void testExportExcel_Success() throws Exception {
+        mockMvc.perform(get("/admin/statistics/export")
+                        .param("startDate", "2026-10-01")
+                        .param("endDate", "2026-10-27"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    String contentType = result.getResponse().getContentType();
+                    org.junit.jupiter.api.Assertions.assertNotNull(contentType);
+                    org.junit.jupiter.api.Assertions.assertTrue(contentType.contains("spreadsheetml.sheet"));
+                    String disposition = result.getResponse().getHeader("Content-Disposition");
+                    org.junit.jupiter.api.Assertions.assertNotNull(disposition);
+                    org.junit.jupiter.api.Assertions.assertTrue(disposition.contains(".xlsx"));
+                    byte[] content = result.getResponse().getContentAsByteArray();
+                    org.junit.jupiter.api.Assertions.assertTrue(content.length > 0);
+                });
+    }
+
+    @Test
     @WithMockUser(username = "khach1@gmail.com", roles = {"CUSTOMER"})
     void testShowStatisticsPage_ForbiddenForCustomer() throws Exception {
         mockMvc.perform(get("/admin/statistics"))

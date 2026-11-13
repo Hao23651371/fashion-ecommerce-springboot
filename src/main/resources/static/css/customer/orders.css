@@ -1,0 +1,64 @@
+/* ==========================================================================
+   FASHIONSHOP - "Đơn hàng của tôi" (customer/orders.css)
+   Dùng chung cho user/orders.html và user/order-detail.html
+   ========================================================================== */
+
+.orders-page .acc-subtitle { font-size: .85rem; color: #777; margin: 0; }
+
+/* ---- Tabs lọc theo trạng thái ---- */
+.od-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid #eee; margin-bottom: 20px; }
+.od-tabs a { white-space: nowrap; padding: 10px 14px; font-size: .72rem; letter-spacing: .08em;
+    text-transform: uppercase; color: #666; text-decoration: none; border-bottom: 2px solid transparent; }
+.od-tabs a:hover { color: #111; }
+.od-tabs a.active { color: #111; font-weight: 700; border-bottom-color: #111; }
+.od-tabs .n { display: inline-block; margin-left: 4px; font-size: .68rem; color: #999; }
+.od-tabs a.active .n { color: #111; }
+
+/* ---- Nhãn trạng thái ---- */
+.od-pill { display: inline-block; padding: 3px 10px; font-size: .68rem; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; border-radius: 2px; }
+.od-pending   { background: #fff4d6; color: #8a6100; }
+.od-confirmed { background: #e3efff; color: #1d4f91; }
+.od-shipping  { background: #e8e6ff; color: #3b2fa3; }
+.od-completed { background: #e0f4e6; color: #1e6b36; }
+.od-cancelled { background: #eee;    color: #666; }
+
+/* ---- Thẻ đơn hàng ---- */
+.od-card { background: #fff; border: 1px solid #eee; margin-bottom: 16px; }
+.od-card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+    gap: 8px; padding: 14px 18px; border-bottom: 1px solid #f1f1f1; background: #fdfcf9; }
+.od-code { font-weight: 700; color: #111; text-decoration: none; letter-spacing: .03em; }
+.od-code:hover { text-decoration: underline; }
+.od-date { font-size: .78rem; color: #888; margin-left: 10px; }
+
+.od-item { display: flex; gap: 14px; padding: 14px 18px; border-bottom: 1px solid #f6f6f6; }
+.od-item:last-child { border-bottom: 0; }
+.od-thumb { width: 64px; height: 80px; flex-shrink: 0; background: #f3f1ec; display: grid;
+    place-items: center; color: #bbb; overflow: hidden; }
+.od-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.od-item-name { font-size: .9rem; font-weight: 600; color: #222; }
+.od-item-meta { font-size: .78rem; color: #888; }
+.od-item-price { margin-left: auto; text-align: right; font-size: .85rem; white-space: nowrap; }
+
+.od-card-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+    gap: 10px; padding: 14px 18px; border-top: 1px solid #f1f1f1; }
+.od-total { font-size: .85rem; color: #666; }
+.od-total b { font-family: 'Playfair Display', serif; font-size: 1.15rem; color: #111; margin-left: 6px; }
+.od-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.od-actions form { margin: 0; }
+
+.od-btn { display: inline-block; padding: 8px 16px; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase;
+    font-weight: 600; border: 1px solid #111; background: #fff; color: #111; text-decoration: none; cursor: pointer; }
+.od-btn:hover { background: #f5f5f5; color: #111; }
+.od-btn.primary { background: #111; color: #fff; }
+.od-btn.primary:hover { background: #2d2d2d; color: #fff; }
+.od-btn.danger { border-color: #b02a37; color: #b02a37; }
+.od-btn.danger:hover { background: #fbeaec; color: #b02a37; }
+
+.od-empty { text-align: center; padding: 60px 20px; background: #fff; border: 1px solid #eee; color: #888; }
+.od-empty i { font-size: 2.4rem; display: block; margin-bottom: 10px; color: #ccc; }
+
+/* ---- Trang chi tiết ---- */
+.od-sum-line { display: flex; justify-content: space-between; padding: 5px 0; font-size: .88rem; color: #555; }
+.od-sum-line.total { border-top: 1px solid #eee; margin-top: 8px; padding-top: 12px; font-weight: 700; color: #111; font-size: 1rem; }
+.od-info p { margin-bottom: 6px; font-size: .88rem; }

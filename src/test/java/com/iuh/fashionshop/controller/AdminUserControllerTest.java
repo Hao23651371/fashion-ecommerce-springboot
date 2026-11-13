@@ -39,6 +39,9 @@ class AdminUserControllerTest {
     @Autowired
     private com.iuh.fashionshop.repository.OrderRepository orderRepository;
 
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -160,6 +163,9 @@ class AdminUserControllerTest {
         order.setTotalAmount(java.math.BigDecimal.valueOf(100000));
         order.setDiscountAmount(java.math.BigDecimal.ZERO);
         order.setCreatedAt(LocalDateTime.now());
+        order.getShippingInfo().setRecipientName("User Có Đơn");
+        order.getShippingInfo().setRecipientPhone("0912000099");
+        order.getShippingInfo().setShippingAddress("12 Nguyen Van Bao, Go Vap, TP.HCM");
         orderRepository.save(order);
 
         mockMvc.perform(post("/admin/users/" + testAcc.getId() + "/delete"))
@@ -197,6 +203,9 @@ class AdminUserControllerTest {
         order.setTotalAmount(java.math.BigDecimal.valueOf(250000));
         order.setDiscountAmount(java.math.BigDecimal.ZERO);
         order.setCreatedAt(LocalDateTime.now());
+        order.getShippingInfo().setRecipientName("User Đang Chờ Giao");
+        order.getShippingInfo().setRecipientPhone("0912000098");
+        order.getShippingInfo().setShippingAddress("12 Nguyen Van Bao, Go Vap, TP.HCM");
         orderRepository.save(order);
 
         mockMvc.perform(post("/admin/users/" + testAcc.getId() + "/toggle-status"))
@@ -207,5 +216,51 @@ class AdminUserControllerTest {
         // Xác nhận tài khoản vẫn là ACTIVE, không bị chuyển sang BANNED
         Account reloaded = accountRepository.findById(testAcc.getId()).orElseThrow();
         assertEquals(AccountStatus.ACTIVE, reloaded.getStatus());
+    }
+
+    @Test
+    @DisplayName("Khôi phục / Reset mật khẩu: Reset mật khẩu thành công về FashionShop@123")
+    @WithMockUser(username = "admin1@fashionshop.vn", roles = {"ADMIN"})
+    void testResetPassword_Success() throws Exception {
+        Account testAcc = new Account();
+        testAcc.setEmail("user_reset_pwd@fashionshop.vn");
+        testAcc.setPassword(passwordEncoder.encode("OldPassword@123"));
+        testAcc.setRole(Role.CUSTOMER);
+        testAcc.setStatus(AccountStatus.ACTIVE);
+        testAcc.setEmailVerified(true);
+        testAcc.setCreatedAt(LocalDateTime.now());
+        testAcc = accountRepository.save(testAcc);
+
+        mockMvc.perform(post("/admin/users/" + testAcc.getId() + "/reset-password"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/users"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        Account updatedAcc = accountRepository.findById(testAcc.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertTrue(passwordEncoder.matches("FashionShop@123", updatedAcc.getPassword()),
+                "Mật khẩu sau khi reset phải khớp với mật khẩu mặc định FashionShop@123");
+    }
+
+    @Test
+    @DisplayName("Khôi phục / Reset mật khẩu: Admin không thể tự reset mật khẩu của chính mình tại trang quản lý danh sách")
+    @WithMockUser(username = "admin_self_reset@fashionshop.vn", roles = {"ADMIN"})
+    void testResetPassword_AdminCannotResetSelf() throws Exception {
+        Account selfAdmin = new Account();
+        selfAdmin.setEmail("admin_self_reset@fashionshop.vn");
+        selfAdmin.setPassword(passwordEncoder.encode("AdminPassword@999"));
+        selfAdmin.setRole(Role.ADMIN);
+        selfAdmin.setStatus(AccountStatus.ACTIVE);
+        selfAdmin.setEmailVerified(true);
+        selfAdmin.setCreatedAt(LocalDateTime.now());
+        selfAdmin = accountRepository.save(selfAdmin);
+
+        mockMvc.perform(post("/admin/users/" + selfAdmin.getId() + "/reset-password"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/users"))
+                .andExpect(flash().attributeExists("errorMessage"));
+
+        Account reloaded = accountRepository.findById(selfAdmin.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertTrue(passwordEncoder.matches("AdminPassword@999", reloaded.getPassword()),
+                "Mật khẩu của tài khoản Admin đang đăng nhập không bị reset");
     }
 }

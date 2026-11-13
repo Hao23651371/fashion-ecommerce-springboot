@@ -422,18 +422,15 @@
                                 <!-- Các hành động CRUD -->
                                 <td class="text-end pe-4">
                                     <div class="d-inline-flex align-items-center gap-1">
-                                        <!-- Nút Sửa (Modal) -->
-                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-2 px-2 py-1"
-                                            title="Chỉnh sửa tài khoản" data-bs-toggle="modal"
-                                            data-bs-target="#editAccountModal" th:data-id="${acc.id}"
-                                            th:data-email="${acc.email}" th:data-role="${acc.role.name()}"
-                                            th:data-status="${acc.status.name()}"
-                                            th:data-verified="${acc.emailVerified}"
-                                            th:data-code="${acc.verificationCode}"
-                                            th:data-expiry="${acc.verificationExpiry != null ? #temporals.format(acc.verificationExpiry, 'yyyy-MM-dd''T''HH:mm') : ''}"
-                                            th:data-created="${acc.createdAt != null ? #temporals.format(acc.createdAt, 'dd/MM/yyyy HH:mm:ss') : ''}"
-                                            th:data-login="${acc.lastLoginAt != null ? #temporals.format(acc.lastLoginAt, 'dd/MM/yyyy HH:mm:ss') : 'Chưa đăng nhập'}">
-                                            <i class="bi bi-pencil-square"></i>
+                                        <!-- Nút Khôi phục / Reset Mật khẩu (Biểu tượng reset mật khẩu thay thế nút Chỉnh sửa) -->
+                                        <button type="button" class="btn btn-sm btn-outline-info rounded-2 px-2 py-1 reset-pwd-btn"
+                                            title="Khôi phục / Reset mật khẩu về mặc định"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#resetPasswordModal"
+                                            th:data-id="${acc.id}"
+                                            th:data-email="${acc.email}"
+                                            th:disabled="${currentAdminEmail != null and currentAdminEmail.equalsIgnoreCase(acc.email)}">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
                                         </button>
 
                                         <!-- Nút Phân quyền (Modal Phân quyền) -->
@@ -486,43 +483,37 @@
                     </table>
                 </div>
 
-                <!-- PHÂN TRANG (PAGINATION) - Chỉ hiển thị khi số lượng tài khoản vượt quá 15 (> 15) -->
-                <div th:if="${accounts.totalElements > 15}"
-                    class="card-footer bg-white py-3 px-4 border-top d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
-                    <div class="small text-muted">
-                        Hiển thị trang <strong th:text="${accounts.number + 1}">1</strong> / <strong
-                            th:text="${accounts.totalPages}">1</strong>
-                        (Tổng số <strong th:text="${accounts.totalElements}">0</strong> tài khoản, 15 tài khoản/trang)
+                <!-- FOOTER & PHÂN TRANG (DỰA THEO CHUẨN QUẢN LÝ SẢN PHẨM & QUẢN LÝ KHO) -->
+                <div class="card-footer bg-white py-3 px-4 border-top d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 users-footer">
+                    <span class="small text-muted">
+                        Hiển thị <b class="text-dark" th:text="${accounts.numberOfElements}">0</b> trên tổng số <b class="text-dark" th:text="${accounts.totalElements}">0</b> tài khoản
+                    </span>
+
+                    <div class="pagination users-pagination" id="usersPagination">
+                        <!-- Nút Trước -->
+                        <a th:if="${accounts.hasPrevious()}"
+                           class="ajax-page-link"
+                           th:href="@{/admin/users(page=${accounts.number - 1}, size=${pageSize != null ? pageSize : 10}, keyword=${keyword}, role=${selectedRole}, status=${selectedStatus}, emailVerified=${selectedVerified}, sortDir=${sortDir})}">
+                            ‹ Trước
+                        </a>
+
+                        <!-- Các số trang (Hiển thị khi có ít nhất 1 trang) -->
+                        <a th:each="i : ${#numbers.sequence(0, accounts.totalPages - 1)}"
+                           th:if="${accounts.totalPages > 0}"
+                           class="ajax-page-link"
+                           th:classappend="${i == accounts.number} ? 'current active' : ''"
+                           th:href="@{/admin/users(page=${i}, size=${pageSize != null ? pageSize : 10}, keyword=${keyword}, role=${selectedRole}, status=${selectedStatus}, emailVerified=${selectedVerified}, sortDir=${sortDir})}"
+                           th:text="${i + 1}">
+                            1
+                        </a>
+
+                        <!-- Nút Sau -->
+                        <a th:if="${accounts.hasNext()}"
+                           class="ajax-page-link"
+                           th:href="@{/admin/users(page=${accounts.number + 1}, size=${pageSize != null ? pageSize : 10}, keyword=${keyword}, role=${selectedRole}, status=${selectedStatus}, emailVerified=${selectedVerified}, sortDir=${sortDir})}">
+                            Sau ›
+                        </a>
                     </div>
-
-                    <nav aria-label="Page navigation">
-                        <ul class="pagination pagination-sm m-0 gap-1">
-                            <!-- Nút Trang trước -->
-                            <li class="page-item" th:classappend="${accounts.first} ? 'disabled'">
-                                <a class="page-link rounded ajax-page-link"
-                                    th:href="@{/admin/users(page=${accounts.number - 1}, size=${pageSize != null ? pageSize : 15}, keyword=${keyword}, role=${selectedRole}, status=${selectedStatus}, emailVerified=${selectedVerified}, sortDir=${sortDir})}">
-                                    <i class="bi bi-chevron-left"></i>
-                                </a>
-                            </li>
-
-                            <!-- Các số trang -->
-                            <li th:each="i : ${#numbers.sequence(0, accounts.totalPages - 1)}"
-                                th:if="${i >= accounts.number - 2 and i <= accounts.number + 2}" class="page-item"
-                                th:classappend="${i == accounts.number} ? 'active'">
-                                <a class="page-link rounded ajax-page-link"
-                                    th:href="@{/admin/users(page=${i}, size=${pageSize != null ? pageSize : 15}, keyword=${keyword}, role=${selectedRole}, status=${selectedStatus}, emailVerified=${selectedVerified}, sortDir=${sortDir})}"
-                                    th:text="${i + 1}">1</a>
-                            </li>
-
-                            <!-- Nút Trang sau -->
-                            <li class="page-item" th:classappend="${accounts.last} ? 'disabled'">
-                                <a class="page-link rounded ajax-page-link"
-                                    th:href="@{/admin/users(page=${accounts.number + 1}, size=${pageSize != null ? pageSize : 15}, keyword=${keyword}, role=${selectedRole}, status=${selectedStatus}, emailVerified=${selectedVerified}, sortDir=${sortDir})}">
-                                    <i class="bi bi-chevron-right"></i>
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
                 </div>
             </div>
         </div>
@@ -603,99 +594,52 @@
         </div>
 
         <!-- ======================================================================= -->
-        <!-- 7. MODAL CHỈNH SỬA TÀI KHOẢN (EDIT)                                     -->
+        <!-- 7. MODAL XÁC NHẬN KHÔI PHỤC / RESET MẬT KHẨU                             -->
         <!-- ======================================================================= -->
-        <div class="modal fade" id="editAccountModal" tabindex="-1" aria-labelledby="editAccountModalLabel"
+        <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel"
             aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow">
-                    <div class="modal-header bg-light border-bottom">
-                        <h5 class="modal-title fw-bold text-dark" id="editAccountModalLabel">
-                            <i class="bi bi-pencil-square text-primary me-2"></i>Chỉnh sửa tài khoản
+                    <div class="modal-header bg-info bg-opacity-10 border-bottom">
+                        <h5 class="modal-title fw-bold text-dark" id="resetPasswordModalLabel">
+                            <i class="bi bi-arrow-counterclockwise text-info me-2"></i>Khôi phục / Reset Mật khẩu
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <form id="editAccountForm" method="post">
+                    <form id="resetPasswordForm" method="post">
                         <div class="modal-body p-4">
-                            <div class="row g-3 mb-3">
-                                <div class="col-sm-4">
-                                    <label class="form-label small fw-semibold">ID tài khoản</label>
-                                    <input type="text" id="editId" class="form-control bg-light font-monospace"
-                                        readonly>
+                            <div class="text-center mb-3">
+                                <div class="rounded-circle d-inline-flex align-items-center justify-content-center bg-info bg-opacity-10 text-info mb-2"
+                                    style="width: 56px; height: 56px; font-size: 1.8rem;">
+                                    <i class="bi bi-shield-lock-fill"></i>
                                 </div>
-                                <div class="col-sm-8">
-                                    <label class="form-label small fw-semibold">Email <span
-                                            class="text-danger">*</span></label>
-                                    <input type="email" id="editEmail" name="email" class="form-control" required
-                                        maxlength="150">
+                                <p class="mb-1 text-muted small">Bạn đang thực hiện khôi phục mật khẩu cho tài khoản:</p>
+                                <h6 class="fw-bold text-primary mb-0 font-monospace" id="resetModalEmail">user@fashionshop.vn</h6>
+                            </div>
+
+                            <div class="p-3 bg-light rounded-3 border mb-3">
+                                <label class="small text-muted mb-1 d-block fw-semibold">Mật khẩu mới cố định sau khi Reset:</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-monospace fw-bold text-danger bg-white"
+                                        id="resetDefaultPasswordVal" value="FashionShop@123" readonly>
+                                    <button class="btn btn-outline-secondary" type="button" id="btnCopyResetPassword" title="Sao chép mật khẩu">
+                                        <i class="bi bi-clipboard"></i> Sao chép
+                                    </button>
+                                </div>
+                                <div class="form-text text-muted mt-2 small">
+                                    <i class="bi bi-info-circle me-1"></i> Admin có thể bấm <b>Sao chép</b> mật khẩu này để gửi ngay cho người dùng/khách hàng qua Zalo/Email/SMS.
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label small fw-semibold">Mật khẩu mới</label>
-                                <input type="password" name="password" class="form-control"
-                                    placeholder="Để trống nếu giữ nguyên mật khẩu cũ" minlength="6">
-                                <div class="form-text text-muted">Chỉ nhập nếu muốn thay đổi mật khẩu (hệ thống sẽ tự mã
-                                    hóa BCrypt).</div>
-                            </div>
-
-                            <div class="row g-3 mb-3">
-                                <div class="col-sm-6">
-                                    <label class="form-label small fw-semibold">Vai trò (role) <span
-                                            class="text-danger">*</span></label>
-                                    <select id="editRole" name="role" class="form-select" required>
-                                        <option value="CUSTOMER">CUSTOMER (Khách hàng)</option>
-                                        <option value="STAFF">STAFF (Nhân viên)</option>
-                                        <option value="ADMIN">ADMIN (Quản trị viên)</option>
-                                    </select>
-                                </div>
-                                <div class="col-sm-6">
-                                    <label class="form-label small fw-semibold">Trạng thái (status) <span
-                                            class="text-danger">*</span></label>
-                                    <select id="editStatus" name="status" class="form-select" required>
-                                        <option value="ACTIVE">ACTIVE (Hoạt động)</option>
-                                        <option value="BANNED">BANNED (Bị khóa)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label small fw-semibold">Xác thực email (email_verified) <span
-                                        class="text-danger">*</span></label>
-                                <select id="editVerified" name="emailVerified" class="form-select" required>
-                                    <option value="true">Đã xác thực (true)</option>
-                                    <option value="false">Chưa xác thực (false)</option>
-                                </select>
-                            </div>
-
-                            <!-- Ẩn trường Mã xác thực và Hạn mã xác thực -->
-                            <input type="hidden" id="editCode" name="verificationCode">
-                            <input type="hidden" id="editExpiry" name="verificationExpiry">
-
-                            <div class="row g-3 pt-2 border-top">
-                                <div class="col-sm-6">
-                                    <label class="form-label small text-muted mb-0">Mã xác thực (OTP):</label>
-                                    <div id="editCodeDisplay" class="small fw-semibold text-secondary"></div>
-                                </div>
-                                <div class="col-sm-6">
-                                    <label class="form-label small text-muted mb-0">Hạn mã xác thực:</label>
-                                    <div id="editExpiryDisplay" class="small fw-semibold text-secondary"></div>
-                                </div>
-                                <div class="col-sm-6">
-                                    <label class="form-label small text-muted mb-0">Ngày tạo (created_at):</label>
-                                    <div id="editCreated" class="small fw-semibold text-secondary"></div>
-                                </div>
-                                <div class="col-sm-6">
-                                    <label class="form-label small text-muted mb-0">Đăng nhập cuối
-                                        (last_login_at):</label>
-                                    <div id="editLogin" class="small fw-semibold text-secondary"></div>
-                                </div>
+                            <div class="alert alert-warning py-2 px-3 small mb-0 border-warning border-opacity-50">
+                                <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                                Sau khi xác nhận, mật khẩu cũ của tài khoản này sẽ lập tức hết hiệu lực và được thay thế bằng <strong>FashionShop@123</strong>. Người dùng có thể đăng nhập và đổi lại mật khẩu cá nhân bất cứ lúc nào.
                             </div>
                         </div>
                         <div class="modal-footer bg-light border-top">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
-                            <button type="submit" class="btn btn-primary fw-semibold px-4">
-                                <i class="bi bi-save me-1"></i>Cập nhật
+                            <button type="submit" class="btn btn-info text-white fw-semibold px-4">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Xác nhận Reset mật khẩu
                             </button>
                         </div>
                     </form>

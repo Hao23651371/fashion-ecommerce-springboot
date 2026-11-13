@@ -127,15 +127,94 @@
                             </span>
                         </label>
                     </div>
+
+                    <!-- Chuyển khoản: hiện mã QR + thông tin tài khoản (CSS: .bank-transfer-box trong checkout.css) -->
+                    <div class="bank-transfer-box" id="bankTransferBox">
+                        <div class="bank-transfer-header">
+                            <i class="bi bi-qr-code-scan"></i>
+                            <div>
+                                <strong>Quét mã QR để chuyển khoản</strong>
+                                <small>Mở app ngân hàng, quét mã. Số tiền và nội dung đã được điền sẵn.</small>
+                            </div>
+                        </div>
+                        <div class="bank-transfer-body">
+                            <div class="bank-qr-wrap">
+                                <img class="bank-qr-img" id="bankQrImg" alt="Mã QR chuyển khoản"
+                                     th:src="${bankQrUrl}"
+                                     onerror="this.style.display='none';document.getElementById('bankQrError').style.display='block';">
+                                <p class="bank-qr-hint" id="bankQrError" style="display:none;">
+                                    Không tải được mã QR (cần kết nối Internet). Vui lòng chuyển khoản theo thông tin bên cạnh.
+                                </p>
+                                <p class="bank-qr-hint">Mã QR VietQR – dùng được với mọi app ngân hàng</p>
+                            </div>
+                            <div class="bank-info-list">
+                                <div class="bank-info-row">
+                                    <span class="bank-info-label">Ngân hàng</span>
+                                    <span class="bank-info-value" th:text="${bankName}">MB Bank</span>
+                                </div>
+                                <div class="bank-info-row">
+                                    <span class="bank-info-label">Số tài khoản</span>
+                                    <span class="bank-info-value">
+                                        <span class="bank-stk" id="bankStk" th:text="${bankAccount}">0000000000</span>
+                                        <button type="button" class="btn-copy-stk" id="btnCopyStk" title="Sao chép">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </span>
+                                </div>
+                                <div class="bank-info-row">
+                                    <span class="bank-info-label">Chủ tài khoản</span>
+                                    <span class="bank-info-value" th:text="${bankHolder}">FASHION SHOP</span>
+                                </div>
+                                <div class="bank-info-row">
+                                    <span class="bank-info-label">Số tiền</span>
+                                    <span class="bank-info-value bank-amount" id="bankAmount"
+                                          th:text="${#numbers.formatDecimal(grandTotal, 0, 'COMMA', 0, 'POINT') + ' ₫'}">0 ₫</span>
+                                </div>
+                                <div class="bank-info-row">
+                                    <span class="bank-info-label">Nội dung</span>
+                                    <span class="bank-info-value" th:text="${bankMemo}">FASHIONSHOP</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bank-transfer-note">
+                            <i class="bi bi-info-circle"></i>
+                            <span>Sau khi bấm <b>Đặt hàng</b>, đơn sẽ ở trạng thái chờ thanh toán. Shop sẽ xác nhận khi nhận được tiền.</span>
+                        </div>
+                    </div>
                 </section>
 
                 <section class="checkout-block">
                     <h2><span class="step">3</span> Mã giảm giá</h2>
                     <div class="coupon-row">
-                        <input type="text" class="form-control" name="couponCode" placeholder="Nhập mã khuyến mãi">
-                        <button type="button" class="btn coupon-apply-btn">Áp dụng</button>
+                        <input type="text" class="form-control" name="couponCode" id="couponInput"
+                               placeholder="Nhập hoặc chọn mã khuyến mãi" autocomplete="off">
+                        <button type="button" class="btn coupon-apply-btn" id="couponApplyBtn">Áp dụng</button>
                     </div>
-                    <p class="coupon-hint" th:if="${couponMessage}" th:text="${couponMessage}"></p>
+                    <p class="coupon-hint" id="couponHint" th:text="${couponMessage}"></p>
+
+                    <!-- Chọn nhanh mã đang có -->
+                    <div class="coupon-picker" id="couponPicker"
+                         th:if="${availableCoupons != null and !#lists.isEmpty(availableCoupons)}">
+                        <button type="button" class="coupon-toggle" id="couponToggle" aria-expanded="false">
+                            <span><i class="bi bi-ticket-perforated"></i> Chọn mã giảm giá
+                                <em class="coupon-count" th:text="${#lists.size(availableCoupons)} + ' mã'">3 mã</em></span>
+                            <i class="bi bi-chevron-down coupon-arrow"></i>
+                        </button>
+                        <div class="coupon-list" id="couponList">
+                            <button type="button" class="coupon-chip"
+                                    th:each="c : ${availableCoupons}"
+                                    th:attr="data-code=${c.code}, data-discount=${c.discount}, data-reason=${c.reason}"
+                                    th:disabled="${!c.eligible}"
+                                    th:classappend="${!c.eligible} ? ' is-disabled'">
+                                <span class="coupon-chip-code" th:text="${c.code}">SALE10</span>
+                                <span class="coupon-chip-desc" th:text="${c.description}">Giảm 10%</span>
+                                <span class="coupon-chip-meta">
+                                <span th:if="${c.eligible}" th:text="${c.expiry}">HSD</span>
+                                <span th:if="${!c.eligible}" class="coupon-chip-reason" th:text="${c.reason}">Mã đã hết lượt sử dụng</span>
+                            </span>
+                            </button>
+                        </div>
+                    </div>
                 </section>
 
                 <div class="checkout-actions d-flex flex-wrap gap-2 justify-content-between align-items-center">
@@ -150,7 +229,8 @@
 
         <!-- Order summary -->
         <div class="col-lg-5">
-            <aside class="checkout-summary">
+            <aside class="checkout-summary" id="checkoutSummary"
+                   th:attr="data-subtotal=${cartSubtotal != null ? cartSubtotal.longValue() : 0}, data-shipping=${shippingFee != null ? shippingFee.longValue() : 0}">
                 <h2>Đơn hàng của bạn</h2>
 
                 <div class="summary-items" th:if="${cartItems != null and !#lists.isEmpty(cartItems)}">
@@ -182,7 +262,7 @@
                     </div>
                     <div class="sum-line">
                         <span>Giảm giá</span>
-                        <span class="text-success"
+                        <span class="text-success" id="sumDiscount"
                               th:text="${discountAmount != null and discountAmount > 0 ? ('− ' + #numbers.formatDecimal(discountAmount, 0, 'COMMA', 0, 'POINT') + ' ₫') : '0 ₫'}">0 ₫</span>
                     </div>
                     <div class="sum-line">
@@ -191,13 +271,39 @@
                     </div>
                     <div class="sum-line sum-grand">
                         <span>Tổng thanh toán</span>
-                        <span th:text="${grandTotal != null ? #numbers.formatDecimal(grandTotal, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0 ₫</span>
+                        <span id="sumGrand" th:text="${grandTotal != null ? #numbers.formatDecimal(grandTotal, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">0 ₫</span>
                     </div>
                 </div>
             </aside>
         </div>
     </div>
     <style>
+        .coupon-picker { margin-top: 12px; }
+        .coupon-toggle { display: flex; justify-content: space-between; align-items: center; width: 100%;
+            padding: 11px 14px; background: #fff; border: 1px solid #e5e0d6; color: #1a1a1a;
+            font-size: .85rem; font-weight: 600; cursor: pointer; transition: .15s ease; }
+        .coupon-toggle:hover { border-color: #121212; }
+        .coupon-count { font-style: normal; font-weight: 500; color: #888; margin-left: 6px; }
+        .coupon-arrow { transition: transform .2s ease; }
+        .coupon-picker.is-open .coupon-arrow { transform: rotate(180deg); }
+        .coupon-picker.is-open .coupon-toggle { border-color: #121212; }
+        .coupon-list { display: none; margin-top: 8px; max-height: 260px; overflow-y: auto;
+            padding: 8px; border: 1px solid #e5e0d6; background: #fff; }
+        .coupon-picker.is-open .coupon-list { display: block; }
+        .coupon-list .coupon-chip:last-child { margin-bottom: 0; }
+        .coupon-chip { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; row-gap: 2px; width: 100%;
+            text-align: left; margin-bottom: 8px; padding: 10px 14px; background: #faf8f5; color: #1a1a1a;
+            border: 1px dashed #c9bfa9; cursor: pointer; transition: .15s ease; }
+        .coupon-chip:hover:not(:disabled) { border-color: #121212; background: #fff; }
+        .coupon-chip.is-selected { border: 1px solid #121212; background: #fff; box-shadow: inset 0 0 0 1px #121212; }
+        .coupon-chip.is-disabled, .coupon-chip:disabled { opacity: .6; cursor: not-allowed; background: #f8f9fa; border-color: #dee2e6; }
+        .coupon-chip.is-disabled .coupon-chip-code, .coupon-chip:disabled .coupon-chip-code { background: #888; }
+        .coupon-chip-code { grid-row: 1 / span 2; align-self: center; font-weight: 700; letter-spacing: .06em;
+            font-size: .85rem; background: #121212; color: #fff; padding: 4px 10px; }
+        .coupon-chip-desc { font-size: .88rem; font-weight: 600; }
+        .coupon-chip-meta { font-size: .75rem; color: #888; }
+        .coupon-chip-reason { color: #dc3545; font-weight: 600; }
+        .coupon-hint.is-error { color: #b02a37; }
         .addr-options { display: grid; gap: 10px; }
         .addr-option { cursor: pointer; margin: 0; }
         .addr-option input { position: absolute; opacity: 0; pointer-events: none; }
@@ -211,6 +317,126 @@
         .addr-new-box { margin-top: 10px; }
     </style>
     <script>
+        (function () {
+            // ---- Mã giảm giá: chọn nhanh, cập nhật tổng tiền & mã QR chuyển khoản ----
+            var input = document.getElementById('couponInput');
+            var applyBtn = document.getElementById('couponApplyBtn');
+            var hint = document.getElementById('couponHint');
+            var summary = document.getElementById('checkoutSummary');
+            var chips = document.querySelectorAll('.coupon-chip');
+            if (!input || !summary) return;
+
+            var subtotal = parseInt(summary.getAttribute('data-subtotal') || '0', 10);
+            var shipping = parseInt(summary.getAttribute('data-shipping') || '0', 10);
+
+            function fmt(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+            function setTotals(discount) {
+                var total = Math.max(0, subtotal - discount + shipping);
+                var d = document.getElementById('sumDiscount');
+                var g = document.getElementById('sumGrand');
+                var b = document.getElementById('bankAmount');
+                if (d) d.textContent = discount > 0 ? '− ' + fmt(discount) + ' ₫' : '0 ₫';
+                if (g) g.textContent = fmt(total) + ' ₫';
+                if (b) b.textContent = fmt(total) + ' ₫';
+                var qr = document.getElementById('bankQrImg');
+                if (qr) {
+                    qr.style.display = '';
+                    qr.src = qr.src.replace(/amount=\d+/, 'amount=' + total);
+                }
+            }
+
+            function showHint(text, isError) {
+                if (!hint) return;
+                hint.textContent = text || '';
+                hint.classList.toggle('is-error', !!isError);
+            }
+
+            // ---- Sổ xuống / thu lại danh sách mã ----
+            var picker = document.getElementById('couponPicker');
+            var toggle = document.getElementById('couponToggle');
+            function setOpen(open) {
+                if (!picker) return;
+                picker.classList.toggle('is-open', open);
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            }
+            if (toggle) {
+                toggle.addEventListener('click', function () {
+                    setOpen(!picker.classList.contains('is-open'));
+                });
+                document.addEventListener('click', function (e) {
+                    if (!picker.contains(e.target)) setOpen(false);   // bấm ra ngoài thì đóng
+                });
+            }
+
+            function select(chip) {
+                chips.forEach(function (c) { c.classList.remove('is-selected'); });
+                if (!chip) { setTotals(0); return; }
+                chip.classList.add('is-selected');
+                input.value = chip.getAttribute('data-code');
+                var discount = parseInt(chip.getAttribute('data-discount') || '0', 10);
+                setTotals(discount);
+                showHint('Đã áp dụng mã ' + input.value + ': giảm ' + fmt(discount) + ' ₫', false);
+            }
+
+            chips.forEach(function (chip) {
+                chip.addEventListener('click', function () {
+                    if (chip.disabled) return;
+                    if (chip.classList.contains('is-selected')) {   // bấm lại để bỏ chọn
+                        input.value = '';
+                        select(null);
+                        showHint('Đã bỏ mã giảm giá.', false);
+                    } else {
+                        select(chip);
+                    }
+                    setOpen(false);   // chọn xong thì thu danh sách lại
+                });
+            });
+
+            function applyTyped() {
+                var code = input.value.trim().toUpperCase();
+                if (!code) { select(null); showHint('', false); return; }
+                var found = null;
+                chips.forEach(function (c) {
+                    if (c.getAttribute('data-code').toUpperCase() === code) found = c;
+                });
+                if (found && !found.disabled) {
+                    select(found);
+                } else if (found) {
+                    select(null);
+                    var reason = found.getAttribute('data-reason') || 'Mã không đủ điều kiện sử dụng.';
+                    showHint(reason, true);
+                } else {
+                    select(null);
+                    showHint('Mã không có trong danh sách. Hệ thống sẽ kiểm tra lại khi đặt hàng.', true);
+                }
+            }
+            applyBtn.addEventListener('click', applyTyped);
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); applyTyped(); }
+            });
+        })();
+        (function () {
+            // ---- Chuyển khoản: hiện/ẩn khung QR theo lựa chọn thanh toán ----
+            var payRadios = document.querySelectorAll('input[name="paymentMethod"]');
+            var bankBox = document.getElementById('bankTransferBox');
+            function syncPay() {
+                var sel = document.querySelector('input[name="paymentMethod"]:checked');
+                if (bankBox) bankBox.classList.toggle('is-visible', !!sel && sel.value === 'BANK_TRANSFER');
+            }
+            payRadios.forEach(function (r) { r.addEventListener('change', syncPay); });
+            syncPay();
+
+            var copyBtn = document.getElementById('btnCopyStk');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', function () {
+                    var stk = document.getElementById('bankStk').textContent.trim();
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(stk).then(function () { copyBtn.innerHTML = '<i class="bi bi-check2"></i>'; });
+                    }
+                });
+            }
+        })();
         (function () {
             var radios = document.querySelectorAll('input[name="addressOption"]');
             var box = document.getElementById('newAddressBox');

@@ -80,16 +80,46 @@ public class Order {
         items.add(item);
     }
 
-    /** totalAmount = subtotal - discountAmount + shippingFee */
+    /**
+     * QUY TẮC NGHIỆP VỤ TÍNH TỔNG TIỀN ĐƠN HÀNG (totalAmount = subtotal - discountAmount + shippingFee):
+     * 1. subtotal: Tổng giá trị tiền hàng trước khi giảm giá.
+     * 2. shippingFee: Phí vận chuyển.
+     * 3. discountAmount (Mức giảm giá):
+     *    - Nếu mã là FREESHIP: Giảm trên phí ship (tối đa phí ship).
+     *    - Nếu mã có HẠN CHẾ DANH MỤC (applicableCategory != null): Mức giảm CHỈ ĐƯỢC TÍNH TRÊN
+     *      TỔNG GIÁ TRỊ CÁC SẢN PHẨM HỢP LỆ THUỘC DANH MỤC ĐÓ TRONG ĐƠN (eligibleSubtotal),
+     *      KHÔNG tính trên toàn bộ đơn hàng.
+     *      (Ví dụ: Đơn 500k gồm Áo sơ mi 200k + Quần jean 300k, mã giảm 10% Áo sơ mi -> giảm 10% x 200k = 20k).
+     *    - Nếu mã không giới hạn danh mục: Tính trên toàn bộ subtotal.
+     *    - Nếu là mã giảm theo %: Bị chặn bởi mức giảm tối đa (maxDiscount).
+     */
     public void recalculateTotal() {
         subtotal = items.stream()
                 .map(OrderItem::calculateSubtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        discountAmount = (coupon != null) ? coupon.calculateDiscount(subtotal) : BigDecimal.ZERO;
         BigDecimal fee = (shippingInfo != null && shippingInfo.getShippingFee() != null)
                 ? shippingInfo.getShippingFee()
                 : BigDecimal.ZERO;
-        totalAmount = subtotal.subtract(discountAmount).add(fee);
+        if (coupon != null) {
+            if (coupon.getDiscountType() == com.iuh.fashionshop.model.enums.DiscountType.FREESHIP) {
+                discountAmount = coupon.calculateShippingDiscount(fee);
+            } else {
+                BigDecimal eligibleSubtotal = subtotal;
+                if (coupon.getApplicableCategory() != null) {
+                    Long targetCatId = coupon.getApplicableCategory().getId();
+                    eligibleSubtotal = items.stream()
+                            .filter(item -> item.getVariant() != null && item.getVariant().getProduct() != null
+                                    && item.getVariant().getProduct().getCategory() != null
+                                    && java.util.Objects.equals(item.getVariant().getProduct().getCategory().getId(), targetCatId))
+                            .map(OrderItem::calculateSubtotal)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                }
+                discountAmount = coupon.calculateDiscount(eligibleSubtotal);
+            }
+        } else {
+            discountAmount = BigDecimal.ZERO;
+        }
+        totalAmount = subtotal.subtract(discountAmount).add(fee).max(BigDecimal.ZERO);
     }
 
     public boolean canBeCancelled() {
