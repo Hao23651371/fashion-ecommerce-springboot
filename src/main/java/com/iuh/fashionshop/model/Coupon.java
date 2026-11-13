@@ -160,6 +160,11 @@ public class Coupon {
                 return "Giảm " + pct + " (Tối đa " + formatCurrency(maxDiscount) + ")";
             }
             return "Giảm " + pct;
+        } else if (discountType == DiscountType.FREESHIP) {
+            if (discountValue == null || discountValue.compareTo(BigDecimal.ZERO) <= 0) {
+                return "Miễn phí vận chuyển";
+            }
+            return "Freeship tối đa " + formatCurrency(discountValue);
         } else {
             return "Giảm " + formatCurrency(discountValue);
         }

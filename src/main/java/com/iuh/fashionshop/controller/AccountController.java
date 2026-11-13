@@ -123,22 +123,16 @@ public class AccountController {
 
         // 1. Ràng buộc Họ và tên
         if (fullName == null || fullName.trim().isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Họ và tên không được để trống.");
-            ra.addFlashAttribute("openEditProfileModal", true);
-            return "redirect:/account?tab=profile";
+            return redirectProfileError(ra, "Họ và tên không được để trống.", fullName, phone, birthDate);
         }
         String cleanFullName = fullName.trim();
         if (cleanFullName.length() < 2 || cleanFullName.length() > 100) {
-            ra.addFlashAttribute("errorMessage", "Họ và tên phải có độ dài từ 2 đến 100 ký tự.");
-            ra.addFlashAttribute("openEditProfileModal", true);
-            return "redirect:/account?tab=profile";
+            return redirectProfileError(ra, "Họ và tên phải có độ dài từ 2 đến 100 ký tự.", fullName, phone, birthDate);
         }
 
         // 2. Ràng buộc Số điện thoại
         if (phone == null || phone.trim().isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Số điện thoại không được để trống.");
-            ra.addFlashAttribute("openEditProfileModal", true);
-            return "redirect:/account?tab=profile";
+            return redirectProfileError(ra, "Số điện thoại không được để trống.", fullName, phone, birthDate);
         }
         String cleanPhone = phone.trim().replaceAll("[\\s.-]", "");
         if (cleanPhone.startsWith("+84")) {
@@ -146,52 +140,36 @@ public class AccountController {
         }
         // Định dạng SĐT di động Việt Nam: 10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09
         if (!cleanPhone.matches("^0[35789]\\d{8}$")) {
-            ra.addFlashAttribute("errorMessage", "Số điện thoại không hợp lệ (phải gồm 10 chữ số và bắt đầu bằng 03, 05, 07, 08 hoặc 09).");
-            ra.addFlashAttribute("openEditProfileModal", true);
-            return "redirect:/account?tab=profile";
+            return redirectProfileError(ra, "Số điện thoại không hợp lệ (phải gồm 10 chữ số và bắt đầu bằng 03, 05, 07, 08 hoặc 09).", fullName, phone, birthDate);
         }
         // Kiểm tra số điện thoại có bị tài khoản khác sử dụng chưa
         if (accountService.isPhoneTakenByAnotherUser(cleanPhone, auth.getName())) {
-            ra.addFlashAttribute("errorMessage", "Số điện thoại này đã được sử dụng bởi một tài khoản khác.");
-            ra.addFlashAttribute("openEditProfileModal", true);
-            return "redirect:/account?tab=profile";
+            return redirectProfileError(ra, "Số điện thoại này đã được sử dụng bởi một tài khoản khác.", fullName, phone, birthDate);
         }
 
         // 3. Ràng buộc Ngày sinh
         if (birthDate == null || birthDate.trim().isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Ngày sinh không được để trống.");
-            ra.addFlashAttribute("openEditProfileModal", true);
-            return "redirect:/account?tab=profile";
+            return redirectProfileError(ra, "Ngày sinh không được để trống.", fullName, phone, birthDate);
         }
         LocalDate parsedBirthDate;
         try {
             parsedBirthDate = LocalDate.parse(birthDate.trim(), DateTimeFormatter.ISO_LOCAL_DATE);
         } catch (Exception e) {
-            ra.addFlashAttribute("errorMessage", "Định dạng ngày sinh không hợp lệ.");
-            ra.addFlashAttribute("openEditProfileModal", true);
-            return "redirect:/account?tab=profile";
+            return redirectProfileError(ra, "Định dạng ngày sinh không hợp lệ.", fullName, phone, birthDate);
         }
 
         LocalDate today = LocalDate.now();
         if (parsedBirthDate.isAfter(today)) {
-            ra.addFlashAttribute("errorMessage", "Ngày sinh không thể là ngày trong tương lai.");
-            ra.addFlashAttribute("openEditProfileModal", true);
-            return "redirect:/account?tab=profile";
+            return redirectProfileError(ra, "Ngày sinh không thể là ngày trong tương lai.", fullName, phone, birthDate);
         }
         if (parsedBirthDate.isEqual(today)) {
-            ra.addFlashAttribute("errorMessage", "Ngày sinh phải trước ngày hiện tại.");
-            ra.addFlashAttribute("openEditProfileModal", true);
-            return "redirect:/account?tab=profile";
+            return redirectProfileError(ra, "Ngày sinh phải trước ngày hiện tại.", fullName, phone, birthDate);
         }
         if (parsedBirthDate.isAfter(today.minusYears(15))) {
-            ra.addFlashAttribute("errorMessage", "Khách hàng phải từ đủ 15 tuổi trở lên.");
-            ra.addFlashAttribute("openEditProfileModal", true);
-            return "redirect:/account?tab=profile";
+            return redirectProfileError(ra, "Khách hàng phải từ đủ 15 tuổi trở lên.", fullName, phone, birthDate);
         }
         if (parsedBirthDate.isBefore(today.minusYears(120))) {
-            ra.addFlashAttribute("errorMessage", "Ngày sinh không hợp lệ (vượt quá 120 tuổi).");
-            ra.addFlashAttribute("openEditProfileModal", true);
-            return "redirect:/account?tab=profile";
+            return redirectProfileError(ra, "Ngày sinh không hợp lệ (vượt quá 120 tuổi).", fullName, phone, birthDate);
         }
 
         UserProfile userProfile = getOrCreateUserProfile(auth.getName());
@@ -201,6 +179,15 @@ public class AccountController {
 
         userProfileRepository.save(userProfile);
         ra.addFlashAttribute("successMessage", "Cập nhật thông tin cá nhân thành công!");
+        return "redirect:/account?tab=profile";
+    }
+
+    private String redirectProfileError(RedirectAttributes ra, String message, String fullName, String phone, String birthDate) {
+        ra.addFlashAttribute("errorMessage", message);
+        ra.addFlashAttribute("openEditProfileModal", true);
+        if (fullName != null) ra.addFlashAttribute("tempFullName", fullName);
+        if (phone != null) ra.addFlashAttribute("tempPhone", phone);
+        if (birthDate != null) ra.addFlashAttribute("tempBirthDate", birthDate);
         return "redirect:/account?tab=profile";
     }
 

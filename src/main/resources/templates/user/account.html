@@ -404,16 +404,22 @@
                     </div>
                     <form th:action="@{/account/update-profile}" method="post" id="formUpdateProfile" novalidate>
                         <div class="modal-body">
+                            <!-- Thông báo lỗi khi cập nhật thất bại từ backend -->
+                            <div th:if="${errorMessage != null}" class="alert alert-danger py-2 small mb-3 rounded-0" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                <span th:text="${errorMessage}">Đã xảy ra lỗi</span>
+                            </div>
+
                             <div class="mb-3">
                                 <label class="form-label acc-label">Họ và tên <span class="text-danger">*</span></label>
                                 <input type="text" name="fullName" id="profileFullName" class="form-control form-luxury"
-                                    th:value="${profile != null ? profile.fullName : ''}" required>
+                                    th:value="${tempFullName != null ? tempFullName : (profile != null ? profile.fullName : '')}" required>
                                 <div class="invalid-feedback" id="fullNameFeedback">Vui lòng nhập họ và tên (từ 2 đến 100 ký tự).</div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label acc-label">Số điện thoại <span class="text-danger">*</span></label>
                                 <input type="tel" name="phone" id="profilePhone" class="form-control form-luxury"
-                                    th:value="${profile != null ? profile.phone : ''}" 
+                                    th:value="${tempPhone != null ? tempPhone : (profile != null ? profile.phone : '')}" 
                                     placeholder="Ví dụ: 0912345678"
                                     maxlength="12" required>
                                 <div class="form-text small text-muted">Gồm 10 chữ số, bắt đầu bằng các đầu số 03, 05, 07, 08 hoặc 09.</div>
@@ -422,7 +428,7 @@
                             <div class="mb-3">
                                 <label class="form-label acc-label">Ngày sinh <span class="text-danger">*</span></label>
                                 <input type="date" name="birthDate" id="profileBirthDate" class="form-control form-luxury"
-                                    th:value="${profile != null ? profile.birthDateIso : ''}" required>
+                                    th:value="${tempBirthDate != null ? tempBirthDate : (profile != null ? profile.birthDateIso : '')}" required>
                                 <div class="form-text small text-muted">Khách hàng phải từ đủ 15 tuổi trở lên.</div>
                                 <div class="invalid-feedback" id="birthDateFeedback">Ngày sinh không hợp lệ.</div>
                             </div>
