@@ -97,6 +97,8 @@ public class SecurityConfig {
      */
     @Bean
     public AuthenticationSuccessHandler customAuthenticationSuccessHandler(AccountRepository accountRepository) {
+        org.springframework.security.web.savedrequest.RequestCache requestCache =
+                new org.springframework.security.web.savedrequest.HttpSessionRequestCache();
         return new AuthenticationSuccessHandler() {
             @Override
             public void onAuthenticationSuccess(HttpServletRequest request,
@@ -116,9 +118,19 @@ public class SecurityConfig {
                 Set<String> roles = AuthorityUtils.authorityListToSet(authentication.getAuthorities());
                 if (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_STAFF")) {
                     response.sendRedirect("/admin/dashboard");
-                } else {
-                    response.sendRedirect("/");
+                    return;
                 }
+
+                org.springframework.security.web.savedrequest.SavedRequest savedRequest = requestCache.getRequest(request, response);
+                if (savedRequest != null) {
+                    String targetUrl = savedRequest.getRedirectUrl();
+                    if (targetUrl != null && !targetUrl.isBlank()) {
+                        response.sendRedirect(targetUrl);
+                        return;
+                    }
+                }
+
+                response.sendRedirect("/");
             }
         };
     }

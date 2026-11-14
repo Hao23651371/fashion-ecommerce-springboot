@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
@@ -35,7 +36,10 @@ public class AuthController {
     }
 
     @GetMapping("/login")
-    public String showLoginPage(Model model) {
+    public String showLoginPage(Authentication auth, Model model) {
+        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+            return "redirect:/";
+        }
         checkDatabaseConnection(model);
         return "auth/login";
     }
@@ -77,7 +81,10 @@ public class AuthController {
     }
 
     @GetMapping("/register")
-    public String showRegisterPage(@ModelAttribute("registerForm") RegisterForm registerForm) {
+    public String showRegisterPage(Authentication auth, @ModelAttribute("registerForm") RegisterForm registerForm) {
+        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+            return "redirect:/";
+        }
         return "auth/register";
     }
 

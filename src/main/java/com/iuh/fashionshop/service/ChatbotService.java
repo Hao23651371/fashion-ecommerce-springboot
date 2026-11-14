@@ -53,11 +53,39 @@ public class ChatbotService {
         Phong cách trò chuyện:
         - Luôn trả lời bằng tiếng Việt thân thiện, tự nhiên như người thật trò chuyện, xưng hô 'mình' hoặc 'FashionShop' và gọi khách là 'bạn'.
         - Khéo léo chèn các icon/emoji thời trang phù hợp (👗, 👕, 👖, 🧥, 👠, ✨, 💖, 🌸, 🛍️, 📦, 💡, 🥰) để câu trả lời thêm sinh động và ấm áp.
-        - Trả lời ngắn gọn, đi thẳng vào vấn đề (từ 3 đến 5 câu).
+
+        Quy tắc trình bày danh sách sản phẩm (BẮT BUỘC):
+        - TUYỆT ĐỐI KHÔNG viết các sản phẩm dồn cục thành một đoạn văn xuôi dài liền nhau.
+        - Mỗi sản phẩm BẮT BUỘC phải xuống dòng và trình bày trên từng mục riêng biệt rõ ràng (đầu dòng có biểu tượng như 👗, 👕, 🧥, ✨...).
+        - Với mỗi sản phẩm được giới thiệu, PHẢI ghi rõ:
+          + Tên sản phẩm in đậm: **Tên sản phẩm**
+          + Giá bán hiện tại (nêu giá gốc và % giảm nếu đang sale), Kích cỡ (Size) có sẵn, Màu sắc.
+          + Ngay dưới thông tin mỗi sản phẩm, BẮT BUỘC phải đính kèm đường link /shop/{id} trên một dòng riêng biệt để hệ thống web tự động hiển thị thẻ sản phẩm trực quan có nút 'Chi tiết' và 'Tiến hành thanh toán'.
+        - TUYỆT ĐỐI KHÔNG hiển thị mã ID, số ID hay viết chữ (ID: ...), [ID: ...] trong câu trả lời. Khách hàng tuyệt đối không được nhìn thấy ID kỹ thuật của cơ sở dữ liệu.
+
+        Ví dụ mẫu định dạng chuẩn bắt buộc làm theo khi giới thiệu sản phẩm:
+        Dạ FashionShop gợi ý cho bạn các mẫu thời trang hot nhất đang có sẵn nè:
+
+        👗 **Váy Maxi Hoa Nhí**
+        - Giá bán: 450.000đ (Đang giảm 10%, giá gốc 500.000đ)
+        - Kích cỡ: S, M, L | Màu sắc: Trắng, Xanh Pastel
+        /shop/12
+
+        👕 **Áo Polo Nam Dry-Fit**
+        - Giá bán: 280.000đ
+        - Kích cỡ: M, L, XL | Màu sắc: Đen, Trắng, Ghi
+        /shop/25
+
+        💬 Bạn có muốn mình tư vấn thêm về kích cỡ (size) hay chất liệu không ạ? 🥰
+
+        Quy tắc khi khách hỏi số lượng lớn (ví dụ: "liệt kê 15 bộ", "cho mình 10 mẫu áo", "tìm 20 cái váy"):
+        - Hệ thống shop gợi ý tối đa 5 sản phẩm đẹp và phù hợp nhất một lần để tránh làm dài khung chat.
+        - Khi khách yêu cầu số lượng lớn hơn 5, câu đầu tiên BẮT BUỘC phải thông báo lịch sự cho khách:
+          "Dạ hiện tại FashionShop xin phép gợi ý tối đa 5 mẫu tiêu biểu và đẹp nhất để bạn dễ tham khảo trước nhé! (Bạn có thể xem thêm tất cả sản phẩm tại mục Cửa hàng nha ✨)"
+        - Sau đó liệt kê đúng tối đa 5 sản phẩm nổi bật, mỗi sản phẩm xuống dòng riêng biệt kèm link /shop/{id}.
 
         Quy tắc độ chính xác tuyệt đối:
         - CHỈ dùng thông tin trong mục "DỮ LIỆU CỬA HÀNG". Tuyệt đối KHÔNG tự bịa ra sản phẩm, giá cả, mã giảm giá, kích cỡ hay số lượng tồn kho.
-        - Khi giới thiệu sản phẩm, nêu rõ: Tên sản phẩm, Giá bán hiện tại (nêu giá gốc và % giảm nếu đang sale), Kích cỡ (Size) có sẵn, Màu sắc và link /shop/{id} để khách bấm vào xem.
         - Nếu khách hỏi về size, màu hoặc số lượng còn hàng, hãy trả lời chính xác dựa theo mục Tồn kho của từng sản phẩm trong dữ liệu.
         - Nếu dữ liệu không có sản phẩm khách cần, hãy thành thật báo hiện shop chưa có mẫu đó và gợi ý các mẫu tương tự đang có sẵn.
         - Tuyệt đối không dùng tiếng Trung hay ký tự Hán. Không trả lời các chủ đề ngoài phạm vi thời trang và cửa hàng.
@@ -157,7 +185,7 @@ public class ChatbotService {
 
         StringBuilder contextBuilder = new StringBuilder();
         if (currentProduct != null) {
-            contextBuilder.append("=== SẢN PHẨM KHÁCH HÀNG ĐANG MỞ XEM TRÊN TRANG CHI TIẾT (ID: ").append(currentProduct.id()).append(") ===\n")
+            contextBuilder.append("=== SẢN PHẨM KHÁCH HÀNG ĐANG MỞ XEM TRÊN TRANG CHI TIẾT (Đường dẫn: /shop/").append(currentProduct.id()).append(") ===\n")
                     .append("• Tên sản phẩm: ").append(currentProduct.name()).append("\n")
                     .append("• Danh mục: ").append(currentProduct.categoryName()).append("\n")
                     .append("• Đối tượng: ").append(currentProduct.genderLabel()).append("\n")
@@ -174,6 +202,16 @@ public class ChatbotService {
                 contextBuilder.append("• Mô tả / Chất liệu / Kiểu dáng: ").append(currentProduct.description().trim()).append("\n");
             }
             contextBuilder.append("👉 LƯU Ý BẮT BUỘC: Khách hàng đang đứng tại trang chi tiết của sản phẩm trên. Nếu khách hỏi về \"mẫu này\", \"sản phẩm này\", \"cái này\", \"áo này\", \"mặc đi đâu\", \"phối với gì\"... hãy trả lời chính xác dựa theo dữ liệu thực tế trên, TUYỆT ĐỐI KHÔNG BỊA ĐẶT thông tin sai lệch ngoài dữ liệu.\n\n");
+        }
+
+        // Kiểm tra nếu khách hỏi số lượng lớn (> 5 sản phẩm)
+        int requestedQty = extractRequestedQuantity(userMessage);
+        if (requestedQty > 5) {
+            contextBuilder.append("⚠️ LƯU Ý BẮT BUỘC: Khách hàng đang hỏi số lượng lớn (").append(requestedQty).append(" sản phẩm).\n")
+                    .append("Vì khung chat hiển thị giới hạn, bạn CHỈ ĐƯỢC PHÉP gợi ý tối đa 5 sản phẩm đẹp và phù hợp nhất.\n")
+                    .append("CÂU ĐẦU TIÊN CỦA BẠN BẮT BUỘC PHẢI LÀ:\n")
+                    .append("\"Dạ hiện tại FashionShop xin phép gợi ý tối đa 5 mẫu tiêu biểu và đẹp nhất để bạn dễ tham khảo trước nhé! (Bạn có thể xem thêm tất cả sản phẩm tại mục Cửa hàng nha ✨)\"\n")
+                    .append("Sau câu thông báo trên, BẮT BUỘC phải xuống dòng và trình bày từng sản phẩm trên từng dòng riêng biệt, TUYỆT ĐỐI KHÔNG viết dồn cục thành một đoạn văn, và dưới mỗi sản phẩm BẮT BUỘC PHẢI đính kèm đường link /shop/{id} trên một dòng riêng để hệ thống hiển thị thẻ sản phẩm có nút Chi tiết và Tiến hành thanh toán.\n\n");
         }
 
         contextBuilder.append("DỮ LIỆU CÁC SẢN PHẨM KHÁC LIÊN QUAN TRONG KHO:\n").append(formatProducts(products));
@@ -1061,21 +1099,38 @@ public class ChatbotService {
         }
         StringBuilder sb = new StringBuilder();
         for (ProductDetailDto p : list) {
-            sb.append("- [ID: ").append(p.id()).append("] ").append(p.name())
-                    .append(" | Danh mục: ").append(p.categoryName());
+            sb.append("• Tên sản phẩm: ").append(p.name())
+                    .append("\n  - Danh mục: ").append(p.categoryName());
             if (p.onSale()) {
-                sb.append(" | Giá bán: ").append(money(p.salePrice()))
+                sb.append("\n  - Giá bán: ").append(money(p.salePrice()))
                         .append(" (Giá gốc: ").append(money(p.price()))
                         .append(", Giảm: ").append(p.discountPercent()).append("%)");
             } else {
-                sb.append(" | Giá bán: ").append(money(p.price()));
+                sb.append("\n  - Giá bán: ").append(money(p.price()));
             }
-            sb.append(" | Kích cỡ có sẵn: ").append(String.join(", ", p.sizes()));
-            sb.append(" | Màu sắc: ").append(p.colors().stream().map(ColorDto::name).collect(Collectors.joining(", ")));
-            sb.append(" | Tồn kho: ").append(p.totalStock()).append(" sản phẩm");
-            sb.append(" | Link: /shop/").append(p.id()).append("\n");
+            sb.append("\n  - Kích cỡ có sẵn: ").append(String.join(", ", p.sizes()));
+            sb.append("\n  - Màu sắc: ").append(p.colors().stream().map(ColorDto::name).collect(Collectors.joining(", ")));
+            sb.append("\n  - Tồn kho: ").append(p.totalStock()).append(" sản phẩm");
+            sb.append("\n  - Link xem và thanh toán (BẮT BUỘC chèn vào câu trả lời trên một dòng riêng): /shop/").append(p.id()).append("\n\n");
         }
         return sb.toString();
+    }
+
+    /**
+     * Nhận diện số lượng sản phẩm khách hàng hỏi trong câu (ví dụ: "15 bộ", "10 cái", "20 mẫu", "8 chiếc")
+     */
+    private int extractRequestedQuantity(String message) {
+        if (message == null || message.isBlank()) return 0;
+        String norm = stripAccents(message).toLowerCase();
+        // Tránh nhầm lẫn với giá tiền hoặc % giảm giá
+        Pattern pat = Pattern.compile("(?<![\\d.,])(\\d{1,2})\\s*(?:cai|chiec|bo|mau|mon|sp|san pham|item|set|ao|quan|dam|vay)\\b(?![kKdDđĐ%])");
+        Matcher m = pat.matcher(norm);
+        if (m.find()) {
+            try {
+                return Integer.parseInt(m.group(1));
+            } catch (NumberFormatException ignored) {}
+        }
+        return 0;
     }
 
     
