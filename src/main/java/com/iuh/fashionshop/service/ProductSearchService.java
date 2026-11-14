@@ -66,6 +66,100 @@ public class ProductSearchService {
         return done;
     }
 
+    /**
+     * Tạo hoặc cập nhật vector cho MỘT sản phẩm cụ thể (chạy đồng bộ).
+     * @param productId id sản phẩm
+     * @return true nếu xử lý thành công
+     */
+    public boolean indexProduct(Long productId) {
+        if (productId == null || !isAvailable()) {
+            return false;
+        }
+        try {
+            var optSource = embeddingRepository.findSourceById(productId);
+            if (optSource.isPresent()) {
+                ProductSource s = optSource.get();
+                List<Double> vector = embeddingClient.embed(buildText(s), OllamaEmbeddingClient.TASK_DOCUMENT);
+                embeddingRepository.save(s.id(), toVectorText(vector));
+                log.info("Đã tạo/cập nhật vector cho sản phẩm id={} ({})", s.id(), s.name());
+                return true;
+            } else {
+                // Sản phẩm bị ẩn, tạm dừng hoặc danh mục bị ẩn -> xóa vector
+                embeddingRepository.delete(productId);
+                log.info("Đã xóa vector cho sản phẩm id={} (không active hoặc danh mục bị ẩn)", productId);
+                return true;
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi tạo vector cho sản phẩm id={}: {}", productId, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Tạo hoặc cập nhật vector ngầm (Async qua Virtual Thread) cho MỘT sản phẩm.
+     * Không chặn luồng xử lý chính của Admin, giúp UI phản hồi tức thì.
+     */
+    public void indexProductAsync(Long productId) {
+        if (productId == null) return;
+        Thread.startVirtualThread(() -> {
+            try {
+                // Delay 400ms để đảm bảo transaction database đã commit xong dữ liệu
+                Thread.sleep(400);
+                indexProduct(productId);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                log.error("Lỗi chạy ngầm tạo vector sản phẩm id={}: {}", productId, e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Xóa vector của một sản phẩm ngầm (Async qua Virtual Thread).
+     */
+    public void removeProductAsync(Long productId) {
+        if (productId == null) return;
+        Thread.startVirtualThread(() -> {
+            try {
+                embeddingRepository.delete(productId);
+                log.info("Đã xóa vector sản phẩm id={}", productId);
+            } catch (Exception e) {
+                log.error("Lỗi xóa vector sản phẩm id={}: {}", productId, e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Quét và tạo lại vector ngầm (Async) cho các sản phẩm chưa có vector.
+     */
+    public void reindexAsync(boolean force) {
+        Thread.startVirtualThread(() -> {
+            try {
+                Thread.sleep(500);
+                reindex(force);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                log.error("Lỗi chạy ngầm reindex vector: {}", e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Xóa vector của toàn bộ sản phẩm thuộc 1 danh mục ngầm (Async).
+     */
+    public void removeByCategoryAsync(Long categoryId) {
+        if (categoryId == null) return;
+        Thread.startVirtualThread(() -> {
+            try {
+                embeddingRepository.deleteByCategoryId(categoryId);
+                log.info("Đã xóa vector các sản phẩm thuộc danh mục id={}", categoryId);
+            } catch (Exception e) {
+                log.error("Lỗi xóa vector theo danh mục id={}: {}", categoryId, e.getMessage());
+            }
+        });
+    }
+
     /** Tìm tối đa `limit` sản phẩm gần nghĩa nhất với câu khách nhập, đã sắp xếp theo độ giống. */
     public List<SearchResult> search(String query, int limit) {
         if (query == null || query.isBlank()) {

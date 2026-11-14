@@ -96,10 +96,25 @@ public class CheckoutController {
 
     @GetMapping
     public String index(@RequestParam(required = false) Long variantId,
+                        @RequestParam(required = false) Long productId,
                         @RequestParam(defaultValue = "1") int quantity,
                         Authentication auth,
                         Model model,
                         RedirectAttributes redirectAttributes) {
+
+        if (variantId == null && productId != null) {
+            List<ProductVariant> variants = productVariantRepository.findByProductId(productId);
+            ProductVariant chosen = variants.stream()
+                    .filter(v -> v.getStatus() == VariantStatus.ACTIVE && v.getStockQuantity() > 0)
+                    .findFirst()
+                    .orElse(null);
+            if (chosen != null) {
+                variantId = chosen.getId();
+            } else {
+                redirectAttributes.addFlashAttribute("errorMessage", "Sản phẩm này hiện đang tạm hết hàng hoặc chưa mở bán.");
+                return "redirect:/shop/" + productId;
+            }
+        }
 
         List<CartItem> items;
         boolean buyNow = variantId != null;
@@ -125,6 +140,11 @@ public class CheckoutController {
             model.addAttribute("buyNow", true);
             model.addAttribute("buyNowVariantId", variant.getId());
             model.addAttribute("buyNowQuantity", qty);
+            if (variant.getProduct() != null) {
+                model.addAttribute("buyNowProductId", variant.getProduct().getId());
+            } else if (productId != null) {
+                model.addAttribute("buyNowProductId", productId);
+            }
         } else {
             // ===== THANH TOÁN TỪ GIỎ HÀNG =====
             items = cartService.getCartItems(auth);

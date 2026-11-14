@@ -10,6 +10,7 @@ import com.iuh.fashionshop.model.enums.ProductStatus;
 import com.iuh.fashionshop.model.enums.CategoryStatus;
 import com.iuh.fashionshop.repository.CategoryRepository;
 import com.iuh.fashionshop.repository.ProductRepository;
+import com.iuh.fashionshop.service.ProductSearchService;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
@@ -34,10 +35,14 @@ public class AdminProductController {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final ProductSearchService searchService;
 
-    public AdminProductController(ProductRepository productRepository, CategoryRepository categoryRepository) {
+    public AdminProductController(ProductRepository productRepository,
+                                  CategoryRepository categoryRepository,
+                                  ProductSearchService searchService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.searchService = searchService;
     }
 
     @GetMapping
@@ -167,6 +172,7 @@ public class AdminProductController {
             }
         }
         productRepository.save(product);
+        searchService.indexProductAsync(product.getId());
         redirectAttributes.addFlashAttribute("successMessage",
                 "Đã thêm sản phẩm \"" + product.getName() + "\" thành công.");
         return "redirect:/admin/products";
@@ -336,6 +342,7 @@ public class AdminProductController {
         }
 
         productRepository.save(product);
+        searchService.indexProductAsync(product.getId());
         redirectAttributes.addFlashAttribute("successMessage",
                 "Đã cập nhật sản phẩm \"" + product.getName() + "\" thành công.");
         return "redirect:/admin/products";
@@ -353,6 +360,7 @@ public class AdminProductController {
         if (product.getStatus() == ProductStatus.ACTIVE) {
             product.setStatus(ProductStatus.INACTIVE);
             productRepository.save(product);
+            searchService.indexProductAsync(product.getId());
             redirectAttributes.addFlashAttribute("successMessage",
                     "Đã ẩn sản phẩm \"" + product.getName() + "\" (Chuyển sang trạng thái Tạm dừng).");
         } else {
@@ -364,6 +372,7 @@ public class AdminProductController {
             }
             product.setStatus(ProductStatus.ACTIVE);
             productRepository.save(product);
+            searchService.indexProductAsync(product.getId());
             redirectAttributes.addFlashAttribute("successMessage",
                     "Đã hiển thị sản phẩm \"" + product.getName() + "\" (Chuyển sang trạng thái Hoạt động).");
         }
@@ -395,6 +404,7 @@ public class AdminProductController {
 
             productRepository.delete(product);
             productRepository.flush();
+            searchService.removeProductAsync(id);
 
             redirectAttributes.addFlashAttribute("successMessage",
                     "Đã xóa vĩnh viễn sản phẩm \"" + productName + "\" khỏi cơ sở dữ liệu thành công!");

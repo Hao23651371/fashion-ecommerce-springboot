@@ -6,6 +6,7 @@ import com.iuh.fashionshop.model.enums.CategoryStatus;
 import com.iuh.fashionshop.model.enums.ProductStatus;
 import com.iuh.fashionshop.repository.CategoryRepository;
 import com.iuh.fashionshop.repository.ProductRepository;
+import com.iuh.fashionshop.service.ProductSearchService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,10 +25,14 @@ public class AdminCategoryController {
 
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final ProductSearchService searchService;
 
-    public AdminCategoryController(CategoryRepository categoryRepository, ProductRepository productRepository) {
+    public AdminCategoryController(CategoryRepository categoryRepository,
+                                   ProductRepository productRepository,
+                                   ProductSearchService searchService) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
+        this.searchService = searchService;
     }
 
     @GetMapping
@@ -143,9 +148,13 @@ public class AdminCategoryController {
         }
 
         if (hiddenProductCount > 0) {
+            searchService.removeByCategoryAsync(id);
             redirect.addFlashAttribute("successMessage",
                     "Cập nhật danh mục #" + id + " thành công và đã tự động ẩn " + hiddenProductCount + " sản phẩm đi kèm!");
         } else {
+            if (category.getStatus() == CategoryStatus.VISIBLE) {
+                searchService.reindexAsync(false);
+            }
             redirect.addFlashAttribute("successMessage", "Cập nhật danh mục #" + id + " thành công!");
         }
         return "redirect:/admin/categories";
@@ -173,6 +182,10 @@ public class AdminCategoryController {
             productRepository.saveAll(products);
         }
 
+        if (hiddenProductCount > 0) {
+            searchService.removeByCategoryAsync(id);
+        }
+
         redirect.addFlashAttribute("successMessage",
                 "Đã ẩn danh mục '" + category.getName() + "' và tự động ẩn " + hiddenProductCount + " sản phẩm đi kèm thành công!");
         return "redirect:/admin/categories";
@@ -189,6 +202,8 @@ public class AdminCategoryController {
 
         category.setStatus(CategoryStatus.VISIBLE);
         categoryRepository.save(category);
+
+        searchService.reindexAsync(false);
 
         redirect.addFlashAttribute("successMessage",
                 "Đã hiển thị lại danh mục '" + category.getName() + "' thành công!");

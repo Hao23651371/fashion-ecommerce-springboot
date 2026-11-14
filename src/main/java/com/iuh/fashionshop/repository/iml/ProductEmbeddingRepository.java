@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Làm việc với bảng product_embedding bằng SQL thuần (JPA chưa hỗ trợ kiểu VECTOR của MariaDB).
@@ -81,5 +82,45 @@ public class ProductEmbeddingRepository {
     public long count() {
         Long n = jdbc.queryForObject("SELECT COUNT(*) FROM product_embedding", Long.class);
         return n == null ? 0 : n;
+    }
+
+    /** Lấy dữ liệu 1 sản phẩm cụ thể để tạo vector (chỉ khi đang ACTIVE và danh mục VISIBLE). */
+    public Optional<ProductSource> findSourceById(long productId) {
+        String sql = """
+                SELECT p.id, p.name, p.description, p.gender, p.price, p.sale_price,
+                       c.name AS category,
+                       GROUP_CONCAT(DISTINCT v.color ORDER BY v.color SEPARATOR ', ') AS colors,
+                       GROUP_CONCAT(DISTINCT v.size  ORDER BY v.size  SEPARATOR ', ') AS sizes
+                FROM product p
+                JOIN category c ON c.id = p.category_id
+                LEFT JOIN product_variant v ON v.product_id = p.id AND v.status = 'ACTIVE'
+                WHERE p.id = ? AND p.status = 'ACTIVE' AND c.status = 'VISIBLE'
+                GROUP BY p.id, p.name, p.description, p.gender, p.price, p.sale_price, c.name
+                """;
+        List<ProductSource> list = jdbc.query(sql, (rs, i) -> new ProductSource(
+                rs.getLong("id"),
+                rs.getString("name"),
+                rs.getString("description"),
+                rs.getString("gender"),
+                rs.getBigDecimal("price"),
+                rs.getBigDecimal("sale_price"),
+                rs.getString("category"),
+                rs.getString("colors"),
+                rs.getString("sizes")), productId);
+        return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
+    }
+
+    /** Xóa vector của một sản phẩm (khi sản phẩm bị xóa hoặc bị ẩn). */
+    public void delete(long productId) {
+        jdbc.update("DELETE FROM product_embedding WHERE product_id = ?", productId);
+    }
+
+    /** Xóa vector của tất cả sản phẩm thuộc một danh mục cụ thể. */
+    public void deleteByCategoryId(long categoryId) {
+        jdbc.update("""
+                DELETE e FROM product_embedding e
+                JOIN product p ON p.id = e.product_id
+                WHERE p.category_id = ?
+                """, categoryId);
     }
 }

@@ -39,8 +39,8 @@
         /* ===== Khung Chatbox Cao Cấp ===== */
         #chat-box {
             position: fixed; right: 24px; bottom: 98px; z-index: 1050;
-            width: 430px; max-width: calc(100vw - 32px);
-            height: 640px; max-height: calc(100vh - 120px);
+            width: 480px; max-width: calc(100vw - 32px);
+            height: 700px; max-height: calc(100vh - 110px);
             display: none; flex-direction: column;
             background: #ffffff; border-radius: 22px; overflow: hidden;
             box-shadow: 0 20px 60px rgba(15, 23, 42, 0.22), 0 0 1px rgba(0, 0, 0, 0.1);
@@ -132,49 +132,56 @@
         }
 
 
-        /* ===== THẺ SẢN PHẨM TRONG KHUNG CHAT (ẢNH TRÁI, THÔNG TIN PHẢI, LINK DƯỚI) ===== */
+        /* ===== THẺ SẢN PHẨM TRONG KHUNG CHAT ===== */
         .chat-product-card {
-            display: flex; gap: 12px; background: #ffffff;
+            display: flex; flex-direction: column; gap: 8px; background: #ffffff;
             border: 1.5px solid #e2e8f0; border-radius: 14px;
             padding: 10px 12px; margin: 10px 0;
             box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
             transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-            align-items: stretch; text-decoration: none !important;
-            color: inherit !important; cursor: pointer;
+            text-decoration: none !important; color: inherit !important;
         }
         .chat-product-card:hover {
-            border-color: #0f172a;
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
-            transform: translateY(-2px);
+            border-color: #cbd5e1;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.09);
+        }
+        .chat-product-card-top {
+            display: flex; gap: 12px; align-items: flex-start;
         }
         .chat-product-card-img-wrap {
             width: 76px; height: 96px; border-radius: 10px;
             overflow: hidden; flex-shrink: 0; background: #f1f5f9;
             display: flex; align-items: center; justify-content: center;
+            text-decoration: none !important;
         }
         .chat-product-card-img {
             width: 100%; height: 100%; object-fit: cover;
             display: block; transition: transform 0.3s ease;
         }
-        .chat-product-card:hover .chat-product-card-img {
+        .chat-product-card-img-wrap:hover .chat-product-card-img {
             transform: scale(1.06);
         }
         .chat-product-card-body {
             flex: 1; min-width: 0; display: flex;
-            flex-direction: column; justify-content: space-between;
+            flex-direction: column; justify-content: flex-start;
         }
         .chat-product-card-title {
-            font-weight: 700; font-size: 0.92rem; color: #0f172a;
+            font-weight: 700; font-size: 0.92rem; color: #0f172a !important;
             line-height: 1.35; margin-bottom: 3px;
             display: -webkit-box; -webkit-line-clamp: 2;
             -webkit-box-orient: vertical; overflow: hidden;
+            text-decoration: none !important;
+            transition: color 0.2s ease;
+        }
+        .chat-product-card-title:hover {
+            color: #2563eb !important;
         }
         .chat-product-card-meta {
-            font-size: 0.78rem; color: #64748b; margin-bottom: 5px;
+            font-size: 0.78rem; color: #64748b; margin-bottom: 4px;
         }
         .chat-product-card-prices {
             display: flex; align-items: baseline; gap: 6px;
-            flex-wrap: wrap; margin-bottom: 6px;
+            flex-wrap: wrap; margin-bottom: 2px;
         }
         .chat-product-card-price-now {
             color: #ef4444; font-weight: 700; font-size: 0.96rem;
@@ -186,15 +193,30 @@
             background: #fee2e2; color: #ef4444; font-size: 0.72rem;
             font-weight: 700; padding: 2px 6px; border-radius: 4px;
         }
-        .chat-product-card-btn {
-            display: inline-flex; align-items: center; gap: 5px;
-            padding: 5px 12px; background: #0f172a; color: #ffffff !important;
-            border-radius: 8px; font-size: 0.8rem; font-weight: 500;
-            text-decoration: none !important; width: fit-content;
-            transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(15, 23, 42, 0.2);
+        .chat-product-card-actions {
+            display: flex; flex-direction: column; gap: 6px;
+            width: 100%; margin-top: 4px;
         }
-        .chat-product-card-btn:hover {
-            background: #334155; transform: translateX(2px);
+        .chat-product-card-btn {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            width: 100%; padding: 7px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+            text-decoration: none !important; cursor: pointer; box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+        .chat-product-card-btn-detail {
+            background: #f1f5f9; color: #334155 !important;
+            border: 1px solid #cbd5e1;
+        }
+        .chat-product-card-btn-detail:hover {
+            background: #e2e8f0; color: #0f172a !important;
+        }
+        .chat-product-card-btn-checkout {
+            background: #0f172a; color: #ffffff !important;
+            border: 1px solid #0f172a; box-shadow: 0 2px 5px rgba(15, 23, 42, 0.2);
+        }
+        .chat-product-card-btn-checkout:hover {
+            background: #2563eb; border-color: #2563eb; color: #ffffff !important;
+            transform: translateY(-1px); box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
         }
 
         /* ===== HỘP CÂU HỎI GỢI MỞ CUỐI CÂU TRẢ LỜI ===== */
@@ -484,58 +506,74 @@
                 const stockText = (data.totalStock && data.totalStock > 0) ? ('Còn ' + data.totalStock + ' sp') : 'Sẵn sàng giao';
                 const categoryText = data.categoryName ? (data.categoryName + ' • ') : '';
 
-                container.innerHTML = '<div class="chat-product-card-img-wrap">'
-                    + '<img src="' + imgUrl + '" alt="' + (data.name || '') + '" class="chat-product-card-img" onerror="this.onerror=null;this.src=\'/images/placeholder.jpg\';" />'
-                    + '</div>'
-                    + '<div class="chat-product-card-body">'
-                    + '  <div>'
-                    + '    <div class="chat-product-card-title" title="' + (data.name || '') + '">' + (data.name || '') + '</div>'
+                container.innerHTML = '<div class="chat-product-card-top">'
+                    + '  <a href="/shop/' + id + '" class="chat-product-card-img-wrap" title="Xem chi tiết">'
+                    + '    <img src="' + imgUrl + '" alt="' + (data.name || '') + '" class="chat-product-card-img" onerror="this.onerror=null;this.src=\'/images/placeholder.jpg\';" />'
+                    + '  </a>'
+                    + '  <div class="chat-product-card-body">'
+                    + '    <a href="/shop/' + id + '" class="chat-product-card-title" title="' + (data.name || '') + '">' + (data.name || '') + '</a>'
                     + '    <div class="chat-product-card-meta">' + categoryText + stockText + '</div>'
                     + '    <div class="chat-product-card-prices">' + priceHtml + '</div>'
                     + '  </div>'
-                    + '  <div class="chat-product-card-btn">'
-                    + '    <span>Xem chi tiết sản phẩm</span> <i class="bi bi-arrow-right-short" style="font-size:1.1rem;"></i>'
-                    + '  </div>'
+                    + '</div>'
+                    + '<div class="chat-product-card-actions">'
+                    + '  <a href="/shop/' + id + '" class="chat-product-card-btn chat-product-card-btn-detail" title="Xem chi tiết">'
+                    + '    <i class="bi bi-eye"></i> <span>Chi tiết</span>'
+                    + '  </a>'
+                    + '  <a href="/checkout?productId=' + id + '" class="chat-product-card-btn chat-product-card-btn-checkout" title="Tiến hành thanh toán ngay">'
+                    + '    <i class="bi bi-credit-card-2-front-fill"></i> <span>Tiến hành thanh toán</span>'
+                    + '  </a>'
                     + '</div>';
             }
 
             function createProductCard(id) {
-                const a = document.createElement('a');
-                a.href = '/shop/' + id;
-                a.className = 'chat-product-card';
-                a.setAttribute('data-product-id', id);
+                const card = document.createElement('div');
+                card.className = 'chat-product-card';
+                card.setAttribute('data-product-id', id);
 
                 const cached = productCache[id];
                 if (cached) {
-                    renderCardInner(a, id, cached);
+                    renderCardInner(card, id, cached);
                 } else {
-                    a.innerHTML = '<div class="chat-product-card-img-wrap">'
-                        + '<i class="bi bi-image text-muted" style="font-size: 1.5rem;"></i>'
+                    card.innerHTML = '<div class="chat-product-card-top">'
+                        + '  <div class="chat-product-card-img-wrap">'
+                        + '    <i class="bi bi-image text-muted" style="font-size: 1.5rem;"></i>'
+                        + '  </div>'
+                        + '  <div class="chat-product-card-body">'
+                        + '    <div class="chat-product-card-title">Đang tải sản phẩm...</div>'
+                        + '  </div>'
                         + '</div>'
-                        + '<div class="chat-product-card-body">'
-                        + '  <div class="chat-product-card-title">Đang tải sản phẩm...</div>'
-                        + '  <div class="chat-product-card-btn"><span>Xem sản phẩm</span> <i class="bi bi-arrow-right"></i></div>'
+                        + '<div class="chat-product-card-actions">'
+                        + '  <a href="/shop/' + id + '" class="chat-product-card-btn chat-product-card-btn-detail"><span>Chi tiết</span> <i class="bi bi-arrow-right"></i></a>'
                         + '</div>';
                     fetchProductInfo(id).then(function (data) {
                         if (data) {
-                            renderCardInner(a, id, data);
+                            renderCardInner(card, id, data);
                         } else {
-                            a.innerHTML = '<div class="chat-product-card-img-wrap">'
-                                + '<i class="bi bi-bag-check-fill text-muted" style="font-size: 1.5rem;"></i>'
+                            card.innerHTML = '<div class="chat-product-card-top">'
+                                + '  <div class="chat-product-card-img-wrap">'
+                                + '    <i class="bi bi-bag-check-fill text-muted" style="font-size: 1.5rem;"></i>'
+                                + '  </div>'
+                                + '  <div class="chat-product-card-body">'
+                                + '    <a href="/shop/' + id + '" class="chat-product-card-title">Xem chi tiết sản phẩm</a>'
+                                + '  </div>'
                                 + '</div>'
-                                + '<div class="chat-product-card-body">'
-                                + '  <div class="chat-product-card-title">Xem sản phẩm #' + id + '</div>'
-                                + '  <div class="chat-product-card-btn"><span>Xem chi tiết</span> <i class="bi bi-arrow-right"></i></div>'
+                                + '<div class="chat-product-card-actions">'
+                                + '  <a href="/shop/' + id + '" class="chat-product-card-btn chat-product-card-btn-detail"><i class="bi bi-eye"></i> <span>Chi tiết</span></a>'
+                                + '  <a href="/checkout?productId=' + id + '" class="chat-product-card-btn chat-product-card-btn-checkout"><i class="bi bi-credit-card-2-front-fill"></i> <span>Tiến hành thanh toán</span></a>'
                                 + '</div>';
                         }
                     });
                 }
-                return a;
+                return card;
             }
 
             function fillContent(el, text) {
                 el.innerHTML = '';
                 if (!text) return;
+
+                // Loại bỏ hoàn toàn mã ID kỹ thuật (ví dụ: (ID: 29), [ID: 29], ID: 29) khỏi văn bản hiển thị
+                text = text.replace(/[\(\[]?\s*ID\s*:\s*\d+\s*[\)\]]?/gi, '');
 
                 // Tách đoạn văn bản theo dòng để phát hiện dòng câu hỏi gợi mở cuối cùng
                 const lines = text.split('\n');
