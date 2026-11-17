@@ -23,8 +23,8 @@ public class UserController {
     }
 
     @GetMapping("/")
-    public String home(@RequestParam(defaultValue = "1") int page,
-                       @RequestParam(defaultValue = "" + DEFAULT_HOME_PAGE_SIZE) int size,
+    public String home(@RequestParam(name = "page", defaultValue = "1") int page,
+                       @RequestParam(name = "size", defaultValue = "" + DEFAULT_HOME_PAGE_SIZE) int size,
                        Model model) {
         // Lấy danh sách sản phẩm mới nhất đang active và visible
         List<ProductCardDto> all = productService.getLatestProducts(500);

@@ -95,9 +95,9 @@ public class CheckoutController {
     }
 
     @GetMapping
-    public String index(@RequestParam(required = false) Long variantId,
-                        @RequestParam(required = false) Long productId,
-                        @RequestParam(defaultValue = "1") int quantity,
+    public String index(@RequestParam(name = "variantId", required = false) Long variantId,
+                        @RequestParam(name = "productId", required = false) Long productId,
+                        @RequestParam(name = "quantity", defaultValue = "1") int quantity,
                         Authentication auth,
                         Model model,
                         RedirectAttributes redirectAttributes) {
@@ -190,16 +190,16 @@ public class CheckoutController {
      */
     @PostMapping
     @Transactional(noRollbackFor = {IllegalArgumentException.class})
-    public String placeOrder(@RequestParam String recipientName,
-                             @RequestParam String recipientPhone,
-                             @RequestParam(required = false) String addressOption,   // id địa chỉ đã lưu, hoặc "new"
-                             @RequestParam(required = false) String newAddress,      // nội dung nếu chọn "new"
-                             @RequestParam(defaultValue = "false") boolean saveAsDefault,
-                             @RequestParam(required = false) String note,
-                             @RequestParam(defaultValue = "COD") String paymentMethod,
-                             @RequestParam(required = false) String couponCode,
-                             @RequestParam(required = false) Long buyNowVariantId,
-                             @RequestParam(defaultValue = "1") int buyNowQuantity,
+    public String placeOrder(@RequestParam(name = "recipientName") String recipientName,
+                             @RequestParam(name = "recipientPhone") String recipientPhone,
+                             @RequestParam(name = "addressOption", required = false) String addressOption,   // id địa chỉ đã lưu, hoặc "new"
+                             @RequestParam(name = "newAddress", required = false) String newAddress,      // nội dung nếu chọn "new"
+                             @RequestParam(name = "saveAsDefault", defaultValue = "false") boolean saveAsDefault,
+                             @RequestParam(name = "note", required = false) String note,
+                             @RequestParam(name = "paymentMethod", defaultValue = "COD") String paymentMethod,
+                             @RequestParam(name = "couponCode", required = false) String couponCode,
+                             @RequestParam(name = "buyNowVariantId", required = false) Long buyNowVariantId,
+                             @RequestParam(name = "buyNowQuantity", defaultValue = "1") int buyNowQuantity,
                              Authentication auth,
                              RedirectAttributes ra) {
 

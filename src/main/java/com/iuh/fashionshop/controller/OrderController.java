@@ -55,7 +55,7 @@ public class OrderController {
     }
 
     @GetMapping
-    public String list(@RequestParam(defaultValue = "all") String status,
+    public String list(@RequestParam(name = "status", defaultValue = "all") String status,
                        Authentication auth, Model model) {
         if (auth == null || !auth.isAuthenticated()) {
             return "redirect:/login";
