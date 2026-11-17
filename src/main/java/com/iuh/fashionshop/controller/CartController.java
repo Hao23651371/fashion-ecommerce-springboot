@@ -39,8 +39,8 @@ public class CartController {
 
     @PostMapping("/add")
     @ResponseBody
-    public ResponseEntity<?> addToCart(@RequestParam Long variantId,
-                                       @RequestParam(defaultValue = "1") int quantity,
+    public ResponseEntity<?> addToCart(@RequestParam(name = "variantId") Long variantId,
+                                       @RequestParam(name = "quantity", defaultValue = "1") int quantity,
                                        Authentication auth) {
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
             return ResponseEntity.status(401).body(Map.of("success", false, "message", "Vui lòng đăng nhập để thêm vào giỏ hàng"));
@@ -61,8 +61,8 @@ public class CartController {
 
     @PostMapping("/update")
     @ResponseBody
-    public ResponseEntity<?> updateQuantity(@RequestParam Long cartItemId,
-                                            @RequestParam int quantity,
+    public ResponseEntity<?> updateQuantity(@RequestParam(name = "cartItemId") Long cartItemId,
+                                            @RequestParam(name = "quantity") int quantity,
                                             Authentication auth) {
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
             return ResponseEntity.status(401).body(Map.of("success", false, "message", "Vui lòng đăng nhập"));
@@ -85,7 +85,7 @@ public class CartController {
 
     @PostMapping("/remove")
     @ResponseBody
-    public ResponseEntity<?> removeItem(@RequestParam Long cartItemId, Authentication auth) {
+    public ResponseEntity<?> removeItem(@RequestParam(name = "cartItemId") Long cartItemId, Authentication auth) {
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
             return ResponseEntity.status(401).body(Map.of("success", false, "message", "Vui lòng đăng nhập"));
         }

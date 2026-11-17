@@ -31,8 +31,8 @@ public class SaleController {
     }
 
     @GetMapping
-    public String sale(@RequestParam(required = false, defaultValue = "ALL") String gender,
-                       @RequestParam(required = false, defaultValue = "discount-desc") String sort,
+    public String sale(@RequestParam(name = "gender", required = false, defaultValue = "ALL") String gender,
+                       @RequestParam(name = "sort", required = false, defaultValue = "discount-desc") String sort,
                        Model model) {
         // 1. Lấy tất cả sản phẩm đang giảm giá
         List<ProductCardDto> allSaleProducts = productService.getSaleProducts(100);

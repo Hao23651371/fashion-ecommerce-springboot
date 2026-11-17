@@ -35,13 +35,13 @@ public class AdminUserController {
      * trang.
      */
     @GetMapping
-    public String list(@RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Role role,
-            @RequestParam(required = false) AccountStatus status,
-            @RequestParam(required = false) Boolean emailVerified,
-            @RequestParam(defaultValue = "asc") String sortDir,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+    public String list(@RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "role", required = false) Role role,
+            @RequestParam(name = "status", required = false) AccountStatus status,
+            @RequestParam(name = "emailVerified", required = false) Boolean emailVerified,
+            @RequestParam(name = "sortDir", defaultValue = "asc") String sortDir,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
             Authentication auth,
             Model model) {
 

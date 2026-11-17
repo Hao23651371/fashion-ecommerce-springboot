@@ -36,10 +36,10 @@ public class AdminCategoryController {
     }
 
     @GetMapping
-    public String list(@RequestParam(defaultValue = "0") int page,
-                       @RequestParam(defaultValue = "10") int size,
-                       @RequestParam(required = false) String keyword,
-                       @RequestParam(required = false) CategoryStatus status,
+    public String list(@RequestParam(name = "page", defaultValue = "0") int page,
+                       @RequestParam(name = "size", defaultValue = "10") int size,
+                       @RequestParam(name = "keyword", required = false) String keyword,
+                       @RequestParam(name = "status", required = false) CategoryStatus status,
                        Model model) {
 
         int validPage = Math.max(0, page);

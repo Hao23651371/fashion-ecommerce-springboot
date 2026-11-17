@@ -40,14 +40,14 @@ public class ShopController {
 
     @GetMapping
     public String list(
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false, defaultValue = "ALL") String gender,
-            @RequestParam(required = false) String priceRange,
-            @RequestParam(required = false, defaultValue = "newest") String sort,
-            @RequestParam(required = false, defaultValue = "false") boolean onSaleOnly,
-            @RequestParam(required = false, defaultValue = "1") int page,
-            @RequestParam(required = false, defaultValue = "12") int size,
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "categoryId", required = false) Long categoryId,
+            @RequestParam(name = "gender", required = false, defaultValue = "ALL") String gender,
+            @RequestParam(name = "priceRange", required = false) String priceRange,
+            @RequestParam(name = "sort", required = false, defaultValue = "newest") String sort,
+            @RequestParam(name = "onSaleOnly", required = false, defaultValue = "false") boolean onSaleOnly,
+            @RequestParam(name = "page", required = false, defaultValue = "1") int page,
+            @RequestParam(name = "size", required = false, defaultValue = "12") int size,
             Model model) {
 
         // 1. Lấy toàn bộ sản phẩm active
