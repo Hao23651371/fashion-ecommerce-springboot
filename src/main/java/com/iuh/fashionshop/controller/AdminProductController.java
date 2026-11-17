@@ -123,11 +123,13 @@ public class AdminProductController {
                          @RequestParam(required = false) String imageUrl,
                          @RequestParam(name = "sizes") java.util.List<String> sizes,
                          @RequestParam(name = "colors") java.util.List<String> colors,
+                         @RequestParam(name = "selectedVariants", required = false) java.util.List<String> selectedVariants,
                          @RequestParam(defaultValue = "0") int stockQuantity,
                          RedirectAttributes redirectAttributes) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new IllegalArgumentException("Danh mục không tồn tại"));
         if (category.getStatus() != CategoryStatus.VISIBLE || sizes.isEmpty() || colors.isEmpty()
+                || selectedVariants == null || selectedVariants.isEmpty()
                 || name == null || name.isBlank()
                 || description == null || description.isBlank()
                 || imageUrl == null || imageUrl.isBlank()
@@ -137,7 +139,7 @@ public class AdminProductController {
                 && salePrice.remainder(java.math.BigDecimal.valueOf(1000)).signum() != 0)
                 || (salePrice != null
                 && (salePrice.signum() < 0 || salePrice.compareTo(price) > 0))) {
-            throw new IllegalArgumentException("Thông tin sản phẩm không hợp lệ");
+            throw new IllegalArgumentException("Thông tin sản phẩm không hợp lệ hoặc chưa chọn biến thể");
         }
 
         if (salePrice == null) {
@@ -158,23 +160,34 @@ public class AdminProductController {
         if (!product.getImageUrl().isBlank()) {
             product.getImages().add(new ProductImage(product, product.getImageUrl(), true, 0));
         }
+
+        java.util.Set<String> chosenSet = new java.util.HashSet<>();
+        for (String sv : selectedVariants) {
+            if (sv != null && !sv.isBlank()) {
+                chosenSet.add(sv.trim().toUpperCase());
+            }
+        }
+
         int variantIndex = 1;
         for (String size : sizes) {
             for (String color : colors) {
-                ProductVariant variant = new ProductVariant();
-                variant.setProduct(product);
-                variant.setSize(size.trim());
-                variant.setColor(color.trim());
-                variant.setSku(String.format("PRD-%05d-%03d", product.getId(), variantIndex++));
-                variant.setStockQuantity(Math.max(0, stockQuantity));
-                variant.setStatus(VariantStatus.ACTIVE);
-                product.getVariants().add(variant);
+                String pairKey = size.trim().toUpperCase() + "___" + color.trim().toUpperCase();
+                if (chosenSet.contains(pairKey)) {
+                    ProductVariant variant = new ProductVariant();
+                    variant.setProduct(product);
+                    variant.setSize(size.trim());
+                    variant.setColor(color.trim());
+                    variant.setSku(String.format("PRD-%05d-%03d", product.getId(), variantIndex++));
+                    variant.setStockQuantity(Math.max(0, stockQuantity));
+                    variant.setStatus(VariantStatus.ACTIVE);
+                    product.getVariants().add(variant);
+                }
             }
         }
         productRepository.save(product);
         searchService.indexProductAsync(product.getId());
         redirectAttributes.addFlashAttribute("successMessage",
-                "Đã thêm sản phẩm \"" + product.getName() + "\" thành công.");
+                "Đã thêm sản phẩm \"" + product.getName() + "\" với " + product.getVariants().size() + " biến thể thành công.");
         return "redirect:/admin/products";
     }
 
@@ -232,6 +245,11 @@ public class AdminProductController {
         model.addAttribute("colors", allColors);
         model.addAttribute("selectedSizes", productSizes);
         model.addAttribute("selectedColors", productColors);
+        java.util.List<String> activeVariantKeys = product.getVariants().stream()
+                .filter(v -> v.getStatus() == VariantStatus.ACTIVE)
+                .map(v -> v.getSize().trim() + "___" + v.getColor().trim())
+                .toList();
+        model.addAttribute("activeVariantKeys", activeVariantKeys);
         return "admin/product-form";
     }
 
@@ -247,6 +265,7 @@ public class AdminProductController {
                          @RequestParam(required = false) String imageUrl,
                          @RequestParam(name = "sizes") java.util.List<String> sizes,
                          @RequestParam(name = "colors") java.util.List<String> colors,
+                         @RequestParam(name = "selectedVariants", required = false) java.util.List<String> selectedVariants,
                          RedirectAttributes redirectAttributes) {
         Product product = productRepository.findByIdWithDetails(id).orElse(null);
         if (product == null) {
@@ -258,6 +277,7 @@ public class AdminProductController {
                 .orElseThrow(() -> new IllegalArgumentException("Danh mục không tồn tại"));
 
         if (sizes.isEmpty() || colors.isEmpty()
+                || selectedVariants == null || selectedVariants.isEmpty()
                 || name == null || name.isBlank()
                 || description == null || description.isBlank()
                 || imageUrl == null || imageUrl.isBlank()
@@ -267,7 +287,7 @@ public class AdminProductController {
                 && salePrice.remainder(java.math.BigDecimal.valueOf(1000)).signum() != 0)
                 || (salePrice != null
                 && (salePrice.signum() < 0 || salePrice.compareTo(price) > 0))) {
-            throw new IllegalArgumentException("Thông tin sản phẩm không hợp lệ");
+            throw new IllegalArgumentException("Thông tin sản phẩm không hợp lệ hoặc chưa chọn biến thể");
         }
 
         if (salePrice == null) {
@@ -295,15 +315,15 @@ public class AdminProductController {
 
         // Cập nhật biến thể
         java.util.Set<String> desiredPairs = new java.util.HashSet<>();
-        for (String s : sizes) {
-            for (String c : colors) {
-                desiredPairs.add(s.trim().toUpperCase() + "___" + c.trim().toLowerCase());
+        for (String sv : selectedVariants) {
+            if (sv != null && !sv.isBlank()) {
+                desiredPairs.add(sv.trim().toUpperCase());
             }
         }
 
         int maxVariantIndex = 0;
         for (ProductVariant v : product.getVariants()) {
-            String pairKey = v.getSize().trim().toUpperCase() + "___" + v.getColor().trim().toLowerCase();
+            String pairKey = v.getSize().trim().toUpperCase() + "___" + v.getColor().trim().toUpperCase();
             if (desiredPairs.contains(pairKey)) {
                 if (v.getStatus() == VariantStatus.INACTIVE) {
                     v.setStatus(VariantStatus.ACTIVE);
@@ -326,17 +346,20 @@ public class AdminProductController {
             String cleanSize = s.trim();
             for (String c : colors) {
                 String cleanColor = c.trim();
-                boolean exists = product.getVariants().stream()
-                        .anyMatch(v -> v.getSize().equalsIgnoreCase(cleanSize) && v.getColor().equalsIgnoreCase(cleanColor));
-                if (!exists) {
-                    ProductVariant newVariant = new ProductVariant();
-                    newVariant.setProduct(product);
-                    newVariant.setSize(cleanSize);
-                    newVariant.setColor(cleanColor);
-                    newVariant.setSku(String.format("PRD-%05d-%03d", product.getId(), nextIndex++));
-                    newVariant.setStockQuantity(0);
-                    newVariant.setStatus(VariantStatus.ACTIVE);
-                    product.getVariants().add(newVariant);
+                String pairKey = cleanSize.toUpperCase() + "___" + cleanColor.toUpperCase();
+                if (desiredPairs.contains(pairKey)) {
+                    boolean exists = product.getVariants().stream()
+                            .anyMatch(v -> v.getSize().equalsIgnoreCase(cleanSize) && v.getColor().equalsIgnoreCase(cleanColor));
+                    if (!exists) {
+                        ProductVariant newVariant = new ProductVariant();
+                        newVariant.setProduct(product);
+                        newVariant.setSize(cleanSize);
+                        newVariant.setColor(cleanColor);
+                        newVariant.setSku(String.format("PRD-%05d-%03d", product.getId(), nextIndex++));
+                        newVariant.setStockQuantity(0);
+                        newVariant.setStatus(VariantStatus.ACTIVE);
+                        product.getVariants().add(newVariant);
+                    }
                 }
             }
         }

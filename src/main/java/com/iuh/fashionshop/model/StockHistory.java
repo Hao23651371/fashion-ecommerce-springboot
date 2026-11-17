@@ -43,6 +43,13 @@ public class StockHistory {
     @Column(length = 255)
     private String reason;
 
+    @Column(name = "receipt_code", length = 50)
+    private String receiptCode;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receipt_id")
+    private ImportReceipt receipt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
     private Order order; // e.g. on SALE / CANCELLED_ORDER

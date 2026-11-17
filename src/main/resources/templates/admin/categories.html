@@ -1,24 +1,26 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{layouts/admin-base :: adminLayout(~{::title}, ~{::#admin-content}, 'categories')}">
+<html th:replace="~{layouts/admin-base :: adminLayout(~{::title}, ~{::#admin-content}, 'categories')}"
+      xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Quản lý danh mục | Fashion Shop Admin</title>
 </head>
 <body>
-<div id="admin-content" class="catalog-page">
+<div class="catalog-page" id="admin-content">
     <!-- Nạp CSS quản lý danh mục & sản phẩm -->
     <link rel="stylesheet" th:href="@{/css/admin/catalog.css}">
 
     <!-- Thông báo Flash Messages -->
-    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4 border-0 shadow-sm" role="alert">
+    <div class="alert alert-success alert-dismissible fade show mb-4 border-0 shadow-sm" role="alert"
+         th:if="${successMessage}">
         <i class="bi bi-check-circle-fill me-2 text-success"></i>
         <span th:text="${successMessage}">Thành công</span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button aria-label="Close" class="btn-close" data-bs-dismiss="alert" type="button"></button>
     </div>
-    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4 border-0 shadow-sm" role="alert">
+    <div class="alert alert-danger alert-dismissible fade show mb-4 border-0 shadow-sm" role="alert"
+         th:if="${errorMessage}">
         <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>
         <span th:text="${errorMessage}">Lỗi</span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button aria-label="Close" class="btn-close" data-bs-dismiss="alert" type="button"></button>
     </div>
 
     <!-- Header & Nút thao tác -->
@@ -31,10 +33,11 @@
             <p>Phân loại sản phẩm và quản trị trạng thái hiển thị trên toàn hệ thống cửa hàng.</p>
         </div>
         <div class="catalog-actions">
-            <a th:href="@{/admin/products}" class="btn catalog-light">
+            <a class="btn catalog-light" th:href="@{/admin/products}">
                 <i class="bi bi-tag"></i> Xem sản phẩm
             </a>
-            <button type="button" class="btn catalog-primary" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+            <button class="btn catalog-primary" data-bs-target="#createCategoryModal" data-bs-toggle="modal"
+                    type="button">
                 <i class="bi bi-folder-plus"></i> Thêm danh mục mới
             </button>
         </div>
@@ -87,25 +90,27 @@
         </div>
 
         <!-- Bộ lọc & Tìm kiếm -->
-        <form method="get" th:action="@{/admin/categories}" class="catalog-filters">
+        <form class="catalog-filters" method="get" th:action="@{/admin/categories}">
             <label>
                 <i class="bi bi-search"></i>
-                <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm kiếm theo tên danh mục..." autocomplete="off">
+                <input autocomplete="off" name="keyword" placeholder="Tìm kiếm theo tên danh mục..."
+                       th:value="${keyword}"
+                       type="text">
             </label>
             <select name="status" onchange="this.form.submit()">
                 <option value="">Trạng thái: Tất cả</option>
                 <option th:each="st : ${allStatuses}"
-                        th:value="${st.name()}"
+                        th:selected="${selectedStatus != null and selectedStatus.name() == st.name()}"
                         th:text="${st.name() == 'VISIBLE' ? 'Đang hiển thị' : 'Đang ẩn'}"
-                        th:selected="${selectedStatus != null and selectedStatus.name() == st.name()}">
+                        th:value="${st.name()}">
                 </option>
             </select>
-            <button type="submit" class="btn catalog-light">
+            <button class="btn catalog-light" type="submit">
                 <i class="bi bi-filter"></i> Lọc dữ liệu
             </button>
-            <a th:if="${(keyword != null and keyword != '') or selectedStatus != null}"
+            <a class="btn catalog-light text-danger"
                th:href="@{/admin/categories}"
-               class="btn catalog-light text-danger" title="Xóa bộ lọc">
+               th:if="${(keyword != null and keyword != '') or selectedStatus != null}" title="Xóa bộ lọc">
                 <i class="bi bi-x-circle"></i> Đặt lại
             </a>
         </form>
@@ -145,44 +150,45 @@
                         </span>
                     </td>
                     <td class="action-cell text-center">
-                        <button th:if="${category.status.name() == 'VISIBLE'}"
-                                type="button" class="btn-action-hide"
-                                title="Ẩn danh mục"
+                        <button class="btn-action-hide"
+                                onclick="openHideModal(this)"
+                                th:data-count="${category.products != null ? category.products.size() : 0}"
                                 th:data-id="${category.id}"
                                 th:data-name="${category.name}"
-                                th:data-count="${category.products != null ? category.products.size() : 0}"
-                                onclick="openHideModal(this)">
+                                th:if="${category.status.name() == 'VISIBLE'}"
+                                title="Ẩn danh mục"
+                                type="button">
                             <i class="bi bi-eye-slash text-warning"></i>
                         </button>
-                        <button th:unless="${category.status.name() == 'VISIBLE'}"
-                                type="button" class="btn-action-show"
-                                title="Hiện danh mục"
-                                th:data-id="${category.id}"
+                        <button class="btn-action-show"
+                                onclick="openShowModal(this)" th:data-id="${category.id}"
                                 th:data-name="${category.name}"
-                                onclick="openShowModal(this)">
+                                th:unless="${category.status.name() == 'VISIBLE'}"
+                                title="Hiện danh mục"
+                                type="button">
                             <i class="bi bi-eye text-success"></i>
                         </button>
-                        <button type="button" class="btn-action-edit"
-                                title="Chỉnh sửa danh mục"
+                        <button class="btn-action-edit" onclick="openEditModal(this)"
                                 th:data-id="${category.id}"
                                 th:data-name="${category.name}"
                                 th:data-status="${category.status.name()}"
-                                onclick="openEditModal(this)">
+                                title="Chỉnh sửa danh mục"
+                                type="button">
                             <i class="bi bi-pencil-square text-primary"></i>
                         </button>
-                        <button type="button" class="btn-action-delete"
-                                title="Xóa danh mục"
-                                th:data-id="${category.id}"
-                                th:data-name="${category.name}"
-                                th:data-count="${category.products != null ? category.products.size() : 0}"
-                                onclick="openDeleteModal(this)">
-                            <i class="bi bi-trash3 text-danger"></i>
-                        </button>
+                        <!--                        <button type="button" class="btn-action-delete"-->
+                        <!--                                title="Xóa danh mục"-->
+                        <!--                                th:data-id="${category.id}"-->
+                        <!--                                th:data-name="${category.name}"-->
+                        <!--                                th:data-count="${category.products != null ? category.products.size() : 0}"-->
+                        <!--                                onclick="openDeleteModal(this)">-->
+                        <!--                            <i class="bi bi-trash3 text-danger"></i>-->
+                        <!--                        </button>-->
                     </td>
                 </tr>
 
                 <tr th:if="${categories.empty}">
-                    <td colspan="5" class="empty-state py-5 text-center text-muted">
+                    <td class="empty-state py-5 text-center text-muted" colspan="5">
                         <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
                         <span>Không tìm thấy danh mục nào phù hợp.</span>
                     </td>
@@ -194,25 +200,26 @@
         <!-- Phân trang -->
         <div class="catalog-footer">
             <span>
-                Hiển thị <b th:text="${categories.numberOfElements}">0</b> trên tổng số <b th:text="${categories.totalElements}">0</b> danh mục
+                Hiển thị <b th:text="${categories.numberOfElements}">0</b> trên tổng số <b
+                    th:text="${categories.totalElements}">0</b> danh mục
             </span>
             <div class="pagination" th:if="${categories.totalPages > 1}">
-                <a th:if="${categories.hasPrevious()}"
-                   th:href="@{/admin/categories(page=${categories.number - 1}, size=${categories.size}, keyword=${keyword}, status=${selectedStatus})}">
+                <a th:href="@{/admin/categories(page=${categories.number - 1}, size=${categories.size}, keyword=${keyword}, status=${selectedStatus})}"
+                   th:if="${categories.hasPrevious()}">
                     ‹ Trước
                 </a>
                 <th:block th:each="i : ${#numbers.sequence(0, categories.totalPages - 1)}">
-                    <span class="pagination-ellipsis" aria-hidden="true"
+                    <span aria-hidden="true" class="pagination-ellipsis"
                           th:if="${categories.totalPages > 7 and i == 1 and categories.number > 3}">...</span>
-                    <span class="pagination-ellipsis" aria-hidden="true"
+                    <span aria-hidden="true" class="pagination-ellipsis"
                           th:if="${categories.totalPages > 7 and ((categories.number <= 2 and i == 3) or (categories.number > 2 and categories.number < categories.totalPages - 4 and i == categories.number + 3))}">...</span>
-                    <a th:if="${categories.totalPages <= 7 or i == 0 or i == categories.totalPages - 1 or (categories.number <= 2 and i <= 2) or (categories.number >= categories.totalPages - 4 and i >= categories.totalPages - 4) or (categories.number > 2 and categories.number < categories.totalPages - 4 and i >= categories.number - 2 and i <= categories.number + 2)}"
-                       th:classappend="${i == categories.number ? 'current' : ''}"
+                    <a th:classappend="${i == categories.number ? 'current' : ''}"
                        th:href="@{/admin/categories(page=${i}, size=${categories.size}, keyword=${keyword}, status=${selectedStatus})}"
+                       th:if="${categories.totalPages <= 7 or i == 0 or i == categories.totalPages - 1 or (categories.number <= 2 and i <= 2) or (categories.number >= categories.totalPages - 4 and i >= categories.totalPages - 4) or (categories.number > 2 and categories.number < categories.totalPages - 4 and i >= categories.number - 2 and i <= categories.number + 2)}"
                        th:text="${i + 1}">1</a>
                 </th:block>
-                <a th:if="${categories.hasNext()}"
-                   th:href="@{/admin/categories(page=${categories.number + 1}, size=${categories.size}, keyword=${keyword}, status=${selectedStatus})}">
+                <a th:href="@{/admin/categories(page=${categories.number + 1}, size=${categories.size}, keyword=${keyword}, status=${selectedStatus})}"
+                   th:if="${categories.hasNext()}">
                     Sau ›
                 </a>
             </div>
@@ -220,7 +227,8 @@
     </section>
 
     <!-- MODAL: THÊM DANH MỤC MỚI -->
-    <div class="modal fade" id="createCategoryModal" tabindex="-1" aria-labelledby="createCategoryModalLabel" aria-hidden="true">
+    <div aria-hidden="true" aria-labelledby="createCategoryModalLabel" class="modal fade" id="createCategoryModal"
+         tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <form method="post" th:action="@{/admin/categories/create}">
@@ -228,25 +236,29 @@
                         <h5 class="modal-title fw-bold" id="createCategoryModalLabel">
                             <i class="bi bi-folder-plus text-primary me-2"></i>Thêm Danh Mục Mới
                         </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                        <button aria-label="Đóng" class="btn-close" data-bs-dismiss="modal" type="button"></button>
                     </div>
                     <div class="modal-body py-4">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold text-dark">Tên danh mục <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" required maxlength="100"
-                                   placeholder="Ví dụ: Áo sơ mi nam, Đầm dạ hội, Quần Jeans...">
+                            <label class="form-label fw-semibold text-dark">Tên danh mục <span
+                                    class="text-danger">*</span></label>
+                            <input class="form-control" maxlength="100" name="name"
+                                   placeholder="Ví dụ: Áo sơ mi nam, Đầm dạ hội, Quần Jeans..." required
+                                   type="text">
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-dark">Trạng thái hiển thị</label>
-                            <select name="status" class="form-select">
-                                <option value="VISIBLE" selected>Hiển thị (Khách hàng có thể thấy và mua hàng)</option>
+                            <select class="form-select" name="status">
+                                <option selected value="VISIBLE">Hiển thị (Khách hàng có thể thấy và mua hàng)</option>
                                 <option value="HIDDEN">Đang ẩn (Tạm thời không hiển thị trên storefront)</option>
                             </select>
                         </div>
                     </div>
                     <div class="modal-footer border-top bg-light">
-                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy bỏ</button>
-                        <button type="submit" class="btn btn-primary px-4 fw-semibold" style="background-color: #4332d5; border-color: #4332d5;">
+                        <button class="btn btn-secondary px-3" data-bs-dismiss="modal" type="button">Hủy bỏ</button>
+                        <button class="btn btn-primary px-4 fw-semibold"
+                                style="background-color: #4332d5; border-color: #4332d5;"
+                                type="submit">
                             <i class="bi bi-check2-circle me-1"></i> Lưu danh mục
                         </button>
                     </div>
@@ -256,40 +268,47 @@
     </div>
 
     <!-- MODAL: CHỈNH SỬA DANH MỤC -->
-    <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
+    <div aria-hidden="true" aria-labelledby="editCategoryModalLabel" class="modal fade" id="editCategoryModal"
+         tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <form id="editCategoryForm" method="post" action="">
+                <form action="" id="editCategoryForm" method="post">
                     <div class="modal-header border-bottom pb-3">
                         <h5 class="modal-title fw-bold" id="editCategoryModalLabel">
                             <i class="bi bi-pencil-square text-primary me-2"></i>Chỉnh Sửa Danh Mục
                         </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                        <button aria-label="Đóng" class="btn-close" data-bs-dismiss="modal" type="button"></button>
                     </div>
                     <div class="modal-body py-4">
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-dark">Mã danh mục</label>
-                            <input type="text" id="editCategoryCode" class="form-control bg-light" readonly>
+                            <input class="form-control bg-light" id="editCategoryCode" readonly type="text">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold text-dark">Tên danh mục <span class="text-danger">*</span></label>
-                            <input type="text" id="editCategoryName" name="name" class="form-control" required maxlength="100">
+                            <label class="form-label fw-semibold text-dark">Tên danh mục <span
+                                    class="text-danger">*</span></label>
+                            <input class="form-control" id="editCategoryName" maxlength="100" name="name" required
+                                   type="text">
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-dark">Trạng thái hiển thị</label>
-                            <select id="editCategoryStatus" name="status" class="form-select" onchange="checkEditCategoryStatusWarning()">
+                            <select class="form-select" id="editCategoryStatus" name="status"
+                                    onchange="checkEditCategoryStatusWarning()">
                                 <option value="VISIBLE">Hiển thị (VISIBLE)</option>
                                 <option value="HIDDEN">Đang ẩn (HIDDEN)</option>
                             </select>
-                            <div id="editCategoryHiddenWarning" class="alert alert-warning py-2 small mt-2 d-none">
+                            <div class="alert alert-warning py-2 small mt-2 d-none" id="editCategoryHiddenWarning">
                                 <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                                <strong>Lưu ý:</strong> Chuyển sang "Đang ẩn" sẽ <strong>tự động ẩn tất cả các sản phẩm</strong> thuộc danh mục này!
+                                <strong>Lưu ý:</strong> Chuyển sang "Đang ẩn" sẽ <strong>tự động ẩn tất cả các sản
+                                phẩm</strong> thuộc danh mục này!
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer border-top bg-light">
-                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-primary px-4 fw-semibold" style="background-color: #4332d5; border-color: #4332d5;">
+                        <button class="btn btn-secondary px-3" data-bs-dismiss="modal" type="button">Hủy</button>
+                        <button class="btn btn-primary px-4 fw-semibold"
+                                style="background-color: #4332d5; border-color: #4332d5;"
+                                type="submit">
                             <i class="bi bi-save me-1"></i> Cập nhật
                         </button>
                     </div>
@@ -299,26 +318,30 @@
     </div>
 
     <!-- MODAL: XÁC NHẬN ẨN DANH MỤC (TỰ ĐỘNG ẨN SẢN PHẨM LIÊN KẾT) -->
-    <div class="modal fade" id="hideCategoryModal" tabindex="-1" aria-labelledby="hideCategoryModalLabel" aria-hidden="true">
+    <div aria-hidden="true" aria-labelledby="hideCategoryModalLabel" class="modal fade" id="hideCategoryModal"
+         tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <form id="hideCategoryForm" method="post" action="">
+                <form action="" id="hideCategoryForm" method="post">
                     <div class="modal-header border-bottom pb-3">
                         <h5 class="modal-title fw-bold text-warning" id="hideCategoryModalLabel">
                             <i class="bi bi-eye-slash-fill me-2"></i>Xác Nhận Ẩn Danh Mục
                         </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                        <button aria-label="Đóng" class="btn-close" data-bs-dismiss="modal" type="button"></button>
                     </div>
                     <div class="modal-body py-4">
-                        <p class="mb-2">Bạn có chắc chắn muốn ẩn danh mục <strong id="hideCategoryNameText" class="text-dark"></strong> không?</p>
+                        <p class="mb-2">Bạn có chắc chắn muốn ẩn danh mục <strong class="text-dark"
+                                                                                  id="hideCategoryNameText"></strong>
+                            không?</p>
                         <div class="alert alert-warning py-2 small mb-0 mt-3">
                             <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                            Hệ thống sẽ <strong>tự động ẩn tất cả <span id="hideCategoryProductCount">0</span> sản phẩm</strong> thuộc danh mục này (chuyển sang trạng thái Tạm dừng / Ẩn).
+                            Hệ thống sẽ <strong>tự động ẩn tất cả <span id="hideCategoryProductCount">0</span> sản phẩm</strong>
+                            thuộc danh mục này (chuyển sang trạng thái Tạm dừng / Ẩn).
                         </div>
                     </div>
                     <div class="modal-footer border-top bg-light">
-                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy bỏ</button>
-                        <button type="submit" class="btn btn-warning px-4 fw-semibold text-dark">
+                        <button class="btn btn-secondary px-3" data-bs-dismiss="modal" type="button">Hủy bỏ</button>
+                        <button class="btn btn-warning px-4 fw-semibold text-dark" type="submit">
                             <i class="bi bi-eye-slash me-1"></i> Xác nhận ẩn danh mục
                         </button>
                     </div>
@@ -328,22 +351,26 @@
     </div>
 
     <!-- MODAL: XÁC NHẬN HIỂN THỊ LẠI DANH MỤC -->
-    <div class="modal fade" id="showCategoryModal" tabindex="-1" aria-labelledby="showCategoryModalLabel" aria-hidden="true">
+    <div aria-hidden="true" aria-labelledby="showCategoryModalLabel" class="modal fade" id="showCategoryModal"
+         tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <form id="showCategoryForm" method="post" action="">
+                <form action="" id="showCategoryForm" method="post">
                     <div class="modal-header border-bottom pb-3">
                         <h5 class="modal-title fw-bold text-success" id="showCategoryModalLabel">
                             <i class="bi bi-eye-fill me-2"></i>Xác Nhận Hiển Thị Danh Mục
                         </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                        <button aria-label="Đóng" class="btn-close" data-bs-dismiss="modal" type="button"></button>
                     </div>
                     <div class="modal-body py-4">
-                        <p class="mb-0">Bạn có muốn hiển thị lại danh mục <strong id="showCategoryNameText" class="text-dark"></strong> trên hệ thống cửa hàng không?</p>
+                        <p class="mb-0">Bạn có muốn hiển thị lại danh mục <strong class="text-dark"
+                                                                                  id="showCategoryNameText"></strong>
+                            trên hệ
+                            thống cửa hàng không?</p>
                     </div>
                     <div class="modal-footer border-top bg-light">
-                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy bỏ</button>
-                        <button type="submit" class="btn btn-success px-4 fw-semibold text-white">
+                        <button class="btn btn-secondary px-3" data-bs-dismiss="modal" type="button">Hủy bỏ</button>
+                        <button class="btn btn-success px-4 fw-semibold text-white" type="submit">
                             <i class="bi bi-eye me-1"></i> Hiển thị danh mục
                         </button>
                     </div>
@@ -353,26 +380,30 @@
     </div>
 
     <!-- MODAL: XÁC NHẬN XÓA DANH MỤC -->
-    <div class="modal fade" id="deleteCategoryModal" tabindex="-1" aria-labelledby="deleteCategoryModalLabel" aria-hidden="true">
+    <div aria-hidden="true" aria-labelledby="deleteCategoryModalLabel" class="modal fade" id="deleteCategoryModal"
+         tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-                <form id="deleteCategoryForm" method="post" action="">
+                <form action="" id="deleteCategoryForm" method="post">
                     <div class="modal-header border-bottom pb-3">
                         <h5 class="modal-title fw-bold text-danger" id="deleteCategoryModalLabel">
                             <i class="bi bi-exclamation-triangle-fill me-2"></i>Xác Nhận Xóa Danh Mục
                         </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                        <button aria-label="Đóng" class="btn-close" data-bs-dismiss="modal" type="button"></button>
                     </div>
                     <div class="modal-body py-4">
-                        <p class="mb-2">Bạn có chắc chắn muốn xóa danh mục <strong id="deleteCategoryNameText" class="text-dark"></strong>?</p>
-                        <div id="deleteCategoryWarning" class="alert alert-warning py-2 small mb-0 d-none">
+                        <p class="mb-2">Bạn có chắc chắn muốn xóa danh mục <strong class="text-dark"
+                                                                                   id="deleteCategoryNameText"></strong>?
+                        </p>
+                        <div class="alert alert-warning py-2 small mb-0 d-none" id="deleteCategoryWarning">
                             <i class="bi bi-exclamation-circle-fill me-1"></i>
-                            Danh mục này đang có <b id="deleteCategoryProductCount">0</b> sản phẩm liên kết. Hệ thống sẽ chặn xóa để đảm bảo toàn vẹn dữ liệu.
+                            Danh mục này đang có <b id="deleteCategoryProductCount">0</b> sản phẩm liên kết. Hệ thống sẽ
+                            chặn xóa để đảm bảo toàn vẹn dữ liệu.
                         </div>
                     </div>
                     <div class="modal-footer border-top bg-light">
-                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy bỏ</button>
-                        <button type="submit" id="confirmDeleteBtn" class="btn btn-danger px-4 fw-semibold">
+                        <button class="btn btn-secondary px-3" data-bs-dismiss="modal" type="button">Hủy bỏ</button>
+                        <button class="btn btn-danger px-4 fw-semibold" id="confirmDeleteBtn" type="submit">
                             <i class="bi bi-trash3 me-1"></i> Xóa danh mục
                         </button>
                     </div>

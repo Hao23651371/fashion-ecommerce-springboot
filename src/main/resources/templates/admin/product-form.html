@@ -105,7 +105,27 @@
                         </div>
                         <small id="colorError" class="field-error" role="alert"></small>
                     </div>
-                    <div class="variant-count">Dự kiến tạo <b id="variantCount">1</b> biến thể (<span id="variantDetail">1 size × 1 màu</span>)</div>
+                    <!-- BẢNG MA TRẬN BIẾN THỂ SIZE x MÀU (YÊU CẦU 1) -->
+                    <div id="variantMatrixWrapper" class="variant-matrix-wrapper">
+                        <div class="matrix-header-bar mb-2">
+                            <span class="fw-bold text-dark" style="font-size: 0.78rem;">
+                                <i class="bi bi-grid-3x3-gap-fill text-primary me-1"></i> Bảng biến thể (Size × Màu) <b>*</b>
+                            </span>
+                            <button type="button" class="btn-toggle-all-matrix" id="btnToggleAllMatrix" title="Bật/Tắt toàn bộ bảng">
+                                <i class="bi bi-check2-all"></i> Chọn/Bỏ tất cả
+                            </button>
+                        </div>
+                        <div class="variant-matrix-scroll" id="variantMatrixScroll">
+                            <table class="variant-matrix-table" id="variantMatrixTable">
+                                <!-- Rendered dynamically by JavaScript -->
+                            </table>
+                        </div>
+                        <!-- Dòng thông tin bắt buộc: "Sẽ tạo X/Y biến thể" -->
+                        <div class="variant-count mt-2" id="variantCountDisplay">
+                            <i class="bi bi-check-circle-fill me-1 text-success"></i> Sẽ tạo <b id="variantCountSelected">0</b>/<span id="variantCountTotal">0</span> biến thể
+                        </div>
+                        <small id="matrixError" class="field-error" role="alert"></small>
+                    </div>
 
                     <!-- Bảng các biến thể hiện có trong CSDL (chế độ chỉnh sửa) -->
                     <div class="mt-4 pt-3 border-top" th:if="${isEdit and product != null and product.variants != null and !product.variants.empty}">
@@ -154,6 +174,7 @@
     <script th:inline="javascript">
     (function () {
         const isEditMode = /*[[${isEdit}]]*/ false;
+        const initialActiveVariantKeys = /*[[${activeVariantKeys}]]*/ [];
         const STORAGE_KEY = 'admin_product_form_draft_v1';
 
         const form = document.getElementById('productForm');
@@ -164,13 +185,18 @@
         const priceInput = document.getElementById('price');
         const salePriceInput = document.getElementById('salePrice');
         const imageUrlInput = document.getElementById('imageUrl');
-        const variantCount = document.getElementById('variantCount');
-        const variantDetail = document.getElementById('variantDetail');
         const imagePreview = document.getElementById('imagePreview');
         const draftAlert = document.getElementById('draftAlert');
         const draftTime = document.getElementById('draftTime');
         const clearDraftBtn = document.getElementById('clearDraftBtn');
         const cancelBtn = document.getElementById('cancelBtn');
+
+        const matrixTable = document.getElementById('variantMatrixTable');
+        const matrixScroll = document.getElementById('variantMatrixScroll');
+        const countSelectedEl = document.getElementById('variantCountSelected');
+        const countTotalEl = document.getElementById('variantCountTotal');
+        const btnToggleAllMatrix = document.getElementById('btnToggleAllMatrix');
+        const matrixError = document.getElementById('matrixError');
 
         const nameError = document.getElementById('nameError');
         const categoryError = document.getElementById('categoryError');
@@ -180,6 +206,22 @@
         const imageUrlError = document.getElementById('imageUrlError');
         const sizeError = document.getElementById('sizeError');
         const colorError = document.getElementById('colorError');
+
+        // Bảng lưu trữ trạng thái checkbox của từng ô ma trận: "SIZE___COLOR" -> boolean
+        const matrixState = {};
+
+        // Khởi tạo trạng thái ban đầu cho edit mode nếu có danh sách biến thể đang hoạt động
+        if (isEditMode && Array.isArray(initialActiveVariantKeys)) {
+            const initialSizes = Array.from(document.querySelectorAll('input[name="sizes"]:checked')).map(cb => cb.value.trim());
+            const initialColors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value.trim());
+            const activeSet = new Set(initialActiveVariantKeys.map(k => (k || '').trim().toUpperCase()));
+            initialSizes.forEach(s => {
+                initialColors.forEach(c => {
+                    const key = s.toUpperCase() + '___' + c.toUpperCase();
+                    matrixState[key] = activeSet.has(key);
+                });
+            });
+        }
 
         // Theo dõi trạng thái đã tương tác (touched) của từng trường
         const touched = {
@@ -345,6 +387,36 @@
             return !error;
         }
 
+        function validateMatrix(showError = true) {
+            const selectedSizes = Array.from(document.querySelectorAll('input[name="sizes"]:checked')).map(cb => cb.value.trim());
+            const selectedColors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value.trim());
+            let error = '';
+
+            if (selectedSizes.length === 0 || selectedColors.length === 0) {
+                error = 'Vui lòng chọn size và màu để hiển thị bảng ma trận biến thể.';
+            } else {
+                let selectedCount = 0;
+                selectedSizes.forEach(s => {
+                    selectedColors.forEach(c => {
+                        const key = s.toUpperCase() + '___' + c.toUpperCase();
+                        if (matrixState[key]) {
+                            selectedCount++;
+                        }
+                    });
+                });
+                if (selectedCount === 0) {
+                    error = 'Bắt buộc chọn ít nhất một biến thể trong bảng ma trận.';
+                }
+            }
+
+            if (showError || touched.sizes || touched.colors) {
+                if (matrixError) {
+                    matrixError.textContent = error;
+                }
+            }
+            return !error;
+        }
+
         // Kiểm tra toàn bộ form có thỏa mãn hay không
         function isFormValid() {
             const vName = validateName(false);
@@ -355,7 +427,8 @@
             const vImg = validateImageUrl(false);
             const vSize = validateSizes(false);
             const vColor = validateColors(false);
-            return vName && vCat && vDesc && vPrice && vSale && vImg && vSize && vColor;
+            const vMatrix = validateMatrix(false);
+            return vName && vCat && vDesc && vPrice && vSale && vImg && vSize && vColor && vMatrix;
         }
 
         // Cập nhật trạng thái nút submit
@@ -380,19 +453,122 @@
             validateImageUrl(true);
             validateSizes(true);
             validateColors(true);
+            validateMatrix(true);
         }
 
-        // ================= CẬP NHẬT GIAO DIỆN BIẾN THỂ & PREVIEW ẢNH =================
-        function updateVariantCount() {
-            const s = document.querySelectorAll('input[name="sizes"]:checked').length;
-            const c = document.querySelectorAll('input[name="colors"]:checked').length;
-            const total = s * c;
-            if (variantCount) {
-                variantCount.textContent = total;
+        // ================= CẬP NHẬT MA TRẬN BIẾN THỂ & PREVIEW ẢNH =================
+        function updateMatrixCounts() {
+            const selectedSizes = Array.from(document.querySelectorAll('input[name="sizes"]:checked')).map(cb => cb.value.trim());
+            const selectedColors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value.trim());
+            const total = selectedSizes.length * selectedColors.length;
+
+            let selected = 0;
+            selectedSizes.forEach(s => {
+                selectedColors.forEach(c => {
+                    const key = s.toUpperCase() + '___' + c.toUpperCase();
+                    if (matrixState[key]) {
+                        selected++;
+                    }
+                });
+            });
+
+            if (countSelectedEl) countSelectedEl.textContent = selected;
+            if (countTotalEl) countTotalEl.textContent = total;
+
+            if (matrixError && (touched.sizes || touched.colors)) {
+                if (total > 0 && selected === 0) {
+                    matrixError.textContent = 'Bắt buộc chọn ít nhất một biến thể trong bảng ma trận.';
+                } else if (total > 0 && selected > 0) {
+                    matrixError.textContent = '';
+                }
             }
-            if (variantDetail) {
-                variantDetail.textContent = s + ' size × ' + c + ' màu';
+        }
+
+        function renderMatrix() {
+            if (!matrixTable) return;
+            const selectedSizes = Array.from(document.querySelectorAll('input[name="sizes"]:checked')).map(cb => cb.value.trim());
+            const selectedColors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value.trim());
+
+            if (selectedSizes.length === 0 || selectedColors.length === 0) {
+                matrixTable.innerHTML = '<tbody><tr><td class="text-muted py-3" style="font-size:0.75rem;">Vui lòng chọn ít nhất 1 size và 1 màu để hiển thị bảng ma trận biến thể.</td></tr></tbody>';
+                if (countSelectedEl) countSelectedEl.textContent = '0';
+                if (countTotalEl) countTotalEl.textContent = '0';
+                return;
             }
+
+            // Điền mặc định true cho các ô mới tạo chưa có trong matrixState (bảo toàn ô cũ)
+            selectedSizes.forEach(s => {
+                selectedColors.forEach(c => {
+                    const key = s.toUpperCase() + '___' + c.toUpperCase();
+                    if (matrixState[key] === undefined) {
+                        matrixState[key] = true;
+                    }
+                });
+            });
+
+            // Xây dựng tiêu đề cột (Màu sắc)
+            let html = '<thead><tr>';
+            html += '<th style="min-width: 80px;">Size \\ Màu</th>';
+            selectedColors.forEach(c => {
+                html += `<th>
+                    <div style="font-weight: 700; color: #1f2937;">${c}</div>
+                    <button type="button" class="btn-matrix-toggle" data-col="${c}" title="Chọn / Bỏ chọn toàn bộ cột ${c}">
+                        <i class="bi bi-arrows-vertical"></i> Cột
+                    </button>
+                </th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            // Xây dựng từng hàng (Size)
+            selectedSizes.forEach(s => {
+                html += '<tr>';
+                html += `<th>
+                    <div style="font-weight: 700; color: #1f2937;">${s}</div>
+                    <button type="button" class="btn-matrix-toggle" data-row="${s}" title="Chọn / Bỏ chọn toàn bộ hàng ${s}">
+                        <i class="bi bi-arrows-collapse"></i> Hàng
+                    </button>
+                </th>`;
+                selectedColors.forEach(c => {
+                    const key = s.toUpperCase() + '___' + c.toUpperCase();
+                    const isChecked = !!matrixState[key];
+                    html += `<td>
+                        <label class="variant-cell-label">
+                            <input type="checkbox" name="selectedVariants" value="${s}___${c}" ${isChecked ? 'checked' : ''} data-size="${s}" data-color="${c}">
+                        </label>
+                    </td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody>';
+            matrixTable.innerHTML = html;
+
+            updateMatrixCounts();
+        }
+
+        function toggleRow(s) {
+            const selectedColors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value.trim());
+            if (selectedColors.length === 0) return;
+            const allChecked = selectedColors.every(c => matrixState[s.toUpperCase() + '___' + c.toUpperCase()]);
+            const targetState = !allChecked;
+            selectedColors.forEach(c => {
+                matrixState[s.toUpperCase() + '___' + c.toUpperCase()] = targetState;
+            });
+            renderMatrix();
+            updateSubmitState();
+            triggerDebouncedSave();
+        }
+
+        function toggleCol(c) {
+            const selectedSizes = Array.from(document.querySelectorAll('input[name="sizes"]:checked')).map(cb => cb.value.trim());
+            if (selectedSizes.length === 0) return;
+            const allChecked = selectedSizes.every(s => matrixState[s.toUpperCase() + '___' + c.toUpperCase()]);
+            const targetState = !allChecked;
+            selectedSizes.forEach(s => {
+                matrixState[s.toUpperCase() + '___' + c.toUpperCase()] = targetState;
+            });
+            renderMatrix();
+            updateSubmitState();
+            triggerDebouncedSave();
         }
 
         function updateImagePreview() {
@@ -422,6 +598,7 @@
                     imageUrl: imageUrlInput.value,
                     sizes: sizes,
                     colors: colors,
+                    matrixState: matrixState,
                     savedAt: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ', ' + new Date().toLocaleDateString('vi-VN')
                 };
 
@@ -473,8 +650,12 @@
                     });
                 }
 
+                if (data.matrixState && typeof data.matrixState === 'object') {
+                    Object.assign(matrixState, data.matrixState);
+                }
+
                 updateImagePreview();
-                updateVariantCount();
+                renderMatrix();
 
                 if (draftAlert) {
                     if (data.savedAt && draftTime) {
@@ -592,7 +773,8 @@
                     touched.colors = true;
                     validateColors(true);
                 }
-                updateVariantCount();
+                renderMatrix();
+                validateMatrix(true);
                 updateSubmitState();
                 triggerDebouncedSave();
             });
@@ -602,12 +784,78 @@
         document.querySelectorAll('.choice-list label').forEach(label => {
             label.addEventListener('click', function () {
                 setTimeout(function () {
-                    updateVariantCount();
+                    renderMatrix();
+                    validateMatrix(true);
                     updateSubmitState();
                     triggerDebouncedSave();
                 }, 10);
             });
         });
+
+        // Bắt sự kiện trên Bảng ma trận biến thể (chọn/bỏ chọn ô, toggle hàng, toggle cột)
+        if (matrixTable) {
+            matrixTable.addEventListener('change', function (e) {
+                if (e.target.matches('input[name="selectedVariants"]')) {
+                    const s = e.target.getAttribute('data-size');
+                    const c = e.target.getAttribute('data-color');
+                    if (s && c) {
+                        const key = s.toUpperCase() + '___' + c.toUpperCase();
+                        matrixState[key] = e.target.checked;
+                        updateMatrixCounts();
+                        validateMatrix(true);
+                        updateSubmitState();
+                        triggerDebouncedSave();
+                    }
+                }
+            });
+
+            matrixTable.addEventListener('click', function (e) {
+                const rowBtn = e.target.closest('[data-row]');
+                if (rowBtn) {
+                    e.preventDefault();
+                    toggleRow(rowBtn.getAttribute('data-row'));
+                    return;
+                }
+                const colBtn = e.target.closest('[data-col]');
+                if (colBtn) {
+                    e.preventDefault();
+                    toggleCol(colBtn.getAttribute('data-col'));
+                    return;
+                }
+            });
+        }
+
+        // Bật / Tắt toàn bộ ma trận biến thể
+        if (btnToggleAllMatrix) {
+            btnToggleAllMatrix.addEventListener('click', function (e) {
+                e.preventDefault();
+                const selectedSizes = Array.from(document.querySelectorAll('input[name="sizes"]:checked')).map(cb => cb.value.trim());
+                const selectedColors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value.trim());
+                if (selectedSizes.length === 0 || selectedColors.length === 0) return;
+
+                let allChecked = true;
+                for (const s of selectedSizes) {
+                    for (const c of selectedColors) {
+                        if (!matrixState[s.toUpperCase() + '___' + c.toUpperCase()]) {
+                            allChecked = false;
+                            break;
+                        }
+                    }
+                    if (!allChecked) break;
+                }
+
+                const targetState = !allChecked;
+                selectedSizes.forEach(s => {
+                    selectedColors.forEach(c => {
+                        matrixState[s.toUpperCase() + '___' + c.toUpperCase()] = targetState;
+                    });
+                });
+                renderMatrix();
+                validateMatrix(true);
+                updateSubmitState();
+                triggerDebouncedSave();
+            });
+        }
 
         // Nút Xóa bản nháp
         if (clearDraftBtn) {
@@ -618,12 +866,14 @@
                     // Khôi phục mặc định M và Đen
                     document.querySelectorAll('input[name="sizes"]').forEach(cb => cb.checked = (cb.value === 'M'));
                     document.querySelectorAll('input[name="colors"]').forEach(cb => cb.checked = (cb.value === 'Đen'));
+                    // Reset trạng thái ma trận
+                    Object.keys(matrixState).forEach(k => delete matrixState[k]);
                     // Reset touched và lỗi
                     Object.keys(touched).forEach(k => touched[k] = false);
                     document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
                     document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
                     updateImagePreview();
-                    updateVariantCount();
+                    renderMatrix();
                     updateSubmitState();
                 }
             });
@@ -662,7 +912,7 @@
             if (!isFormValid()) {
                 e.preventDefault();
                 // Focus vào ô lỗi đầu tiên
-                const firstErrorInput = form.querySelector('.input-error, input[name="sizes"]:not(:checked)');
+                const firstErrorInput = form.querySelector('.input-error, input[name="sizes"]:not(:checked), #variantMatrixTable');
                 if (firstErrorInput) {
                     firstErrorInput.focus();
                 }
@@ -685,7 +935,7 @@
         if (!isEditMode) {
             restoreDraft();
         }
-        updateVariantCount();
+        renderMatrix();
         updateImagePreview();
         updateSubmitState();
     })();

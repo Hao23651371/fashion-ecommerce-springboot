@@ -86,19 +86,47 @@ public class AdminInventoryController {
     }
 
     @PostMapping("/import")
-    public String importStock(@RequestParam Long variantId,
-                              @RequestParam int quantity,
+    public String importStock(@RequestParam(name = "variantId", required = false) List<Long> variantIds,
+                              @RequestParam(name = "quantity", required = false) List<Integer> quantities,
+                              @RequestParam(name = "importPrice", required = false) List<BigDecimal> importPrices,
                               @RequestParam(required = false) String supplier,
-                              @RequestParam(required = false) BigDecimal importPrice,
                               @RequestParam(required = false) String reason,
                               RedirectAttributes redirectAttributes) {
         try {
+            if (variantIds == null || variantIds.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng chọn ít nhất một biến thể để nhập kho.");
+            }
+
+            List<InventoryService.ImportItem> items = new java.util.ArrayList<>();
+            for (int i = 0; i < variantIds.size(); i++) {
+                Long vId = variantIds.get(i);
+                if (vId == null) {
+                    continue;
+                }
+                int qty = (quantities != null && quantities.size() > i && quantities.get(i) != null)
+                        ? quantities.get(i) : 0;
+                if (qty <= 0) {
+                    throw new IllegalArgumentException("Số lượng nhập ở mỗi dòng phải lớn hơn 0.");
+                }
+                BigDecimal price = (importPrices != null && importPrices.size() > i)
+                        ? importPrices.get(i) : null;
+                if (price != null && price.signum() < 0) {
+                    throw new IllegalArgumentException("Đơn giá nhập không được âm.");
+                }
+                items.add(new InventoryService.ImportItem(vId, qty, price));
+            }
+
+            if (items.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng chọn ít nhất một biến thể hợp lệ để nhập kho.");
+            }
+
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String userEmail = (auth != null) ? auth.getName() : null;
 
-            inventoryService.importStock(variantId, quantity, supplier, importPrice, reason, userEmail);
+            var receipt = inventoryService.importMultiStock(items, supplier, reason, userEmail);
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Đã nhập kho thành công +" + quantity + " sản phẩm.");
+                    "Đã tạo phiếu nhập " + receipt.getReceiptCode() + " thành công cho "
+                            + receipt.getTotalQuantity() + " sản phẩm (" + items.size() + " mã SKU).");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Lỗi khi nhập kho: " + e.getMessage());

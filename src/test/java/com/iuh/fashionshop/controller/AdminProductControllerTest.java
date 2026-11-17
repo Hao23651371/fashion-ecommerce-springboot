@@ -77,7 +77,8 @@ class AdminProductControllerTest {
                         .param("description", "Mô tả chất liệu cao cấp")
                         .param("imageUrl", "https://example.com/test.jpg")
                         .param("sizes", "S", "M")
-                        .param("colors", "Đen", "Trắng"))
+                        .param("colors", "Đen", "Trắng")
+                        .param("selectedVariants", "S___Đen", "S___Trắng", "M___Đen", "M___Trắng"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/products"));
 
@@ -93,6 +94,65 @@ class AdminProductControllerTest {
         assertNotNull(created.getSalePrice());
         assertEquals(0, created.getPrice().compareTo(created.getSalePrice()));
         assertEquals(4, created.getVariants().size()); // 2 sizes * 2 colors = 4 variants
+    }
+
+    @Test
+    @WithMockUser(username = "admin1@fashionshop.vn", roles = {"ADMIN"})
+    void testCreateProduct_OnlyCreatesSelectedVariantsFromMatrix() throws Exception {
+        Category category = new Category();
+        category.setName("Áo thun ma trận");
+        category.setStatus(CategoryStatus.VISIBLE);
+        category = categoryRepository.save(category);
+
+        mockMvc.perform(post("/admin/products/new")
+                        .with(csrf())
+                        .param("name", "Áo thun ma trận test")
+                        .param("categoryId", category.getId().toString())
+                        .param("gender", "UNISEX")
+                        .param("price", "200000")
+                        .param("description", "Mô tả áo thun")
+                        .param("imageUrl", "https://example.com/matrix.jpg")
+                        .param("sizes", "S", "M")
+                        .param("colors", "Đen", "Trắng")
+                        // Chỉ chọn 2 ô trong ma trận 2x2
+                        .param("selectedVariants", "S___Đen", "M___Trắng"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/products"));
+
+        Product created = productRepository.findAll().stream()
+                .filter(p -> "Áo thun ma trận test".equals(p.getName()))
+                .findFirst()
+                .orElse(null);
+
+        assertNotNull(created);
+        assertEquals(2, created.getVariants().size());
+        assertTrue(created.getVariants().stream().anyMatch(v -> "S".equals(v.getSize()) && "Đen".equals(v.getColor())));
+        assertTrue(created.getVariants().stream().anyMatch(v -> "M".equals(v.getSize()) && "Trắng".equals(v.getColor())));
+        assertFalse(created.getVariants().stream().anyMatch(v -> "S".equals(v.getSize()) && "Trắng".equals(v.getColor())));
+        assertFalse(created.getVariants().stream().anyMatch(v -> "M".equals(v.getSize()) && "Đen".equals(v.getColor())));
+    }
+
+    @Test
+    @WithMockUser(username = "admin1@fashionshop.vn", roles = {"ADMIN"})
+    void testCreateProduct_FailsWhenNoVariantsSelected() {
+        Category category = new Category();
+        category.setName("Áo polo test");
+        category.setStatus(CategoryStatus.VISIBLE);
+        final Category savedCategory = categoryRepository.save(category);
+
+        assertThrows(Exception.class, () -> {
+            mockMvc.perform(post("/admin/products/new")
+                            .with(csrf())
+                            .param("name", "Áo polo test")
+                            .param("categoryId", savedCategory.getId().toString())
+                            .param("gender", "MALE")
+                            .param("price", "250000")
+                            .param("description", "Mô tả polo")
+                            .param("imageUrl", "https://example.com/polo.jpg")
+                            .param("sizes", "S", "M")
+                            .param("colors", "Đen", "Trắng"));
+                            // Không truyền selectedVariants
+        });
     }
 
     @Test
@@ -200,7 +260,8 @@ class AdminProductControllerTest {
                         .param("description", "Mô tả mới đã cập nhật")
                         .param("imageUrl", "https://example.com/after.jpg")
                         .param("sizes", "M", "L")
-                        .param("colors", "Trắng"))
+                        .param("colors", "Trắng")
+                        .param("selectedVariants", "M___Trắng", "L___Trắng"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/products"));
 

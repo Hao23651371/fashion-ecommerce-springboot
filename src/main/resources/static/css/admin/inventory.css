@@ -712,6 +712,54 @@
     box-shadow: 0 0 0 2px #e2e8f0;
 }
 
+/* Bulk action bar */
+.bulk-action-bar {
+    background: #f8faff !important;
+    border: 1px solid #c7d2fe !important;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    animation: fadeInSlide 0.2s ease-in-out;
+}
+
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.variant-row-checkbox {
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    accent-color: #4332d5;
+}
+
+#selectAllVariantsCheckbox {
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    accent-color: #4332d5;
+}
+
+.import-items-table select {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.import-items-table input {
+    font-size: 0.8rem;
+}
+
+.import-line-total {
+    color: #087f75;
+    font-weight: 700;
+}
+
 /* Responsive */
 @media (max-width: 992px) {
     .inventory-heading {
