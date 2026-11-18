@@ -36,12 +36,12 @@ public class AdminController {
     }
 
     @GetMapping({"", "/dashboard"})
-    public String dashboard(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-                            @RequestParam(required = false) Integer month,
-                            @RequestParam(required = false) Integer year,
+    public String dashboard(@RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                            @RequestParam(value = "month", required = false) Integer month,
+                            @RequestParam(value = "year", required = false) Integer year,
                             Authentication auth,
                             Model model) {
-        String userName = "Nguyễn Bảo Duy";
+        String userName = "Quản trị viên";
         String userRole = "Quản trị viên cấp cao";
 
         if (auth != null && auth.isAuthenticated()) {
@@ -80,12 +80,14 @@ public class AdminController {
                                @RequestParam(value = "targetYear", required = false) Integer targetYear,
                                RedirectAttributes redirectAttributes) {
         try {
-            dashboardService.updateTarget(monthlyTarget, highlightNote, targetMonth, targetYear);
-            redirectAttributes.addFlashAttribute("successMessage", "Cập nhật mục tiêu kinh doanh Tháng " + targetMonth + "/" + targetYear + " vào Database thành công!");
+            var saved = dashboardService.updateTarget(monthlyTarget, highlightNote, targetMonth, targetYear);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Cập nhật mục tiêu kinh doanh Tháng " + saved.getTargetMonth() + "/" + saved.getTargetYear() + " vào Database thành công!");
+            return "redirect:/admin/dashboard?month=" + saved.getTargetMonth() + "&year=" + saved.getTargetYear();
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Không thể lưu mục tiêu: " + e.getMessage());
+            return "redirect:/admin/dashboard?month=" + (targetMonth != null ? targetMonth : "") + "&year=" + (targetYear != null ? targetYear : "");
         }
-        return "redirect:/admin/dashboard?month=" + (targetMonth != null ? targetMonth : "") + "&year=" + (targetYear != null ? targetYear : "");
     }
 
     /**

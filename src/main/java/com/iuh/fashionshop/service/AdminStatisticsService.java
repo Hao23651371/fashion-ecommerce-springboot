@@ -451,7 +451,7 @@ public class AdminStatisticsService {
                         "Kiểm soát rủi ro COD",
                         "bi-shield-exclamation text-danger",
                         "Đơn COD có " + cod.cancelledOrders() + " đơn bị hủy/hoàn (" + String.format(Locale.US, "%.1f%%", cancelRate) + ")",
-                        "",
+                        "Nên rà soát nguyên nhân hủy/hoàn ở nhóm đơn thanh toán khi nhận hàng (COD) để giảm chi phí vận chuyển phát sinh.",
                         "Xem đơn COD",
                         "/admin/orders?payment=COD"
                 ));

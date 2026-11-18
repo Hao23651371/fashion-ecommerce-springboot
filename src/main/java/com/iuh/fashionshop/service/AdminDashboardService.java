@@ -27,13 +27,16 @@ public class AdminDashboardService {
 
     private final DashboardSettingRepository settingRepository;
     private final OrderRepository orderRepository;
+    private final OrderService orderService;
     private final JdbcTemplate jdbc;
 
     public AdminDashboardService(DashboardSettingRepository settingRepository,
                                  OrderRepository orderRepository,
+                                 OrderService orderService,
                                  JdbcTemplate jdbc) {
         this.settingRepository = settingRepository;
         this.orderRepository = orderRepository;
+        this.orderService = orderService;
         this.jdbc = jdbc;
     }
 
@@ -405,43 +408,49 @@ public class AdminDashboardService {
     }
 
     /**
-     * THAO TÁC DATABASE: Duyệt nhanh đơn hàng đang chờ duyệt.
+     * THAO TÁC DATABASE: Duyệt nhanh đơn hàng đang chờ duyệt (qua OrderService).
      */
     @Transactional
     public boolean quickConfirmOrder(Long orderId) {
         Optional<Order> orderOpt = orderRepository.findById(orderId);
-        if (orderOpt.isPresent()) {
-            Order order = orderOpt.get();
-            if (order.getStatus() == OrderStatus.PENDING) {
-                order.setStatus(OrderStatus.CONFIRMED);
-                orderRepository.save(order);
-                return true;
-            }
+        if (orderOpt.isPresent() && orderOpt.get().getStatus() == OrderStatus.PENDING) {
+            orderService.updateStatus(orderId, OrderStatus.CONFIRMED, null);
+            return true;
         }
         return false;
     }
 
     /**
-     * THAO TÁC DATABASE: Duyệt toàn bộ đơn hàng đang ở trạng thái PENDING.
+     * THAO TÁC DATABASE: Duyệt toàn bộ đơn hàng đang ở trạng thái PENDING (qua OrderService).
      */
     @Transactional
     public int quickConfirmAllPendingOrders() {
-        return jdbc.update("UPDATE orders SET status = 'CONFIRMED' WHERE status = 'PENDING'");
+        List<Long> pendingIds = jdbc.queryForList(
+                "SELECT id FROM orders WHERE status = 'PENDING'", Long.class);
+        int confirmed = 0;
+        for (Long id : pendingIds) {
+            if (id != null) {
+                orderService.updateStatus(id, OrderStatus.CONFIRMED, null);
+                confirmed++;
+            }
+        }
+        return confirmed;
     }
 
     /**
-     * THAO TÁC DATABASE: Hủy đơn hàng kèm lý do.
+     * THAO TÁC DATABASE: Hủy đơn hàng kèm lý do qua OrderService
+     * (đảm bảo hoàn tồn kho, ghi lịch sử kho, hoàn lượt coupon và đồng bộ trạng thái thanh toán).
      */
     @Transactional
     public boolean quickCancelOrder(Long orderId, String reason) {
         Optional<Order> orderOpt = orderRepository.findById(orderId);
         if (orderOpt.isPresent()) {
-            Order order = orderOpt.get();
-            if (order.getStatus() == OrderStatus.PENDING || order.getStatus() == OrderStatus.CONFIRMED) {
-                order.setStatus(OrderStatus.CANCELLED);
-                order.setCancelReason(reason != null && !reason.isBlank() ? reason.trim() : "Quản trị viên hủy đơn nhanh");
-                order.setCancelledAt(LocalDateTime.now());
-                orderRepository.save(order);
+            OrderStatus current = orderOpt.get().getStatus();
+            if (current == OrderStatus.PENDING || current == OrderStatus.CONFIRMED) {
+                String finalReason = (reason != null && !reason.isBlank())
+                        ? reason.trim()
+                        : "Quản trị viên hủy đơn nhanh";
+                orderService.updateStatus(orderId, OrderStatus.CANCELLED, finalReason);
                 return true;
             }
         }
@@ -492,7 +501,8 @@ public class AdminDashboardService {
             String payMethod = rs.getString("payment_method");
             String status = rs.getString("status");
             int hour = rs.getInt("order_hour");
-            LocalDateTime createdAt = rs.getTimestamp("created_at").toLocalDateTime();
+            java.sql.Timestamp createdTs = rs.getTimestamp("created_at");
+            LocalDateTime createdAt = createdTs != null ? createdTs.toLocalDateTime() : LocalDateTime.now();
 
             boolean isPending = "PENDING".equalsIgnoreCase(status);
             boolean isCancelled = "CANCELLED".equalsIgnoreCase(status);
@@ -753,6 +763,8 @@ public class AdminDashboardService {
         """;
         jdbc.query(sql, rs -> {
             BigDecimal totalAmt = rs.getBigDecimal("total_amount");
+            java.sql.Timestamp createdTs = rs.getTimestamp("created_at");
+            String createdAtFormatted = createdTs != null ? createdTs.toLocalDateTime().format(df) : "—";
             list.add(new AdminDashboardDto.PendingOrderSummary(
                     rs.getLong("id"),
                     rs.getString("order_code"),
@@ -760,7 +772,7 @@ public class AdminDashboardService {
                     rs.getString("recipient_phone"),
                     totalAmt != null ? totalAmt : BigDecimal.ZERO,
                     rs.getString("payment_method"),
-                    rs.getTimestamp("created_at").toLocalDateTime().format(df)
+                    createdAtFormatted
             ));
         });
         return list;

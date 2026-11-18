@@ -124,7 +124,8 @@
                                 <h6 class="stats-insight-title mb-1" th:text="${insight.title}">Tiêu đề cảnh báo</h6>
                                 <p class="stats-insight-desc mb-2" th:if="${insight.description != null and !#strings.isEmpty(insight.description)}" th:text="${insight.description}">Mô tả chi tiết phân tích kinh doanh...</p>
                             </div>
-                            <a th:href="@{${insight.actionUrl}}" class="stats-insight-link text-decoration-none d-inline-flex align-items-center gap-1 mt-auto">
+                            <a th:if="${insight.actionUrl != null and !#strings.isEmpty(insight.actionUrl)}"
+                               th:href="@{${insight.actionUrl}}" class="stats-insight-link text-decoration-none d-inline-flex align-items-center gap-1 mt-auto">
                                 <span th:text="${insight.actionLabel}">Xem chi tiết</span>
                                 <i class="bi bi-arrow-right"></i>
                             </a>
