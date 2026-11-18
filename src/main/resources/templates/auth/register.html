@@ -101,10 +101,7 @@
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
-                                    <div class="d-flex justify-content-between">
-                                        <label for="phone" class="auth-label">SỐ ĐIỆN THOẠI</label>
-                                        <span class="text-muted small" style="font-size: 0.65rem;">ĐẦU SỐ 03, 05, 07, 08, 09</span>
-                                    </div>
+                                    <label for="phone" class="auth-label">SỐ ĐIỆN THOẠI</label>
                                     <div class="luxury-input-group" th:classappend="${#fields.hasErrors('phoneNumber')} ? 'is-invalid'">
                                         <span class="input-icon"><i class="bi bi-telephone"></i></span>
                                         <input type="tel" id="phone" name="phoneNumber" th:value="*{phoneNumber}" placeholder="0901 234 567" autocomplete="tel">
@@ -155,23 +152,17 @@
                                 </div>
                             </div>
 
-                            <!-- Terms & Newsletter Checkboxes -->
-                            <div class="mb-2">
-                                <div class="form-check mb-1">
-                                    <input class="form-check-input" type="checkbox" id="termsCheck" name="termsAccepted" th:checked="*{termsAccepted != null and termsAccepted}" th:classappend="${#fields.hasErrors('termsAccepted')} ? 'is-invalid'">
-                                    <label class="form-check-label small text-muted" for="termsCheck" style="font-size: 0.75rem;">
-                                        Tôi đồng ý với <a th:href="@{/terms#terms}" target="_blank" class="text-dark text-decoration-underline">Điều khoản dịch vụ</a> và <a th:href="@{/terms#privacy}" target="_blank" class="text-dark text-decoration-underline">Chính sách bảo mật</a> của Fashion Shop.
+                            <!-- Terms & Privacy Checkbox (Bắt buộc) -->
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="termsCheck" name="termsAccepted" value="true" required th:checked="*{termsAccepted != null and termsAccepted}" th:classappend="${#fields.hasErrors('termsAccepted')} ? 'is-invalid'">
+                                    <label class="form-check-label small text-muted" for="termsCheck" style="font-size: 0.78rem;">
+                                        Tôi đồng ý với <a th:href="@{/terms#terms}" target="_blank" class="text-dark fw-semibold text-decoration-underline">Điều khoản dịch vụ</a> và <a th:href="@{/terms#privacy}" target="_blank" class="text-dark fw-semibold text-decoration-underline">Chính sách bảo mật</a> của Fashion Shop. <span class="text-danger">*</span>
                                     </label>
                                 </div>
-                                <div class="auth-field-error" id="termsError" th:if="${#fields.hasErrors('termsAccepted')}">
+                                <div class="auth-field-error mt-1" id="termsError" th:if="${#fields.hasErrors('termsAccepted')}">
                                     <i class="bi bi-exclamation-circle-fill"></i>
                                     <span th:errors="*{termsAccepted}"></span>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="newsCheck" checked>
-                                    <label class="form-check-label small text-muted" for="newsCheck" style="font-size: 0.75rem;">
-                                        Nhận tin báo sớm về các bộ sưu tập giới hạn, phong cách may đo bespoke và sự kiện Private Sale.
-                                    </label>
                                 </div>
                             </div>
 
@@ -181,28 +172,8 @@
                             </button>
                         </form>
 
-                        <!-- Social Divider -->
-                        <div class="auth-divider">
-                            <span>HOẶC ĐĂNG KÝ BẰNG</span>
-                        </div>
-
-                        <div class="row g-2 mb-2">
-                            <div class="col-6">
-                                <button type="button" class="btn-social">
-                                    <i class="bi bi-google text-danger"></i>
-                                    <span>GOOGLE</span>
-                                </button>
-                            </div>
-                            <div class="col-6">
-                                <button type="button" class="btn-social">
-                                    <i class="bi bi-apple"></i>
-                                    <span>APPLE</span>
-                                </button>
-                            </div>
-                        </div>
-
                         <!-- Switch to Login -->
-                        <p class="text-center small text-muted mb-2" style="font-size: 0.78rem;">
+                        <p class="text-center small text-muted mt-3 mb-2" style="font-size: 0.78rem;">
                             Đã có tài khoản? 
                             <a th:href="@{/login}" class="text-dark fw-bold text-decoration-underline ms-1">ĐĂNG NHẬP NGAY</a>
                         </p>
@@ -382,6 +353,10 @@
                 errBox.className = 'auth-field-error';
                 if (group) {
                     group.parentNode.insertBefore(errBox, group.nextSibling);
+                } else if (input.closest('.form-check')) {
+                    const checkWrap = input.closest('.form-check');
+                    errBox.classList.add('mt-1');
+                    checkWrap.parentNode.insertBefore(errBox, checkWrap.nextSibling);
                 } else if (input.parentNode) {
                     input.parentNode.appendChild(errBox);
                 }
@@ -473,7 +448,54 @@
         if (fullnameInput) fullnameInput.addEventListener('input', () => clearFieldError(fullnameInput, 'fullNameError'));
         if (emailInput) emailInput.addEventListener('input', () => clearFieldError(emailInput, 'emailError'));
         if (phoneInput) {
-            phoneInput.addEventListener('input', () => clearFieldError(phoneInput, 'phoneError'));
+            phoneInput.addEventListener('input', function () {
+                const raw = (this.value || '').trim();
+                if (!raw) {
+                    clearFieldError(phoneInput, 'phoneError');
+                    return;
+                }
+                const cleaned = raw.replace(/[\s.-]/g, '');
+                if (!/^\+?[0-9]*$/.test(cleaned)) {
+                    setFieldError(phoneInput, 'phoneError', 'Số điện thoại chỉ được chứa các chữ số (ví dụ: 0901234567)');
+                    return;
+                }
+                if (cleaned.startsWith('0')) {
+                    if (cleaned.length >= 2 && cleaned.startsWith('02')) {
+                        setFieldError(phoneInput, 'phoneError', 'Đầu số 02 là mã vùng máy bàn cố định. Vui lòng nhập số di động (03, 05, 07, 08 hoặc 09)');
+                        return;
+                    }
+                    if (cleaned.length >= 2 && !/^(03|05|07|08|09)/.test(cleaned)) {
+                        setFieldError(phoneInput, 'phoneError', 'Số điện thoại di động Việt Nam phải bắt đầu bằng đầu số: 03, 05, 07, 08 hoặc 09');
+                        return;
+                    }
+                    if (cleaned.length > 10) {
+                        setFieldError(phoneInput, 'phoneError', 'Số điện thoại phải gồm đúng 10 chữ số (bạn đã nhập ' + cleaned.length + ' số)');
+                        return;
+                    }
+                    clearFieldError(phoneInput, 'phoneError');
+                    return;
+                }
+                if (cleaned.startsWith('+')) {
+                    if (cleaned.length >= 3 && !cleaned.startsWith('+84')) {
+                        setFieldError(phoneInput, 'phoneError', 'Số điện thoại Việt Nam phải bắt đầu bằng số 0 (hoặc +84), ví dụ: 0901234567');
+                        return;
+                    }
+                    if (cleaned.startsWith('+84')) {
+                        const rest = cleaned.substring(3);
+                        if (rest.length >= 1 && !/^[35789]/.test(rest)) {
+                            setFieldError(phoneInput, 'phoneError', 'Đầu số di động sau +84 phải là 3, 5, 7, 8 hoặc 9 (ví dụ: +84901234567)');
+                            return;
+                        }
+                        if (rest.length > 9) {
+                            setFieldError(phoneInput, 'phoneError', 'Số điện thoại quốc tế (+84) cần 9 chữ số tiếp theo (hiện có ' + rest.length + ' số)');
+                            return;
+                        }
+                    }
+                    clearFieldError(phoneInput, 'phoneError');
+                    return;
+                }
+                setFieldError(phoneInput, 'phoneError', 'Số điện thoại Việt Nam phải bắt đầu bằng số 0 (hoặc +84), ví dụ: 0901234567');
+            });
             phoneInput.addEventListener('blur', function () {
                 const err = validatePhoneValue(this.value);
                 if (err) {
