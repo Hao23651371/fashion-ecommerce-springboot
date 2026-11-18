@@ -212,9 +212,23 @@ public class StatisticsExcelExportService {
         r++;
 
         startRow(sb, r);
-        appendTextCell(sb, 1, r, 6, "Tổng doanh thu");
-        appendNumberCell(sb, 2, r, 9, stats.totalRevenue());
+        appendTextCell(sb, 1, r, 6, "Doanh thu thuần (Net)");
+        appendNumberCell(sb, 2, r, 9, stats.netRevenue() != null ? stats.netRevenue() : stats.totalRevenue());
         appendNumberCell(sb, 3, r, 10, stats.revenueKpi().growthRate());
+        endRow(sb);
+        r++;
+
+        startRow(sb, r);
+        appendTextCell(sb, 1, r, 6, "  • Doanh thu gộp (Gross)");
+        appendNumberCell(sb, 2, r, 9, stats.grossRevenue() != null ? stats.grossRevenue() : stats.totalRevenue());
+        appendTextCell(sb, 3, r, 7, "-");
+        endRow(sb);
+        r++;
+
+        startRow(sb, r);
+        appendTextCell(sb, 1, r, 6, "  • Giảm giá / Khuyến mãi");
+        appendNumberCell(sb, 2, r, 9, stats.discountAmount() != null ? stats.discountAmount() : BigDecimal.ZERO);
+        appendTextCell(sb, 3, r, 7, stats.discountRate() + "%");
         endRow(sb);
         r++;
 
@@ -229,6 +243,13 @@ public class StatisticsExcelExportService {
         appendTextCell(sb, 1, r, 6, "Giá trị đơn trung bình (AOV)");
         appendNumberCell(sb, 2, r, 9, stats.aovKpi().value());
         appendNumberCell(sb, 3, r, 10, stats.aovKpi().growthRate());
+        endRow(sb);
+        r++;
+
+        startRow(sb, r);
+        appendTextCell(sb, 1, r, 6, "Sản phẩm / đơn hàng (Độ sâu giỏ)");
+        appendNumberCell(sb, 2, r, 10, stats.itemsPerOrder());
+        appendTextCell(sb, 3, r, 7, "-");
         endRow(sb);
         r++;
 
@@ -428,6 +449,8 @@ public class StatisticsExcelExportService {
         sb.append("    <col min=\"5\" max=\"5\" width=\"22\" customWidth=\"1\"/>\n");  // Doanh thu
         sb.append("    <col min=\"6\" max=\"6\" width=\"16\" customWidth=\"1\"/>\n");  // Tỷ trọng
         sb.append("    <col min=\"7\" max=\"7\" width=\"18\" customWidth=\"1\"/>\n");  // Tăng trưởng
+        sb.append("    <col min=\"8\" max=\"8\" width=\"16\" customWidth=\"1\"/>\n");  // Tồn kho
+        sb.append("    <col min=\"9\" max=\"9\" width=\"22\" customWidth=\"1\"/>\n");  // Khuyến nghị
         sb.append("  </cols>\n");
         sb.append("  <sheetData>\n");
 
@@ -450,6 +473,8 @@ public class StatisticsExcelExportService {
         appendTextCell(sb, 5, r, 5, "Doanh thu");
         appendTextCell(sb, 6, r, 5, "Tỷ trọng doanh thu");
         appendTextCell(sb, 7, r, 5, "Tăng trưởng");
+        appendTextCell(sb, 8, r, 5, "Tồn kho");
+        appendTextCell(sb, 9, r, 5, "Khuyến nghị nhập hàng");
         endRow(sb);
         r++;
 
@@ -463,6 +488,8 @@ public class StatisticsExcelExportService {
                 appendNumberCell(sb, 5, r, 9, p.revenue());
                 appendNumberCell(sb, 6, r, 10, p.share());
                 appendNumberCell(sb, 7, r, 10, p.growthRate());
+                appendNumberCell(sb, 8, r, 8, p.currentStock());
+                appendTextCell(sb, 9, r, 7, p.recommendation());
                 endRow(sb);
                 r++;
             }

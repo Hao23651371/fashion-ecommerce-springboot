@@ -1,3 +1,4 @@
+
 package com.iuh.fashionshop.service;
 
 import com.iuh.fashionshop.dto.AdminStatisticsDto;
@@ -75,6 +76,41 @@ public class AdminStatisticsService {
         BigDecimal topRevenue = topProducts.stream().map(AdminStatisticsDto.TopProduct::revenue).reduce(BigDecimal.ZERO, BigDecimal::add);
         long topSold = topProducts.stream().mapToLong(AdminStatisticsDto.TopProduct::soldQuantity).sum();
 
+        // 4 chỉ số chất lượng doanh thu mới
+        AdminStatisticsRepository.GrossAndDiscount revDetails = statisticsRepository.aggregateRevenueDetails(SUCCESS_STATUSES, startAt, endAt);
+        BigDecimal grossRevenue = nonNull(revDetails.grossRevenue());
+        BigDecimal discountAmount = nonNull(revDetails.discountAmount());
+        BigDecimal netRevenue = nonNull(revDetails.netRevenue());
+        double discountRate = grossRevenue.compareTo(BigDecimal.ZERO) > 0
+                ? discountAmount.multiply(BigDecimal.valueOf(100)).divide(grossRevenue, 1, RoundingMode.HALF_UP).doubleValue()
+                : 0.0;
+        double itemsPerOrder = currentOrders > 0
+                ? Math.round(((double) currentSold / currentOrders) * 10.0) / 10.0
+                : 0.0;
+
+        // Phân tích ngành thời trang: Size & Màu sắc
+        List<AdminStatisticsDto.SizeShare> sizeShares = buildSizeShares(startAt, endAt, currentSold);
+        List<AdminStatisticsDto.ColorShare> colorShares = buildColorShares(startAt, endAt, currentSold);
+
+        // Đánh giá sức khỏe kho hàng toàn sàn
+        AdminStatisticsRepository.StockHealthAggregate stockHealth = statisticsRepository.countStockHealth();
+        List<AdminStatisticsDto.LowStockItem> urgentLowStockItems = statisticsRepository.findUrgentLowStockProducts(6).stream()
+                .map(p -> new AdminStatisticsDto.LowStockItem(
+                        p.productId(),
+                        p.productName(),
+                        p.categoryName(),
+                        p.currentStock(),
+                        p.currentStock() == 0 ? "bg-danger-subtle text-danger border border-danger-subtle" : "bg-warning-subtle text-warning-emphasis border border-warning-subtle",
+                        p.currentStock() == 0 ? "Hết hàng" : "Sắp hết",
+                        p.currentStock() == 0 ? "Cần nhập gấp" : "Bổ sung thêm"
+                ))
+                .toList();
+
+        // Sinh thông điệp kinh doanh thông minh (Smart Insights)
+        List<AdminStatisticsDto.SmartInsight> smartInsights = generateSmartInsights(
+                categoryRevenues, topProducts, channelRevenues, discountAmount, discountRate, bestPeriod, currentOrders, stockHealth
+        );
+
         return new AdminStatisticsDto(
                 start,
                 end,
@@ -95,7 +131,18 @@ public class AdminStatisticsService {
                 topProducts,
                 topSold,
                 topRevenue,
-                share(topRevenue, currentRevenue)
+                share(topRevenue, currentRevenue),
+                smartInsights,
+                grossRevenue,
+                discountAmount,
+                netRevenue,
+                discountRate,
+                itemsPerOrder,
+                sizeShares,
+                colorShares,
+                stockHealth.lowStockCount(),
+                stockHealth.outOfStockCount(),
+                urgentLowStockItems
         );
     }
 
@@ -165,20 +212,28 @@ public class AdminStatisticsService {
     }
 
     private List<AdminStatisticsDto.ChannelRevenue> buildChannelRevenue(LocalDateTime start, LocalDateTime end, BigDecimal totalRevenue) {
-        List<AdminStatisticsRepository.ChannelAggregate> rows = statisticsRepository.channelRevenue(SUCCESS_STATUSES, start, end);
+        List<AdminStatisticsRepository.ChannelDetailAggregate> rows = statisticsRepository.channelRevenueDetailed(SUCCESS_STATUSES, start, end);
         List<AdminStatisticsDto.ChannelRevenue> result = new ArrayList<>();
         for (int i = 0; i < rows.size(); i++) {
-            AdminStatisticsRepository.ChannelAggregate row = rows.get(i);
+            AdminStatisticsRepository.ChannelDetailAggregate row = rows.get(i);
             String dotClass = switch (i % 3) {
                 case 0 -> "dot-1";
                 case 1 -> "dot-2";
                 default -> "dot-3";
             };
+            double successRate = row.totalOrders() > 0
+                    ? Math.round(((double) row.completedOrders() * 100 / row.totalOrders()) * 10.0) / 10.0
+                    : 100.0;
+
             result.add(new AdminStatisticsDto.ChannelRevenue(
                     channelLabel(row.paymentMethod()),
                     nonNull(row.revenue()),
                     share(nonNull(row.revenue()), totalRevenue),
-                    dotClass
+                    dotClass,
+                    row.totalOrders(),
+                    row.completedOrders(),
+                    row.cancelledOrders(),
+                    successRate
             ));
         }
         return result;
@@ -215,25 +270,218 @@ public class AdminStatisticsService {
             BigDecimal totalRevenue
     ) {
         Map<String, BigDecimal> previousRevenueMap = statisticsRepository.productRevenueMap(SUCCESS_STATUSES, prevStart, prevEnd);
-        List<AdminStatisticsRepository.ProductAggregate> currentRows = statisticsRepository.topProducts(SUCCESS_STATUSES, start, end, 5);
+        List<AdminStatisticsRepository.ProductWithStockAggregate> currentRows = statisticsRepository.topProductsWithStock(SUCCESS_STATUSES, start, end, 5);
         List<AdminStatisticsDto.TopProduct> result = new ArrayList<>();
 
         for (int i = 0; i < currentRows.size(); i++) {
-            AdminStatisticsRepository.ProductAggregate row = currentRows.get(i);
+            AdminStatisticsRepository.ProductWithStockAggregate row = currentRows.get(i);
             BigDecimal currentRevenue = nonNull(row.revenue());
             BigDecimal prevRevenue = nonNull(previousRevenueMap.get(row.productName()));
+            long stock = row.currentStock();
+
+            String stockStatus;
+            String stockStatusText;
+            String stockBadgeClass;
+            String recommendation;
+
+            if (stock <= 0) {
+                stockStatus = "OUT_OF_STOCK";
+                stockStatusText = "Hết hàng (0 sp)";
+                stockBadgeClass = "bg-danger-subtle text-danger border border-danger-subtle";
+                recommendation = "Cần nhập gấp 🔴";
+            } else if (stock <= 5) {
+                stockStatus = "LOW_STOCK";
+                stockStatusText = "Sắp hết (" + stock + " sp)";
+                stockBadgeClass = "bg-warning-subtle text-warning-emphasis border border-warning-subtle";
+                recommendation = "Bổ sung thêm 🟡";
+            } else {
+                stockStatus = "IN_STOCK";
+                stockStatusText = "Đủ hàng (" + stock + " sp)";
+                stockBadgeClass = "bg-success-subtle text-success border border-success-subtle";
+                recommendation = "Duy trì bán 🟢";
+            }
 
             result.add(new AdminStatisticsDto.TopProduct(
                     i + 1,
+                    row.productId(),
                     row.productName(),
                     row.categoryName(),
                     row.soldQuantity(),
                     currentRevenue,
                     share(currentRevenue, totalRevenue),
-                    growth(currentRevenue, prevRevenue)
+                    growth(currentRevenue, prevRevenue),
+                    stock,
+                    stockStatus,
+                    stockStatusText,
+                    stockBadgeClass,
+                    recommendation
             ));
         }
         return result;
+    }
+
+    private List<AdminStatisticsDto.SizeShare> buildSizeShares(LocalDateTime start, LocalDateTime end, long totalSold) {
+        List<AdminStatisticsRepository.SizeAggregate> rows = statisticsRepository.topSizes(SUCCESS_STATUSES, start, end, 5);
+        long sum = rows.stream().mapToLong(AdminStatisticsRepository.SizeAggregate::quantity).sum();
+        long divisor = sum > 0 ? sum : (totalSold > 0 ? totalSold : 1);
+
+        return rows.stream().map(r -> new AdminStatisticsDto.SizeShare(
+                r.size(),
+                r.quantity(),
+                Math.round(((double) r.quantity() * 100 / divisor) * 10.0) / 10.0
+        )).toList();
+    }
+
+    private List<AdminStatisticsDto.ColorShare> buildColorShares(LocalDateTime start, LocalDateTime end, long totalSold) {
+        List<AdminStatisticsRepository.ColorAggregate> rows = statisticsRepository.topColors(SUCCESS_STATUSES, start, end, 5);
+        long sum = rows.stream().mapToLong(AdminStatisticsRepository.ColorAggregate::quantity).sum();
+        long divisor = sum > 0 ? sum : (totalSold > 0 ? totalSold : 1);
+
+        return rows.stream().map(r -> {
+            String hex = mapColorToHex(r.color());
+            return new AdminStatisticsDto.ColorShare(
+                    r.color(),
+                    r.quantity(),
+                    Math.round(((double) r.quantity() * 100 / divisor) * 10.0) / 10.0,
+                    hex
+            );
+        }).toList();
+    }
+
+    private String mapColorToHex(String color) {
+        if (color == null) return "#64748b";
+        String c = color.trim().toLowerCase();
+        if (c.contains("đen")) return "#0f172a";
+        if (c.contains("trắng")) return "#f8fafc; border: 1px solid #cbd5e1";
+        if (c.contains("đỏ")) return "#dc2626";
+        if (c.contains("xanh lam") || c.contains("xanh dương") || c.contains("biển")) return "#2563eb";
+        if (c.contains("xanh lá") || c.contains("rêu")) return "#16a34a";
+        if (c.contains("vàng")) return "#eab308";
+        if (c.contains("hồng")) return "#ec4899";
+        if (c.contains("cam")) return "#f97316";
+        if (c.contains("nâu") || c.contains("be")) return "#b45309";
+        if (c.contains("xám") || c.contains("ghi")) return "#64748b";
+        if (c.contains("tím")) return "#9333ea";
+        return "#475569";
+    }
+
+    private List<AdminStatisticsDto.SmartInsight> generateSmartInsights(
+            List<AdminStatisticsDto.CategoryRevenue> categoryRevenues,
+            List<AdminStatisticsDto.TopProduct> topProducts,
+            List<AdminStatisticsDto.ChannelRevenue> channelRevenues,
+            BigDecimal discountAmount,
+            double discountRate,
+            AdminStatisticsDto.WeeklyData bestPeriod,
+            long totalOrders,
+            AdminStatisticsRepository.StockHealthAggregate stockHealth
+    ) {
+        List<AdminStatisticsDto.SmartInsight> list = new ArrayList<>();
+
+        // 1. Điểm sáng danh mục (Growth & Category leader)
+        if (!categoryRevenues.isEmpty()) {
+            AdminStatisticsDto.CategoryRevenue topCat = categoryRevenues.get(0);
+            list.add(new AdminStatisticsDto.SmartInsight(
+                    "SUCCESS",
+                    "Động lực tăng trưởng",
+                    "bi-stars text-warning",
+                    "Danh mục \"" + topCat.name() + "\" đang dẫn đầu thị phần",
+                    "Đóng góp " + String.format(Locale.US, "%.1f%%", topCat.share()) + " tổng doanh thu trong kỳ. Hãy cân nhắc mở rộng mẫu mã và tăng ngân sách quảng cáo cho danh mục này.",
+                    "Xem sản phẩm",
+                    "/admin/products?q=" + topCat.name()
+            ));
+        }
+
+        // 2. Cảnh báo tồn kho cho sản phẩm bán chạy hoặc kho toàn sàn (Stock velocity warning)
+        java.util.Optional<AdminStatisticsDto.TopProduct> lowStockTopProduct = topProducts.stream()
+                .filter(p -> p.currentStock() <= 5)
+                .findFirst();
+
+        if (lowStockTopProduct.isPresent()) {
+            AdminStatisticsDto.TopProduct p = lowStockTopProduct.get();
+            String stockMsg = p.currentStock() == 0
+                    ? "Sản phẩm \"" + p.productName() + "\" đã hết sạch hàng trong kho nhưng nhu cầu khách vẫn rất cao!"
+                    : "Sản phẩm Top " + p.rank() + " (\"" + p.productName() + "\") có sức bán " + p.soldQuantity() + " sp nhưng trong kho chỉ còn " + p.currentStock() + " chiếc!";
+            list.add(new AdminStatisticsDto.SmartInsight(
+                    p.currentStock() == 0 ? "DANGER" : "WARNING",
+                    "Cảnh báo tồn kho",
+                    "bi-exclamation-triangle-fill text-warning",
+                    p.currentStock() == 0 ? "Cháy hàng sản phẩm bán chạy" : "Sắp đứt hàng sản phẩm chủ lực",
+                    stockMsg + " Khuyến nghị liên hệ xưởng hoặc lên đơn nhập thêm để tránh mất doanh thu.",
+                    "Nhập kho ngay",
+                    "/admin/products/edit/" + p.productId()
+            ));
+        } else if (stockHealth != null && (stockHealth.outOfStockCount() > 0 || stockHealth.lowStockCount() > 0)) {
+            String title = stockHealth.outOfStockCount() > 0
+                    ? "Kho có " + stockHealth.outOfStockCount() + " sản phẩm đã hết hàng"
+                    : "Kho có " + stockHealth.lowStockCount() + " sản phẩm chạm ngưỡng cạn (≤ 5 cái)";
+            String desc = "Toàn sàn có " + (stockHealth.outOfStockCount() + stockHealth.lowStockCount()) + " sản phẩm đang ở mức báo động tồn kho. Cần chủ động kiểm kê và nhập thêm hàng để sẵn sàng phục vụ.";
+            list.add(new AdminStatisticsDto.SmartInsight(
+                    stockHealth.outOfStockCount() > 0 ? "DANGER" : "WARNING",
+                    "Cảnh báo kho",
+                    "bi-box-seam text-danger",
+                    title,
+                    desc,
+                    "Quản lý kho hàng",
+                    "/admin/inventory?stockStatus=LOW"
+            ));
+        } else if (!topProducts.isEmpty()) {
+            AdminStatisticsDto.TopProduct p = topProducts.get(0);
+            list.add(new AdminStatisticsDto.SmartInsight(
+                    "INFO",
+                    "Sản phẩm ngôi sao",
+                    "bi-award-fill text-primary",
+                    "Sản phẩm \"" + p.productName() + "\" đạt doanh số cao nhất",
+                    "Đã tiêu thụ " + p.soldQuantity() + " chiếc với doanh thu " + String.format(Locale.US, "%,d đ", p.revenue().longValue()) + ". Hiện kho vẫn đảm bảo với " + p.currentStock() + " sản phẩm sẵn sàng phục vụ.",
+                    "Xem chi tiết",
+                    "/admin/products/edit/" + p.productId()
+            ));
+        }
+
+        // 3. Rủi ro COD & Kênh thanh toán
+        java.util.Optional<AdminStatisticsDto.ChannelRevenue> codChannel = channelRevenues.stream()
+                .filter(c -> c.channelName().toUpperCase().contains("COD"))
+                .findFirst();
+
+        if (codChannel.isPresent() && codChannel.get().totalOrders() > 0) {
+            AdminStatisticsDto.ChannelRevenue cod = codChannel.get();
+            double cancelRate = cod.totalOrders() > 0 ? (double) cod.cancelledOrders() * 100 / cod.totalOrders() : 0.0;
+            if (cancelRate > 10.0 || cod.cancelledOrders() > 0) {
+                list.add(new AdminStatisticsDto.SmartInsight(
+                        "WARNING",
+                        "Kiểm soát rủi ro COD",
+                        "bi-shield-exclamation text-danger",
+                        "Đơn COD có " + cod.cancelledOrders() + " đơn bị hủy/hoàn (" + String.format(Locale.US, "%.1f%%", cancelRate) + ")",
+                        "Nên rà soát nguyên nhân hủy/hoàn ở nhóm đơn thanh toán khi nhận hàng (COD) để giảm chi phí vận chuyển phát sinh.",
+                        "Xem đơn COD",
+                        "/admin/orders?payment=COD"
+                ));
+            } else {
+                list.add(new AdminStatisticsDto.SmartInsight(
+                        "INFO",
+                        "Thanh toán an toàn",
+                        "bi-credit-card-fill text-success",
+                        "Tỷ lệ thanh toán không tiền mặt đang ổn định",
+                        "Khách hàng có xu hướng tin tưởng thanh toán chuyển khoản và ví điện tử, giúp giảm thiểu tối đa rủi ro bom hàng.",
+                        null,
+                        null
+                ));
+            }
+        }
+
+        // 4. Hiệu quả khuyến mãi
+        if (discountAmount != null && discountAmount.compareTo(BigDecimal.ZERO) > 0) {
+            list.add(new AdminStatisticsDto.SmartInsight(
+                    "INFO",
+                    "Hiệu quả khuyến mãi",
+                    "bi-ticket-perforated-fill text-info",
+                    "Mã giảm giá đã hỗ trợ kích cầu " + String.format(Locale.US, "%,d đ", discountAmount.longValue()),
+                    "Mức chiết khấu chiếm " + String.format(Locale.US, "%.1f%%", discountRate) + " doanh thu gộp. Khuyến mãi đang phát huy tác dụng kích thích khách hàng hoàn tất giỏ hàng.",
+                    "Quản lý Voucher",
+                    "/admin/coupons"
+            ));
+        }
+
+        return list;
     }
 
     private String channelLabel(String paymentMethod) {
