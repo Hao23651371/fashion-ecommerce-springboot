@@ -140,6 +140,9 @@
                     <div class="alert alert-success py-2 small rounded-3 mb-2" th:if="${param.registered}">
                         <i class="bi bi-check-circle-fill me-1"></i> Đăng ký tài khoản thành công! Quý khách vui lòng đăng nhập.
                     </div>
+                    <div class="alert alert-success py-2 small rounded-3 mb-2" th:if="${param.resetSuccess != null or param.passwordChanged != null}">
+                        <i class="bi bi-shield-check me-1"></i> Đặt lại mật khẩu thành công! Quý khách vui lòng đăng nhập bằng mật khẩu mới.
+                    </div>
 
                     <!-- Login Form (Spring Security form-login) -->
                     <form th:action="@{/login}" method="post"
@@ -171,7 +174,7 @@
                         </div>
 
                         <div class="d-flex justify-content-end align-items-center mb-3">
-                            <a href="#" class="small text-decoration-none text-dark fw-semibold" style="font-size: 0.78rem;">Quên mật khẩu?</a>
+                            <a th:href="@{/forgot-password}" class="small text-decoration-none text-dark fw-semibold" style="font-size: 0.78rem;">Quên mật khẩu?</a>
                         </div>
 
                         <button type="submit" class="btn-auth-primary">
