@@ -1,3 +1,4 @@
+
 package com.iuh.fashionshop.repository.iml;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -37,6 +38,23 @@ public class AdminStatisticsRepository {
             LocalDateTime createdAt
     ) {
     }
+
+    public record GrossAndDiscount(BigDecimal grossRevenue, BigDecimal discountAmount, BigDecimal netRevenue) {}
+
+    public record SizeAggregate(String size, long quantity) {}
+
+    public record ColorAggregate(String color, long quantity) {}
+
+    public record ChannelDetailAggregate(String paymentMethod, BigDecimal revenue, long totalOrders, long completedOrders, long cancelledOrders) {}
+
+    public record ProductWithStockAggregate(
+            Long productId,
+            String productName,
+            String categoryName,
+            long soldQuantity,
+            BigDecimal revenue,
+            long currentStock
+    ) {}
 
     private final JdbcTemplate jdbc;
 
@@ -188,6 +206,160 @@ public class AdminStatisticsRepository {
                 },
                 startInclusive, endExclusive);
         return result;
+    }
+
+    public GrossAndDiscount aggregateRevenueDetails(List<String> successStatuses, LocalDateTime startInclusive, LocalDateTime endExclusive) {
+        String inClause = inClause(successStatuses);
+        return jdbc.queryForObject("""
+                SELECT COALESCE(SUM(o.subtotal), 0) AS grossRevenue,
+                       COALESCE(SUM(o.discount_amount), 0) AS discountAmount,
+                       COALESCE(SUM(o.total_amount), 0) AS netRevenue
+                FROM orders o
+                WHERE o.status IN (%s)
+                  AND o.created_at >= ?
+                  AND o.created_at < ?
+                """.formatted(inClause), (rs, i) -> new GrossAndDiscount(
+                rs.getBigDecimal("grossRevenue"),
+                rs.getBigDecimal("discountAmount"),
+                rs.getBigDecimal("netRevenue")
+        ), startInclusive, endExclusive);
+    }
+
+    public List<SizeAggregate> topSizes(List<String> successStatuses, LocalDateTime startInclusive, LocalDateTime endExclusive, int limit) {
+        String inClause = inClause(successStatuses);
+        return jdbc.query("""
+                SELECT COALESCE(NULLIF(TRIM(oi.size), ''), 'FreeSize') AS sizeName,
+                       COALESCE(SUM(oi.quantity), 0) AS totalQty
+                FROM order_item oi
+                JOIN orders o ON o.id = oi.order_id
+                WHERE o.status IN (%s)
+                  AND o.created_at >= ?
+                  AND o.created_at < ?
+                GROUP BY COALESCE(NULLIF(TRIM(oi.size), ''), 'FreeSize')
+                ORDER BY totalQty DESC
+                LIMIT ?
+                """.formatted(inClause), (rs, i) -> new SizeAggregate(
+                rs.getString("sizeName"),
+                rs.getLong("totalQty")
+        ), startInclusive, endExclusive, limit);
+    }
+
+    public List<ColorAggregate> topColors(List<String> successStatuses, LocalDateTime startInclusive, LocalDateTime endExclusive, int limit) {
+        String inClause = inClause(successStatuses);
+        return jdbc.query("""
+                SELECT COALESCE(NULLIF(TRIM(oi.color), ''), 'Tiêu chuẩn') AS colorName,
+                       COALESCE(SUM(oi.quantity), 0) AS totalQty
+                FROM order_item oi
+                JOIN orders o ON o.id = oi.order_id
+                WHERE o.status IN (%s)
+                  AND o.created_at >= ?
+                  AND o.created_at < ?
+                GROUP BY COALESCE(NULLIF(TRIM(oi.color), ''), 'Tiêu chuẩn')
+                ORDER BY totalQty DESC
+                LIMIT ?
+                """.formatted(inClause), (rs, i) -> new ColorAggregate(
+                rs.getString("colorName"),
+                rs.getLong("totalQty")
+        ), startInclusive, endExclusive, limit);
+    }
+
+    public List<ChannelDetailAggregate> channelRevenueDetailed(List<String> successStatuses, LocalDateTime startInclusive, LocalDateTime endExclusive) {
+        String inClause = inClause(successStatuses);
+        return jdbc.query("""
+                SELECT o.payment_method AS paymentMethod,
+                       COALESCE(SUM(CASE WHEN o.status IN (%s) THEN o.total_amount ELSE 0 END), 0) AS revenue,
+                       COUNT(*) AS totalOrders,
+                       COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' THEN 1 ELSE 0 END), 0) AS completedOrders,
+                       COALESCE(SUM(CASE WHEN o.status = 'CANCELLED' THEN 1 ELSE 0 END), 0) AS cancelledOrders
+                FROM orders o
+                WHERE o.created_at >= ?
+                  AND o.created_at < ?
+                GROUP BY o.payment_method
+                ORDER BY revenue DESC
+                """.formatted(inClause), (rs, i) -> new ChannelDetailAggregate(
+                rs.getString("paymentMethod"),
+                rs.getBigDecimal("revenue"),
+                rs.getLong("totalOrders"),
+                rs.getLong("completedOrders"),
+                rs.getLong("cancelledOrders")
+        ), startInclusive, endExclusive);
+    }
+
+    public List<ProductWithStockAggregate> topProductsWithStock(List<String> successStatuses, LocalDateTime startInclusive, LocalDateTime endExclusive, int limit) {
+        String inClause = inClause(successStatuses);
+        return jdbc.query("""
+                SELECT COALESCE(p.id, 0) AS productId,
+                       oi.product_name AS productName,
+                       COALESCE(MAX(c.name), 'Thời trang') AS categoryName,
+                       COALESCE(SUM(oi.quantity), 0) AS soldQuantity,
+                       COALESCE(SUM(oi.unit_price * oi.quantity), 0) AS revenue,
+                       COALESCE(MAX(st.total_stock), 0) AS currentStock
+                FROM order_item oi
+                JOIN orders o ON o.id = oi.order_id
+                LEFT JOIN product_variant pv ON pv.id = oi.variant_id
+                LEFT JOIN product p ON p.id = pv.product_id
+                LEFT JOIN category c ON c.id = p.category_id
+                LEFT JOIN (
+                    SELECT product_id, SUM(stock_quantity) AS total_stock
+                    FROM product_variant
+                    GROUP BY product_id
+                ) st ON st.product_id = p.id
+                WHERE o.status IN (%s)
+                  AND o.created_at >= ?
+                  AND o.created_at < ?
+                GROUP BY p.id, oi.product_name
+                ORDER BY revenue DESC
+                LIMIT ?
+                """.formatted(inClause), (rs, i) -> new ProductWithStockAggregate(
+                rs.getLong("productId"),
+                rs.getString("productName"),
+                rs.getString("categoryName"),
+                rs.getLong("soldQuantity"),
+                rs.getBigDecimal("revenue"),
+                rs.getLong("currentStock")
+        ), startInclusive, endExclusive, limit);
+    }
+
+    public record StockHealthAggregate(long outOfStockCount, long lowStockCount) {}
+
+    public StockHealthAggregate countStockHealth() {
+        return jdbc.queryForObject("""
+                SELECT 
+                    COALESCE(SUM(CASE WHEN stock_quantity = 0 THEN 1 ELSE 0 END), 0) AS outOfStockCount,
+                    COALESCE(SUM(CASE WHEN stock_quantity > 0 AND stock_quantity <= 5 THEN 1 ELSE 0 END), 0) AS lowStockCount
+                FROM product_variant
+                """, (rs, i) -> new StockHealthAggregate(
+                rs.getLong("outOfStockCount"),
+                rs.getLong("lowStockCount")
+        ));
+    }
+
+    public record LowStockProductAggregate(Long productId, String productName, String categoryName, long currentStock) {}
+
+    public List<LowStockProductAggregate> findUrgentLowStockProducts(int limit) {
+        return jdbc.query("""
+                SELECT p.id AS productId,
+                       CASE 
+                           WHEN pv.size IS NOT NULL AND TRIM(pv.size) != '' AND pv.color IS NOT NULL AND TRIM(pv.color) != '' 
+                               THEN CONCAT(p.name, ' (', pv.color, ' - Size ', pv.size, ')')
+                           WHEN pv.size IS NOT NULL AND TRIM(pv.size) != '' 
+                               THEN CONCAT(p.name, ' (Size ', pv.size, ')')
+                           ELSE p.name 
+                       END AS productName,
+                       COALESCE(c.name, 'Thời trang') AS categoryName,
+                       pv.stock_quantity AS currentStock
+                FROM product_variant pv
+                JOIN product p ON p.id = pv.product_id
+                LEFT JOIN category c ON c.id = p.category_id
+                WHERE pv.stock_quantity <= 5
+                ORDER BY pv.stock_quantity ASC, pv.id DESC
+                LIMIT ?
+                """, (rs, i) -> new LowStockProductAggregate(
+                rs.getLong("productId"),
+                rs.getString("productName"),
+                rs.getString("categoryName"),
+                rs.getLong("currentStock")
+        ), limit);
     }
 
     private String inClause(List<String> statuses) {

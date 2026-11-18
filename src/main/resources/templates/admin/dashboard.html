@@ -6,12 +6,782 @@
           'dashboard'
       )}">
 <head>
-    <title>Bảng điều khiển | Fashion Shop Admin</title>
+    <title>Tổng quan kinh doanh | Fashion Shop Admin</title>
 </head>
 <body>
 
-    <!-- Khung trống cho nội dung Admin (Các thành viên tự viết code vào đây) -->
-    <div id="admin-content"></div>
+<div id="admin-content">
+    <!-- ApexCharts CDN & Dashboard Styles -->
+    <link rel="stylesheet" th:href="@{/css/admin/dashboard.css}">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <div class="dashboard-page">
+
+        <!-- THÔNG BÁO FLASH TỪ HỆ THỐNG -->
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show rounded-4 border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <span th:text="${successMessage}">Thao tác thành công!</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show rounded-4 border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span th:text="${errorMessage}">Đã xảy ra lỗi!</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
+        <!-- 1. HEADER & ACTION TOOLBAR -->
+        <div class="dashboard-topbar d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
+            <div>
+                <div class="dashboard-breadcrumb">
+                    TỔNG QUAN&gt; <span>TỔNG QUAN KINH DOANH</span>
+                </div>
+                <h1 class="dashboard-title">Tổng quan kinh doanh</h1>
+                <p class="dashboard-subtitle">Chào mừng quay trở lại, đây là hiệu suất bán hàng của Atelier Fashion hôm nay.</p>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <!-- Chọn ngày lọc -->
+                <a href="javascript:void(0)" class="dashboard-action-pill" data-bs-toggle="modal" data-bs-target="#filterDateModal">
+                    <i class="bi bi-calendar3 text-secondary"></i>
+                    <span th:text="'Tháng ' + ${dashboard.targetMonth} + '/' + ${dashboard.targetYear} + ' (' + ${dashboard.currentFilterDate} + ')'">Tháng 10/2024</span>
+                    <i class="bi bi-chevron-down ms-1 text-muted" style="font-size: 0.7rem;"></i>
+                </a>
+
+                <!-- Nút cấu hình mục tiêu Database -->
+                <button type="button" class="dashboard-action-pill" data-bs-toggle="modal" data-bs-target="#targetSettingModal" title="Chỉnh sửa mục tiêu doanh thu lưu trên database">
+                    <i class="bi bi-sliders2 text-primary"></i>
+                    <span>Cấu hình mục tiêu</span>
+                </button>
+
+                <!-- Nút xuất báo cáo Excel -->
+                <a th:href="@{/admin/statistics/export}" class="btn-export-purple" title="Xuất toàn bộ báo cáo doanh thu ra Excel">
+                    <i class="bi bi-file-earmark-arrow-down-fill"></i>
+                    <span>Xuất báo cáo</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 2. NỘI DUNG CHÍNH: LƯỚI 2 CỘT (Trái: KPI & Biểu đồ, Phải: Top 5 sản phẩm) -->
+        <div class="row g-3">
+
+            <!-- CỘT TRÁI (8 CỘT TRÊN MÀN LỚN) -->
+            <div class="col-12 col-xl-8 d-flex flex-column gap-3">
+
+                <!-- HÀNG 2 THẺ KPI (Doanh thu & Đơn hàng) -->
+                <div class="row g-3">
+
+                    <!-- KPI 1: TỔNG DOANH THU -->
+                    <div class="col-12 col-md-6">
+                        <div class="atelier-card">
+                            <div class="kpi-header">
+                                <span class="kpi-label">Tổng doanh thu</span>
+                                <div class="kpi-icon-badge kpi-icon-purple">
+                                    <i class="bi bi-wallet2"></i>
+                                </div>
+                            </div>
+
+                            <div class="kpi-value">
+                                <span th:text="${#numbers.formatDecimal(dashboard.totalRevenue, 0, 'COMMA', 0, 'POINT')}">1.485.620.000</span>
+                                <span class="kpi-value-unit">đ</span>
+                            </div>
+
+                            <div class="d-flex align-items-center">
+                                <span class="kpi-trend-badge" th:classappend="${dashboard.revenueGrowthRate >= 0 ? 'trend-up' : 'trend-down'}">
+                                    <i th:class="${dashboard.revenueGrowthRate >= 0 ? 'bi bi-arrow-up-right' : 'bi bi-arrow-down-right'}"></i>
+                                    <span th:text="${dashboard.revenueGrowthRateText}">+18.4%</span>
+                                </span>
+                                <span class="trend-subtext">so với tháng trước</span>
+                            </div>
+
+                            <!-- TIẾN ĐỘ MỤC TIÊU THÁNG LƯU TRÊN DATABASE -->
+                            <div class="target-progress-box">
+                                <div class="target-labels">
+                                    <span class="target-label-text" th:text="'Mục tiêu tháng ' + ${dashboard.targetMonth} + ':'">Mục tiêu tháng 10:</span>
+                                    <span class="target-achieved-text" th:if="${dashboard.hasMonthlyTarget}"
+                                          th:text="${#numbers.formatDecimal(dashboard.targetAchievedPercent, 1, 1)} + '% đạt được (' + ${#numbers.formatDecimal(dashboard.monthlyTarget, 0, 'COMMA', 0, 'POINT')} + ' đ)'">
+                                        82% đạt được (1.800.000.000 đ)
+                                    </span>
+                                    <span class="target-achieved-text text-muted fst-italic" th:unless="${dashboard.hasMonthlyTarget}">
+                                        Chưa đặt mục tiêu
+                                    </span>
+                                </div>
+                                <div class="progress-bar-atelier">
+                                    <div class="progress-fill-purple" th:style="'width: ' + ${dashboard.targetAchievedPercentClamped} + '%;'"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KPI 2: ĐƠN HÀNG THÀNH CÔNG -->
+                    <div class="col-12 col-md-6">
+                        <div class="atelier-card">
+                            <div class="kpi-header">
+                                <span class="kpi-label">Đơn hàng thành công</span>
+                                <div class="kpi-icon-badge kpi-icon-cyan">
+                                    <i class="bi bi-bag-check-fill"></i>
+                                </div>
+                            </div>
+
+                            <div class="kpi-value">
+                                <span th:text="${#numbers.formatInteger(dashboard.successfulOrders, 0, 'COMMA')}">3.842</span>
+                                <span class="kpi-value-unit" style="font-size: 1.1rem; font-weight: 600;">đơn</span>
+                            </div>
+
+                            <div class="d-flex align-items-center">
+                                <span class="kpi-trend-badge" th:classappend="${dashboard.ordersGrowthRate >= 0 ? 'trend-up' : 'trend-down'}">
+                                    <i th:class="${dashboard.ordersGrowthRate >= 0 ? 'bi bi-arrow-up-right' : 'bi bi-arrow-down-right'}"></i>
+                                    <span th:text="${dashboard.ordersGrowthRateText}">+12.6%</span>
+                                </span>
+                                <span class="trend-subtext">so với cùng kỳ</span>
+                            </div>
+
+                            <!-- TỶ LỆ HOÀN THÀNH ĐƠN HÀNG -->
+                            <div class="kpi-footer-row">
+                                <span class="text-muted fw-semibold">Tỷ lệ hoàn thành đơn:</span>
+                                <span class="fw-bold text-dark" th:text="${#numbers.formatDecimal(dashboard.fulfillmentRate, 1, 1)} + '% giao dịch'">98.2% giao dịch</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- BIỂU ĐỒ ĐƠN HÀNG PHÁT SINH TRONG NGÀY & ĐIỀU PHỐI XỬ LÝ NHANH -->
+                <div class="atelier-card">
+                    <div class="chart-controls-row">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <h5 class="fw-bold text-dark mb-0" style="font-size: 1.05rem;" id="chartHeaderTitle">Biểu đồ Đơn hàng phát sinh trong ngày</h5>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0" style="font-size: 0.7rem;">
+                                    <i class="bi bi-record-fill text-danger me-1 blink-animation"></i>Live 24h
+                                </span>
+                            </div>
+                            <p class="text-muted small mb-0" id="chartHeaderSubtitle">Theo dõi đơn đặt theo 24 khung giờ &bull; Nhấp mốc giờ để lọc nhanh danh sách bên dưới</p>
+                        </div>
+                        <div class="grain-toggle-group">
+                            <button type="button" class="grain-btn active" data-grain="today"><i class="bi bi-clock-history me-1"></i>Hôm nay (24h)</button>
+                            <button type="button" class="grain-btn" data-grain="week"><i class="bi bi-calendar-week me-1"></i>7 ngày qua</button>
+                            <button type="button" class="grain-btn" data-grain="month"><i class="bi bi-calendar3 me-1"></i>12 tháng</button>
+                        </div>
+                    </div>
+
+                    <div class="chart-legend-wrap flex-wrap">
+                        <span id="legend-item-orders"><i class="legend-dot" style="background: #4f46e5;"></i> <span id="legend-text-orders">Đơn phát sinh</span></span>
+                        <span id="legend-item-confirmed"><i class="legend-dot" style="background: #10b981;"></i> <span id="legend-text-confirmed">Đã xử lý / Xác nhận</span></span>
+                        <span id="legend-item-pending"><i class="legend-dot" style="background: #f59e0b;"></i> <span id="legend-text-pending">Chờ duyệt</span></span>
+                        <span id="legend-item-revenue"><i class="legend-dot" style="background: #06b6d4;"></i> <span id="legend-text-revenue">Doanh thu giờ (VNĐ)</span></span>
+
+                        <span class="badge bg-light text-dark border ms-auto py-1 px-2">
+                            <i class="bi bi-bag-check text-primary me-1"></i>Hôm nay: <strong class="text-primary" id="chipTodayTotal" th:text="${dashboard.todayPipeline.totalOrders}">0</strong> đơn
+                        </span>
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1 py-1 px-2">
+                            <i class="bi bi-hourglass-split me-1"></i>Cần duyệt: <strong id="chipTodayPending" th:text="${dashboard.todayPendingOrdersCount}">0</strong>
+                        </span>
+                    </div>
+
+                    <!-- VÙNG RENDER BIỂU ĐỒ APEXCHARTS -->
+                    <div id="dashboardAreaChart"
+                         th:data-today-labels="${#strings.listJoin(dashboard.hourlyLabels, ',')}"
+                         th:data-today-orders="${#strings.listJoin(dashboard.hourlyOrders, ',')}"
+                         th:data-today-pending="${#strings.listJoin(dashboard.hourlyPendingOrders, ',')}"
+                         th:data-today-confirmed="${#strings.listJoin(dashboard.hourlyConfirmedOrders, ',')}"
+                         th:data-today-revenues="${#strings.listJoin(dashboard.hourlyRevenues, ',')}"
+                         th:data-week-labels="${#strings.listJoin(dashboard.weeklyLabels, ',')}"
+                         th:data-week-revenues="${#strings.listJoin(dashboard.weeklyRevenues, ',')}"
+                         th:data-week-orders="${#strings.listJoin(dashboard.weeklyOrders, ',')}"
+                         th:data-month-labels="${#strings.listJoin(dashboard.chartLabels, ',')}"
+                         th:data-month-revenues="${#strings.listJoin(dashboard.chartRevenues, ',')}"
+                         th:data-month-orders="${#strings.listJoin(dashboard.chartOrders, ',')}"
+                         th:data-peak-note="${dashboard.peakMonthNote}">
+                    </div>
+
+                    <!-- KHU VỰC ĐIỀU PHỐI & XỬ LÝ NHANH ĐƠN HÀNG HÔM NAY -->
+                    <div class="today-dispatcher-box mt-3 pt-3 border-top">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1" style="font-size: 0.95rem;">
+                                    <i class="bi bi-lightning-charge-fill text-warning"></i>
+                                    <span>Điều phối &amp; Xử lý nhanh đơn hàng trong ngày</span>
+                                </h6>
+
+                                <!-- Badge lọc theo khung giờ khi click vào biểu đồ -->
+                                <div id="hourFilterBadge" class="badge bg-primary text-white d-none align-items-center gap-1 py-1 px-2 rounded-pill" style="font-size: 0.75rem;">
+                                    <i class="bi bi-funnel-fill"></i> Khung giờ: <span id="selectedHourText" class="fw-bold">14:00</span>
+                                    <button type="button" class="btn-close btn-close-white ms-1" style="width: 0.4rem; height: 0.4rem;" onclick="clearHourFilter()" title="Xóa lọc theo giờ"></button>
+                                </div>
+                            </div>
+
+                            <!-- Bộ lọc trạng thái & Nút duyệt tất cả -->
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-secondary active order-filter-btn" data-status-filter="ALL">
+                                        Tất cả (<span id="countFilterAll" th:text="${#lists.size(dashboard.todayOrders)}">0</span>)
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning order-filter-btn" data-status-filter="PENDING">
+                                        Cần duyệt (<span id="countFilterPending" th:text="${dashboard.todayPendingOrdersCount}">0</span>)
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success order-filter-btn" data-status-filter="CONFIRMED">
+                                        Đã xử lý (<span id="countFilterConfirmed" th:text="${dashboard.todayConfirmedOrdersCount}">0</span>)
+                                    </button>
+                                </div>
+
+                                <button type="button" class="btn btn-sm btn-success fw-semibold px-2 py-1" id="btnBatchConfirmToday"
+                                        th:disabled="${dashboard.todayPendingOrdersCount == 0}"
+                                        onclick="batchConfirmTodayOrders()">
+                                    <i class="bi bi-check2-all me-1"></i> Duyệt nhanh tất cả (<span id="btnBatchConfirmCount" th:text="${dashboard.todayPendingOrdersCount}">0</span>)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- BẢNG CUỘN ĐƠN HÀNG HÔM NAY -->
+                        <div class="today-orders-table-wrapper rounded-3 border" style="max-height: 270px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0" style="font-size: 0.82rem;">
+                                <thead class="table-light sticky-top" style="z-index: 1;">
+                                    <tr>
+                                        <th style="width: 65px;">Giờ</th>
+                                        <th>Mã đơn</th>
+                                        <th>Khách hàng</th>
+                                        <th>Tổng tiền</th>
+                                        <th>Thanh toán</th>
+                                        <th>Trạng thái</th>
+                                        <th class="text-end" style="min-width: 110px;">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="todayOrdersTableBody">
+                                    <tr th:each="ord : ${dashboard.todayOrders}"
+                                        th:id="'today-order-row-' + ${ord.id}"
+                                        class="today-order-row"
+                                        th:data-hour="${ord.hourSlot}"
+                                        th:data-status="${ord.status}">
+                                        <td class="fw-bold text-secondary font-monospace" th:text="${ord.timeFormatted}">14:20</td>
+                                        <td>
+                                            <a th:href="@{'/admin/orders/' + ${ord.id}}" class="fw-bold font-monospace text-primary text-decoration-none"
+                                               th:text="'#' + ${ord.orderCode}" title="Xem chi tiết đơn hàng">#FS001</a>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold text-dark text-truncate" style="max-width: 130px;" th:text="${ord.recipientName}">Nguyễn Văn A</div>
+                                            <small class="text-muted font-monospace" th:text="${ord.phone}">0912345678</small>
+                                        </td>
+                                        <td>
+                                            <strong class="text-dark" th:text="${#numbers.formatDecimal(ord.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">850.000 đ</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border" th:text="${ord.paymentMethod}">COD</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge rounded-pill" th:classappend="${ord.statusBadgeClass}"
+                                                  th:id="'order-status-badge-' + ${ord.id}"
+                                                  th:text="${ord.statusNameVi}">Chờ xác nhận</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="d-flex justify-content-end gap-1">
+                                                <button th:if="${ord.isPending}"
+                                                        type="button" class="btn btn-sm btn-success rounded-pill px-2 py-0 fw-semibold btn-quick-confirm-action"
+                                                        th:data-order-id="${ord.id}"
+                                                        title="Duyệt nhanh đơn này"
+                                                        onclick="quickConfirmRow(this)">
+                                                    <i class="bi bi-check-lg"></i> Duyệt
+                                                </button>
+                                                <a th:href="@{'/admin/orders/' + ${ord.id}}"
+                                                   class="btn btn-sm btn-light border rounded-pill px-2 py-0 fw-semibold text-secondary"
+                                                   title="Xem chi tiết đơn hàng">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <!-- NẾU CHƯA CÓ ĐƠN NÀO TRONG NGÀY -->
+                                    <tr id="emptyTodayRow" th:classappend="${#lists.isEmpty(dashboard.todayOrders) ? '' : 'd-none'}">
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            <i class="bi bi-bag-check fs-2 text-secondary d-block mb-1"></i>
+                                            <span>Chưa phát sinh đơn hàng nào trong ngày hôm nay.</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- CỘT PHẢI: TOP 5 SẢN PHẨM BÁN CHẠY NHẤT -->
+            <div class="col-12 col-xl-4">
+                <div class="atelier-card widget-top-sellers">
+                    <div class="widget-header">
+                        <div>
+                            <div class="widget-title">
+                                <i class="bi bi-award-fill text-warning"></i>
+                                <span>5 sản phẩm bán chạy nhất</span>
+                            </div>
+                            <p class="widget-subtitle">Xếp hạng dựa trên lượng tiêu thụ &amp; doanh số thực</p>
+                        </div>
+                        <span class="badge-sold-chip" th:text="'Đã bán ' + ${#numbers.formatInteger(dashboard.totalTopProductsSold, 0, 'COMMA')} + ' sp'">Đã bán 1.840 sp</span>
+                    </div>
+
+                    <!-- DANH SÁCH 5 SẢN PHẨM -->
+                    <div class="best-seller-list">
+                        <div class="best-seller-item" th:each="p : ${dashboard.topProducts}">
+                            <!-- Thứ hạng -->
+                            <div class="seller-rank-badge" th:classappend="'rank-' + ${p.rank}" th:text="${p.rank}">1</div>
+
+                            <!-- Ảnh sản phẩm -->
+                            <a th:href="@{'/admin/products/edit/' + ${p.productId}}" class="seller-thumbnail-wrap" title="Xem chi tiết & quản lý sản phẩm">
+                                <img th:src="${p.imageUrl != null and !p.imageUrl.isEmpty() ? p.imageUrl : '/images/products/default.jpg'}"
+                                     alt="Ảnh" class="seller-thumbnail"
+                                     onerror="this.src='https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=100&q=80'">
+                            </a>
+
+                            <!-- Tên + SKU + Giá -->
+                            <div class="seller-info">
+                                <a th:href="@{'/admin/products/edit/' + ${p.productId}}"
+                                   class="seller-name text-decoration-none"
+                                   title="Nhấp để xem chi tiết & quản lý sản phẩm"
+                                   th:text="${p.productName}">Áo Khoác Blazer Regular Fit</a>
+                                <div class="seller-meta d-flex align-items-center gap-1">
+                                    <span th:text="${p.sku}">SKU: AT-BLZ-092 • Áo khoác</span>
+                                    <a th:href="@{'/shop/' + ${p.productId}}" target="_blank" class="text-primary text-decoration-none small ms-1" title="Mở trang sản phẩm ngoài website (Storefront)">
+                                        <i class="bi bi-box-arrow-up-right" style="font-size: 0.7rem;"></i>
+                                    </a>
+                                </div>
+                                <div class="seller-pricing">
+                                    <span class="fw-semibold text-secondary" th:text="${#numbers.formatInteger(p.soldQuantity, 0, 'COMMA')} + ' chiếc'">542 chiếc</span>
+                                    <span>•</span>
+                                    <span class="text-muted" th:text="'Giá: ' + ${#numbers.formatDecimal(p.unitPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">Giá: 2.150.000 đ</span>
+                                </div>
+                            </div>
+
+                            <!-- Doanh thu & Tỷ trọng -->
+                            <div class="seller-stats-col">
+                                <div class="seller-revenue" th:text="${#numbers.formatDecimal(p.revenue, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.165.300.000 đ</div>
+                                <div class="seller-share-label" th:text="${#numbers.formatDecimal(p.sharePercent, 1, 1)} + '% tỉ trọng'">29.5% tỉ trọng</div>
+                                <div class="seller-progress-track">
+                                    <div class="seller-progress-bar"
+                                         th:classappend="'bar-rank-' + ${p.rank}"
+                                         th:style="'width: ' + ${p.sharePercent} + '%;'"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Trường hợp chưa có dữ liệu bán -->
+                        <div th:if="${#lists.isEmpty(dashboard.topProducts)}" class="text-center py-4 text-muted small">
+                            Chưa phát sinh dữ liệu bán hàng trong kỳ.
+                        </div>
+                    </div>
+
+                    <!-- FOOTER ĐIỀU HƯỚNG KHO HÀNG -->
+                    <div class="widget-footer-action">
+                        <a th:href="@{/admin/inventory}" class="widget-link-btn">
+                            Xem báo cáo danh mục tồn kho chi tiết &rarr;
+                        </a>
+                        <button type="button" class="btn-icon-refresh" onclick="location.reload()" title="Làm mới số liệu">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 3. BANNER PHÂN BỔ TRẠNG THÁI XỬ LÝ ĐƠN HÀNG (THEO BỘ LỌC THỜI GIAN) -->
+        <div class="atelier-card mt-3" id="orderPipelineSection"
+             th:data-target-month="${dashboard.targetMonth}"
+             th:data-selected-year="${dashboard.selectedYear}"
+
+             th:data-pipeline-today-total="${dashboard.todayPipeline.totalOrders}"
+             th:data-pipeline-today-completed="${dashboard.todayPipeline.completedCount}"
+             th:data-pipeline-today-completed-pct="${dashboard.todayPipeline.completedPercent}"
+             th:data-pipeline-today-processing="${dashboard.todayPipeline.processingCount}"
+             th:data-pipeline-today-processing-pct="${dashboard.todayPipeline.processingPercent}"
+             th:data-pipeline-today-shipping="${dashboard.todayPipeline.shippingCount}"
+             th:data-pipeline-today-shipping-pct="${dashboard.todayPipeline.shippingPercent}"
+             th:data-pipeline-today-cancelled="${dashboard.todayPipeline.cancelledCount}"
+             th:data-pipeline-today-cancelled-pct="${dashboard.todayPipeline.cancelledPercent}"
+
+             th:data-pipeline-week-total="${dashboard.weekPipeline.totalOrders}"
+             th:data-pipeline-week-completed="${dashboard.weekPipeline.completedCount}"
+             th:data-pipeline-week-completed-pct="${dashboard.weekPipeline.completedPercent}"
+             th:data-pipeline-week-processing="${dashboard.weekPipeline.processingCount}"
+             th:data-pipeline-week-processing-pct="${dashboard.weekPipeline.processingPercent}"
+             th:data-pipeline-week-shipping="${dashboard.weekPipeline.shippingCount}"
+             th:data-pipeline-week-shipping-pct="${dashboard.weekPipeline.shippingPercent}"
+             th:data-pipeline-week-cancelled="${dashboard.weekPipeline.cancelledCount}"
+             th:data-pipeline-week-cancelled-pct="${dashboard.weekPipeline.cancelledPercent}"
+
+             th:data-pipeline-month-total="${dashboard.monthPipeline.totalOrders}"
+             th:data-pipeline-month-completed="${dashboard.monthPipeline.completedCount}"
+             th:data-pipeline-month-completed-pct="${dashboard.monthPipeline.completedPercent}"
+             th:data-pipeline-month-processing="${dashboard.monthPipeline.processingCount}"
+             th:data-pipeline-month-processing-pct="${dashboard.monthPipeline.processingPercent}"
+             th:data-pipeline-month-shipping="${dashboard.monthPipeline.shippingCount}"
+             th:data-pipeline-month-shipping-pct="${dashboard.monthPipeline.shippingPercent}"
+             th:data-pipeline-month-cancelled="${dashboard.monthPipeline.cancelledCount}"
+             th:data-pipeline-month-cancelled-pct="${dashboard.monthPipeline.cancelledPercent}"
+
+             th:data-pipeline-year-total="${dashboard.yearPipeline.totalOrders}"
+             th:data-pipeline-year-completed="${dashboard.yearPipeline.completedCount}"
+             th:data-pipeline-year-completed-pct="${dashboard.yearPipeline.completedPercent}"
+             th:data-pipeline-year-processing="${dashboard.yearPipeline.processingCount}"
+             th:data-pipeline-year-processing-pct="${dashboard.yearPipeline.processingPercent}"
+             th:data-pipeline-year-shipping="${dashboard.yearPipeline.shippingCount}"
+             th:data-pipeline-year-shipping-pct="${dashboard.yearPipeline.shippingPercent}"
+             th:data-pipeline-year-cancelled="${dashboard.yearPipeline.cancelledCount}"
+             th:data-pipeline-year-cancelled-pct="${dashboard.yearPipeline.cancelledPercent}"
+
+             th:data-pipeline-all-total="${dashboard.allPipeline.totalOrders}"
+             th:data-pipeline-all-completed="${dashboard.allPipeline.completedCount}"
+             th:data-pipeline-all-completed-pct="${dashboard.allPipeline.completedPercent}"
+             th:data-pipeline-all-processing="${dashboard.allPipeline.processingCount}"
+             th:data-pipeline-all-processing-pct="${dashboard.allPipeline.processingPercent}"
+             th:data-pipeline-all-shipping="${dashboard.allPipeline.shippingCount}"
+             th:data-pipeline-all-shipping-pct="${dashboard.allPipeline.shippingPercent}"
+             th:data-pipeline-all-cancelled="${dashboard.allPipeline.cancelledCount}"
+             th:data-pipeline-all-cancelled-pct="${dashboard.allPipeline.cancelledPercent}">
+
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="fw-bold text-dark" style="font-size: 0.95rem;">Phân bổ trạng thái xử lý đơn hàng:</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold" id="pipelinePeriodLabel">Hôm nay</span>
+                    <span class="text-muted small">&bull;</span>
+                    <span class="badge bg-light text-dark border fw-semibold" id="pipelineTotalBadge" th:text="${dashboard.todayPipeline.totalOrders} + ' đơn tổng'">0 đơn tổng</span>
+                </div>
+
+                <!-- BỘ LỌC THỜI GIAN CHO PIPELINE: NGÀY, TUẦN, THÁNG, NĂM, TOÀN BỘ -->
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="grain-toggle-group">
+                        <button type="button" class="pipeline-grain-btn active" data-pipeline="today">Ngày (Hôm nay)</button>
+                        <button type="button" class="pipeline-grain-btn" data-pipeline="week">Tuần (7 ngày)</button>
+                        <button type="button" class="pipeline-grain-btn" data-pipeline="month" th:text="'Tháng ' + ${dashboard.targetMonth}">Tháng này</button>
+                        <button type="button" class="pipeline-grain-btn" data-pipeline="year" th:text="'Năm ' + ${dashboard.selectedYear}">Năm này</button>
+                        <button type="button" class="pipeline-grain-btn" data-pipeline="all">Toàn bộ</button>
+                    </div>
+
+                    <div th:if="${!#lists.isEmpty(dashboard.pendingOrders)}" class="d-flex align-items-center gap-2">
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                            <i class="bi bi-clock-history me-1"></i>Có <strong th:text="${#lists.size(dashboard.pendingOrders)}">0</strong> đơn cần duyệt
+                        </span>
+                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#pendingOrdersModal">
+                            Xem &amp; duyệt nhanh &rarr;
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- THANH TIẾN TRÌNH 4 MÀU PHÂN BỔ TRẠNG THÁI -->
+            <div class="pipeline-bar-wrapper">
+                <div id="pipelineSegmentCompleted" class="pipeline-segment" th:style="'width: ' + ${dashboard.todayPipeline.completedPercent} + '%; background: #10b981;'" title="Đã hoàn tất"></div>
+                <div id="pipelineSegmentProcessing" class="pipeline-segment" th:style="'width: ' + ${dashboard.todayPipeline.processingPercent} + '%; background: #4f46e5;'" title="Đang xử lý"></div>
+                <div id="pipelineSegmentShipping" class="pipeline-segment" th:style="'width: ' + ${dashboard.todayPipeline.shippingPercent} + '%; background: #06b6d4;'" title="Đang giao"></div>
+                <div id="pipelineSegmentCancelled" class="pipeline-segment" th:style="'width: ' + ${dashboard.todayPipeline.cancelledPercent} + '%; background: #ef4444;'" title="Hoàn trả/Hủy"></div>
+            </div>
+
+            <!-- CHÚ THÍCH CÓ CLICK DẪN SANG DANH SÁCH ĐƠN HÀNG -->
+            <div class="pipeline-legend-grid">
+                <a th:href="@{/admin/orders(status='COMPLETED')}" class="pipeline-legend-item">
+                    <i class="legend-dot" style="background: #10b981;"></i>
+                    <span>Đã hoàn tất:</span>
+                    <strong id="pipelineLegendCompleted" th:text="${dashboard.todayPipeline.completedPercent} + '% (' + ${dashboard.todayPipeline.completedCount} + ')'">0% (0)</strong>
+                </a>
+                <a th:href="@{/admin/orders(status='PROCESSING')}" class="pipeline-legend-item">
+                    <i class="legend-dot" style="background: #4f46e5;"></i>
+                    <span>Đang xử lý:</span>
+                    <strong id="pipelineLegendProcessing" th:text="${dashboard.todayPipeline.processingPercent} + '% (' + ${dashboard.todayPipeline.processingCount} + ')'">0% (0)</strong>
+                </a>
+                <a th:href="@{/admin/orders(status='SHIPPING')}" class="pipeline-legend-item">
+                    <i class="legend-dot" style="background: #06b6d4;"></i>
+                    <span>Đang giao:</span>
+                    <strong id="pipelineLegendShipping" th:text="${dashboard.todayPipeline.shippingPercent} + '% (' + ${dashboard.todayPipeline.shippingCount} + ')'">0% (0)</strong>
+                </a>
+                <a th:href="@{/admin/orders(status='CANCELLED')}" class="pipeline-legend-item">
+                    <i class="legend-dot" style="background: #ef4444;"></i>
+                    <span>Hoàn trả/Hủy:</span>
+                    <strong id="pipelineLegendCancelled" th:text="${dashboard.todayPipeline.cancelledPercent} + '% (' + ${dashboard.todayPipeline.cancelledCount} + ')'">0% (0)</strong>
+                </a>
+            </div>
+        </div>
+
+        <!-- 4. THEO DÕI MỤC TIÊU & MỨC ĐỘ HOÀN THÀNH 12 THÁNG (THAY THẾ KÊNH BÁN HÀNG) -->
+        <div class="atelier-card mt-3">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="kpi-icon-badge kpi-icon-purple" style="width: 38px; height: 38px; font-size: 1.1rem;">
+                        <i class="bi bi-calendar-check-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold text-dark mb-0" style="font-size: 1.05rem;">Mục tiêu &amp; Mức độ hoàn thành các tháng</h5>
+                        <p class="text-muted small mb-0">Theo dõi doanh thu thực tế so với chỉ tiêu từng tháng trong năm tài chính <strong class="text-primary" th:text="${dashboard.selectedYear}">2024</strong></p>
+                    </div>
+                </div>
+
+                <!-- Chọn năm tài chính & Đặt mục tiêu nhanh -->
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <form th:action="@{/admin/dashboard}" method="get" class="d-flex align-items-center gap-1">
+                        <span class="small text-muted fw-semibold">Năm:</span>
+                        <select name="year" class="form-select form-select-sm rounded-pill fw-semibold border-secondary-subtle" onchange="this.form.submit()" style="width: auto; font-size: 0.8rem;">
+                            <option th:each="y : ${dashboard.availableYears}" th:value="${y}" th:text="'Năm ' + ${y}" th:selected="${y == dashboard.selectedYear}">Năm 2024</option>
+                        </select>
+                    </form>
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold" data-bs-toggle="modal" data-bs-target="#targetSettingModal">
+                        <i class="bi bi-sliders2 me-1"></i> Cấu hình chỉ tiêu
+                    </button>
+                </div>
+            </div>
+
+            <!-- LƯỚI 12 THÁNG TRONG NĂM -->
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-3">
+                <div class="col" th:each="m : ${dashboard.monthlyProgressList}">
+                    <div class="monthly-target-card" th:classappend="${m.isCurrentMonth ? 'current-active-month' : ''}">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="month-title" th:text="${m.monthLabel}">Tháng 10</span>
+                                <span th:if="${m.isCurrentMonth}" class="badge bg-primary text-white" style="font-size: 0.65rem;">Hiện tại</span>
+                                <span th:if="${m.isPastMonth}" class="badge bg-light text-muted border" style="font-size: 0.65rem;">
+                                    <i class="bi bi-lock-fill"></i> Đã chốt
+                                </span>
+                            </div>
+                            <span class="monthly-status-badge" th:classappend="${m.badgeClass}" th:text="${m.statusText}">Đạt mục tiêu</span>
+                        </div>
+
+                        <!-- Doanh thu thực tế vs Mục tiêu -->
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>Thực đạt:</span>
+                                <strong class="text-dark" th:text="${#numbers.formatDecimal(m.actualRevenue, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.485.620.000 đ</strong>
+                            </div>
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>Mục tiêu:</span>
+                                <span class="text-secondary fw-semibold" th:if="${m.hasTarget}"
+                                      th:text="${#numbers.formatDecimal(m.targetAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.800.000.000 đ</span>
+                                <span class="text-muted fst-italic" th:unless="${m.hasTarget}">Chưa đặt</span>
+                            </div>
+                        </div>
+
+                        <!-- Thanh tiến độ hoàn thành -->
+                        <div class="monthly-progress-track mb-2">
+                            <div class="monthly-progress-fill"
+                                 th:classappend="${m.achievedPercent >= 100 ? 'fill-success' : (m.achievedPercent >= 70 ? 'fill-good' : 'fill-progress')}"
+                                 th:style="'width: ' + ${m.achievedPercentClamped} + '%;'"></div>
+                        </div>
+
+                        <!-- Footer thẻ tháng: % đạt và nút bấm -->
+                        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                            <div>
+                                <span class="monthly-pct-text fw-bold" th:if="${m.hasTarget}"
+                                      th:classappend="${m.achievedPercent >= 100 ? 'text-success' : (m.achievedPercent >= 70 ? 'text-primary' : 'text-dark')}"
+                                      th:text="${#numbers.formatDecimal(m.achievedPercent, 1, 1)} + '%'">82.5%</span>
+                                <span class="monthly-pct-text text-muted" th:unless="${m.hasTarget}">--</span>
+                                <small class="text-muted d-block" style="font-size: 0.68rem;" th:text="${m.ordersCount} + ' đơn'">3.842 đơn</small>
+                            </div>
+
+                            <div class="d-flex gap-1">
+                                <a th:href="@{/admin/dashboard(month=${m.month}, year=${m.year})}"
+                                   class="btn btn-sm btn-light border rounded-pill py-0 px-2 fw-semibold"
+                                   style="font-size: 0.75rem;"
+                                   title="Xem toàn bộ số liệu chi tiết của tháng này trên Dashboard">
+                                    <i class="bi bi-eye"></i> Xem
+                                </a>
+                                <!-- Nút Sửa: Chỉ hiện khi tháng hiện tại hoặc tương lai (chưa chốt) -->
+                                <button th:if="${m.canEditTarget}"
+                                        type="button" class="btn btn-sm btn-light border text-primary rounded-pill py-0 px-2 fw-semibold"
+                                        style="font-size: 0.75rem;"
+                                        th:data-set-month="${m.month}"
+                                        th:data-set-year="${m.year}"
+                                        th:data-set-target="${m.hasTarget ? m.targetAmount : ''}"
+                                        onclick="openTargetModalForMonth(this)"
+                                        title="Chỉnh sửa mục tiêu doanh thu">
+                                    <i class="bi bi-pencil"></i> Sửa
+                                </button>
+                                <!-- Nút Khóa khi tháng đã qua: Không cho sửa -->
+                                <button th:unless="${m.canEditTarget}"
+                                        type="button" class="btn btn-sm btn-light border text-muted rounded-pill py-0 px-2 fw-semibold disabled"
+                                        style="font-size: 0.75rem; opacity: 0.6;"
+                                        title="Kỳ kinh doanh này đã kết thúc và chốt sổ, không thể thay đổi mục tiêu!">
+                                    <i class="bi bi-lock-fill"></i> Khóa
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 1: CẤU HÌNH MỤC TIÊU DOANH THU & GHI CHÚ (LƯU VÀO DATABASE) -->
+    <!-- ========================================================================= -->
+    <div class="modal fade" id="targetSettingModal" tabindex="-1" aria-labelledby="targetSettingModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <form th:action="@{/admin/dashboard/target}" method="post" id="targetSettingForm" onsubmit="return confirmTargetChange(event)">
+                    <div class="modal-header border-bottom-0 pb-0">
+                        <h5 class="modal-title fw-bold" id="targetSettingModalLabel">
+                            <i class="bi bi-sliders2 text-primary me-2"></i>Cấu hình mục tiêu kinh doanh
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-3">
+                        <div class="alert alert-warning d-flex align-items-center rounded-3 p-2 small mb-3 border-0 bg-warning-subtle text-warning-emphasis">
+                            <i class="bi bi-shield-exclamation fs-5 me-2 flex-shrink-0 text-warning"></i>
+                            <div>
+                                <strong>Xác nhận nghiêm ngặt:</strong> Mục tiêu doanh thu là chỉ tiêu tài chính quan trọng. Các tháng trong quá khứ đã chốt doanh thu sẽ bị hệ thống khóa và không thể thay đổi.
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold small">Tháng áp dụng (1 - 12) <span class="text-danger">*</span></label>
+                                <input type="number" min="1" max="12" name="targetMonth" id="modalTargetMonth" class="form-control rounded-3"
+                                       th:value="${dashboard.targetMonth}" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold small">Năm tài chính <span class="text-danger">*</span></label>
+                                <input type="number" min="2020" max="2035" name="targetYear" id="modalTargetYear" class="form-control rounded-3"
+                                       th:value="${dashboard.targetYear}" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Mục tiêu doanh thu tháng (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" step="1000000" name="monthlyTarget" id="modalMonthlyTarget" class="form-control rounded-3"
+                                   th:value="${dashboard.monthlyTarget}" required placeholder="Ví dụ: 100000000">
+                            <div class="form-text">Nhập số tiền mục tiêu thực tế mong muốn đạt được trong tháng.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Ghi chú sự kiện đỉnh điểm (Peak Note)</label>
+                            <input type="text" name="highlightNote" class="form-control rounded-3"
+                                   th:value="${dashboard.peakMonthNote}">
+                            <div class="form-text">Hiển thị trên biểu đồ, ví dụ: <em>Đạt đỉnh doanh thu vào T10 dịp Fashion Week Thu Đông</em>.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top-0 pt-0">
+                        <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4">
+                            <i class="bi bi-floppy-fill me-1"></i> Lưu vào Database
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 2: DUYỆT NHANH ĐƠN HÀNG CHỜ XỬ LÝ (THAO TÁC DATABASE) -->
+    <!-- ========================================================================= -->
+    <div class="modal fade" id="pendingOrdersModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-clock-history text-warning me-2"></i>Đơn hàng đang chờ duyệt
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Khách hàng</th>
+                                <th>Tổng tiền</th>
+                                <th>Thanh toán</th>
+                                <th>Thời gian đặt</th>
+                                <th class="text-end">Hành động</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="order : ${dashboard.pendingOrders}" th:id="'pending-order-row-' + ${order.id}">
+                                <td>
+                                    <strong class="font-monospace text-primary" th:text="'#' + ${order.orderCode}">#FS001</strong>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold" th:text="${order.recipientName}">Nguyễn Văn A</div>
+                                    <small class="text-muted" th:text="${order.phone}">0912345678</small>
+                                </td>
+                                <td class="fw-bold text-dark" th:text="${#numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                    850.000 đ
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border" th:text="${order.paymentMethod}">COD</span>
+                                </td>
+                                <td class="small text-muted" th:text="${order.createdAtFormatted}">14/10/2024 10:30</td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-success rounded-3 px-3"
+                                            th:data-quick-confirm="${order.id}">
+                                        <i class="bi bi-check-lg"></i> Duyệt nhanh
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(dashboard.pendingOrders)}">
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    <i class="bi bi-check2-circle fs-3 text-success d-block mb-1"></i>
+                                    Tuyệt vời! Hiện không có đơn hàng nào bị ứ đọng chờ duyệt.
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a th:href="@{/admin/orders}" class="btn btn-outline-secondary rounded-3">Xem tất cả đơn hàng</a>
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: CHỌN THÁNG HOẶC NGÀY LỌC BÁO CÁO -->
+    <div class="modal fade" id="filterDateModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <form th:action="@{/admin/dashboard}" method="get">
+                    <div class="modal-header border-bottom-0 pb-0">
+                        <h6 class="modal-title fw-bold">Chọn thời gian xem báo cáo</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-3">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-dark">Xem theo Tháng &amp; Năm:</label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <select name="month" class="form-select form-select-sm rounded-3">
+                                        <option th:each="m : ${#numbers.sequence(1, 12)}"
+                                                th:value="${m}"
+                                                th:text="'Tháng ' + ${m}"
+                                                th:selected="${m == dashboard.targetMonth}">Tháng 10</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <select name="year" class="form-select form-select-sm rounded-3">
+                                        <option th:each="y : ${dashboard.availableYears}"
+                                                th:value="${y}"
+                                                th:text="'Năm ' + ${y}"
+                                                th:selected="${y == dashboard.targetYear}">Năm 2024</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center text-muted small my-2">-- HOẶC --</div>
+
+                        <div>
+                            <label class="form-label small fw-semibold text-dark">Xem theo ngày cụ thể:</label>
+                            <input type="date" name="date" class="form-control form-control-sm rounded-3">
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top-0 pt-0">
+                        <button type="submit" class="btn btn-primary btn-sm rounded-3 w-100">Áp dụng lọc</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script điều khiển Dashboard -->
+    <script th:src="@{/js/admin/dashboard.js}"></script>
+</div>
 
 </body>
 </html>

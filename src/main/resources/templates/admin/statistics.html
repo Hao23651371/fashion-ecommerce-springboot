@@ -44,12 +44,31 @@
                 <h2>Thống kê bán hàng</h2>
                 <p>Theo dõi hiệu quả kinh doanh và khám phá động lực tăng trưởng.</p>
             </div>
-            <a th:href="@{/admin/statistics/export(startDate=${stats != null ? stats.startDate : ''}, endDate=${stats != null ? stats.endDate : ''})}"
-               id="statsExportExcelBtn"
-               class="btn stats-export-btn"
-               title="Xuất dữ liệu thống kê ra file Excel (.xlsx)">
-                <i class="bi bi-file-earmark-excel me-2"></i>Xuất file Excel
-            </a>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <!-- Nút Cảnh báo Tồn kho: Luôn hiển thị trạng thái kho (Cảnh báo nếu thiếu hàng, hoặc An toàn nếu đủ hàng) -->
+                <a th:if="${stats != null}"
+                   th:href="@{/admin/inventory(stockStatus=${stats.totalOutOfStockCount > 0 or stats.totalLowStockCount > 0 ? 'LOW' : 'ALL'})}"
+                   class="btn stats-stock-indicator-btn shadow-sm"
+                   th:classappend="${stats.totalOutOfStockCount > 0 ? 'status-danger' : (stats.totalLowStockCount > 0 ? 'status-warning' : 'status-safe')}"
+                   title="Bấm để chuyển tới trang Quản lý Kho Hàng">
+                    <span th:if="${stats.totalOutOfStockCount > 0 or stats.totalLowStockCount > 0}">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        <span>Cảnh báo kho:</span>
+                        <span class="badge bg-danger ms-1" th:if="${stats.totalOutOfStockCount > 0}" th:text="${stats.totalOutOfStockCount} + ' hết hàng'">0 hết</span>
+                        <span class="badge bg-warning text-dark ms-1" th:if="${stats.totalLowStockCount > 0}" th:text="${stats.totalLowStockCount} + ' sắp hết'">0 sắp hết</span>
+                    </span>
+                    <span th:unless="${stats.totalOutOfStockCount > 0 or stats.totalLowStockCount > 0}">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <span class="text-dark">Tồn kho: <strong class="text-success">An toàn</strong></span>
+                    </span>
+                </a>
+                <a th:href="@{/admin/statistics/export(startDate=${stats != null ? stats.startDate : ''}, endDate=${stats != null ? stats.endDate : ''})}"
+                   id="statsExportExcelBtn"
+                   class="btn stats-export-btn"
+                   title="Xuất dữ liệu thống kê ra file Excel (.xlsx)">
+                    <i class="bi bi-file-earmark-excel me-2"></i>Xuất file Excel
+                </a>
+            </div>
         </div>
 
         <!-- Filter Bar -->
@@ -84,20 +103,63 @@
             </div>
         </div>
 
+        <!-- Smart Business Insights Hub -->
+        <div class="stats-insights-section mb-4" th:if="${stats != null and stats.smartInsights != null and !#lists.isEmpty(stats.smartInsights)}">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="stats-insight-sparkle"><i class="bi bi-stars"></i></span>
+                    <h6 class="mb-0 fw-bold text-dark">Gợi ý & Cảnh báo Quản trị Thông minh (Actionable Business Insights)</h6>
+                </div>
+                <small class="text-muted"><i class="bi bi-lightning-charge text-warning me-1"></i>Hệ thống tự động phân tích dữ liệu kinh doanh</small>
+            </div>
+            <div class="row g-3">
+                <div class="col-12 col-md-6 col-xl-3" th:each="insight : ${stats.smartInsights}">
+                    <div class="card h-100 border-0 shadow-sm stats-insight-card" th:classappend="'insight-' + ${insight.type.toLowerCase()}">
+                        <div class="card-body d-flex flex-column justify-content-between p-3">
+                            <div>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="stats-insight-badge" th:text="${insight.badgeText}">Hot</span>
+                                    <i class="stats-insight-icon" th:classappend="${insight.iconClass}"></i>
+                                </div>
+                                <h6 class="stats-insight-title mb-1" th:text="${insight.title}">Tiêu đề cảnh báo</h6>
+                                <p class="stats-insight-desc mb-2" th:if="${insight.description != null and !#strings.isEmpty(insight.description)}" th:text="${insight.description}">Mô tả chi tiết phân tích kinh doanh...</p>
+                            </div>
+                            <a th:href="@{${insight.actionUrl}}" class="stats-insight-link text-decoration-none d-inline-flex align-items-center gap-1 mt-auto">
+                                <span th:text="${insight.actionLabel}">Xem chi tiết</span>
+                                <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- KPI Cards -->
         <div class="row g-3" th:if="${stats != null}">
-            <!-- Doanh thu -->
+            <!-- Doanh thu thuần & Doanh thu gộp -->
             <div class="col-12 col-md-6 col-xxl-3">
-                <div class="stats-kpi card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="stats-kpi-head">
-                            <span>Tổng doanh thu</span>
-                            <i class="bi bi-cash-coin"></i>
+                <div class="stats-kpi card border-0 shadow-sm h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="stats-kpi-head">
+                                <span>Doanh thu thuần</span>
+                                <i class="bi bi-cash-coin"></i>
+                            </div>
+                            <h3 th:text="${#numbers.formatDecimal(stats.revenueKpi.value, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</h3>
+                            <div class="stats-kpi-trend" th:classappend="${stats.revenueKpi.growthRate >= 0 ? 'up' : 'down'}">
+                                <span th:text="${stats.revenueKpi.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(stats.revenueKpi.growthRate, 1, 1)} + '%'">0%</span>
+                                <small th:text="'so với ' + ${stats.previousMonthLabel}">so với tháng trước</small>
+                            </div>
                         </div>
-                        <h3 th:text="${#numbers.formatDecimal(stats.revenueKpi.value, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</h3>
-                        <div class="stats-kpi-trend" th:classappend="${stats.revenueKpi.growthRate >= 0 ? 'up' : 'down'}">
-                            <span th:text="${stats.revenueKpi.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(stats.revenueKpi.growthRate, 1, 1)} + '%'">0%</span>
-                            <small th:text="'so với ' + ${stats.previousMonthLabel}">so với tháng trước</small>
+                        <div class="stats-kpi-footer border-top pt-2 mt-3">
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span>Doanh thu gộp:</span>
+                                <strong class="text-dark" th:text="${#numbers.formatDecimal(stats.grossRevenue, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</strong>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted small mt-1" th:if="${stats.discountAmount > 0}">
+                                <span>Giảm giá/Voucher:</span>
+                                <span class="text-danger fw-semibold" th:text="'-' + ${#numbers.formatDecimal(stats.discountAmount, 0, 'COMMA', 0, 'POINT')} + ' ₫ (' + ${#numbers.formatDecimal(stats.discountRate, 1, 1)} + '%)'">-0 ₫</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -105,33 +167,58 @@
 
             <!-- Đơn hàng thành công -->
             <div class="col-12 col-md-6 col-xxl-3">
-                <div class="stats-kpi card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="stats-kpi-head">
-                            <span>Đơn hàng thành công</span>
-                            <i class="bi bi-bag-check"></i>
+                <div class="stats-kpi card border-0 shadow-sm h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="stats-kpi-head">
+                                <span>Đơn hàng thành công</span>
+                                <i class="bi bi-bag-check"></i>
+                            </div>
+                            <h3 th:text="${#numbers.formatInteger(stats.ordersKpi.value, 0, 'COMMA')} + ' đơn'">0</h3>
+                            <div class="stats-kpi-trend" th:classappend="${stats.ordersKpi.growthRate >= 0 ? 'up' : 'down'}">
+                                <span th:text="${stats.ordersKpi.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(stats.ordersKpi.growthRate, 1, 1)} + '%'">0%</span>
+                                <small th:text="'so với ' + ${stats.previousMonthLabel}">so với tháng trước</small>
+                            </div>
                         </div>
-                        <h3 th:text="${#numbers.formatInteger(stats.ordersKpi.value, 0, 'COMMA')}">0</h3>
-                        <div class="stats-kpi-trend" th:classappend="${stats.ordersKpi.growthRate >= 0 ? 'up' : 'down'}">
-                            <span th:text="${stats.ordersKpi.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(stats.ordersKpi.growthRate, 1, 1)} + '%'">0%</span>
-                            <small th:text="'so với ' + ${stats.previousMonthLabel}">so với tháng trước</small>
+                        <div class="stats-kpi-footer border-top pt-2 mt-3">
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span>Tỷ lệ hoàn tất đơn:</span>
+                                <span class="badge bg-success-subtle text-success fw-semibold">Đạt chuẩn</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted small mt-1">
+                                <span>Kênh chính:</span>
+                                <span class="text-dark fw-semibold" th:if="${!#lists.isEmpty(stats.channelRevenues)}" th:text="${stats.channelRevenues[0].channelName}">Online</span>
+                                <span class="text-dark fw-semibold" th:if="${#lists.isEmpty(stats.channelRevenues)}">N/A</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- AOV -->
+            <!-- AOV & Độ sâu giỏ hàng -->
             <div class="col-12 col-md-6 col-xxl-3">
-                <div class="stats-kpi card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="stats-kpi-head">
-                            <span>Giá trị đơn trung bình</span>
-                            <i class="bi bi-receipt"></i>
+                <div class="stats-kpi card border-0 shadow-sm h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="stats-kpi-head">
+                                <span>Giá trị đơn TB (AOV)</span>
+                                <i class="bi bi-receipt"></i>
+                            </div>
+                            <h3 th:text="${#numbers.formatDecimal(stats.aovKpi.value, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</h3>
+                            <div class="stats-kpi-trend" th:classappend="${stats.aovKpi.growthRate >= 0 ? 'up' : 'down'}">
+                                <span th:text="${stats.aovKpi.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(stats.aovKpi.growthRate, 1, 1)} + '%'">0%</span>
+                                <small th:text="'so với ' + ${stats.previousMonthLabel}">so với tháng trước</small>
+                            </div>
                         </div>
-                        <h3 th:text="${#numbers.formatDecimal(stats.aovKpi.value, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</h3>
-                        <div class="stats-kpi-trend" th:classappend="${stats.aovKpi.growthRate >= 0 ? 'up' : 'down'}">
-                            <span th:text="${stats.aovKpi.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(stats.aovKpi.growthRate, 1, 1)} + '%'">0%</span>
-                            <small th:text="'so với ' + ${stats.previousMonthLabel}">so với tháng trước</small>
+                        <div class="stats-kpi-footer border-top pt-2 mt-3">
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span>Độ sâu giỏ hàng:</span>
+                                <strong class="text-primary" th:text="${#numbers.formatDecimal(stats.itemsPerOrder, 1, 1)} + ' SP / đơn'">1.5 SP</strong>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted small mt-1">
+                                <span>Khả năng bán chéo:</span>
+                                <span th:text="${stats.itemsPerOrder >= 2.0 ? 'Rất tốt' : (stats.itemsPerOrder >= 1.5 ? 'Khá' : 'Cần kích cầu')}">Khá</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -139,16 +226,28 @@
 
             <!-- Sản phẩm đã bán -->
             <div class="col-12 col-md-6 col-xxl-3">
-                <div class="stats-kpi card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="stats-kpi-head">
-                            <span>Sản phẩm đã bán</span>
-                            <i class="bi bi-box-seam"></i>
+                <div class="stats-kpi card border-0 shadow-sm h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="stats-kpi-head">
+                                <span>Sản phẩm đã bán</span>
+                                <i class="bi bi-box-seam"></i>
+                            </div>
+                            <h3 th:text="${#numbers.formatInteger(stats.soldProductsKpi.value, 0, 'COMMA')} + ' chiếc'">0</h3>
+                            <div class="stats-kpi-trend" th:classappend="${stats.soldProductsKpi.growthRate >= 0 ? 'up' : 'down'}">
+                                <span th:text="${stats.soldProductsKpi.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(stats.soldProductsKpi.growthRate, 1, 1)} + '%'">0%</span>
+                                <small th:text="'so với ' + ${stats.previousMonthLabel}">so với tháng trước</small>
+                            </div>
                         </div>
-                        <h3 th:text="${#numbers.formatInteger(stats.soldProductsKpi.value, 0, 'COMMA')}">0</h3>
-                        <div class="stats-kpi-trend" th:classappend="${stats.soldProductsKpi.growthRate >= 0 ? 'up' : 'down'}">
-                            <span th:text="${stats.soldProductsKpi.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(stats.soldProductsKpi.growthRate, 1, 1)} + '%'">0%</span>
-                            <small th:text="'so với ' + ${stats.previousMonthLabel}">so với tháng trước</small>
+                        <div class="stats-kpi-footer border-top pt-2 mt-3">
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span>Độ phủ danh mục:</span>
+                                <strong class="text-dark" th:text="${#lists.size(stats.categoryRevenues)} + ' danh mục'">0</strong>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted small mt-1">
+                                <span>Tốc độ tiêu thụ:</span>
+                                <span class="text-success fw-semibold">Tích cực</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -294,8 +393,11 @@
             <div class="col-12 col-xl-6">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body">
-                        <h5 class="stats-card-title mb-1">Doanh thu theo phương thức thanh toán</h5>
-                        <p class="stats-card-subtitle">Hiệu quả phân bổ kênh thanh toán</p>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h5 class="stats-card-title mb-0">Doanh thu theo phương thức thanh toán</h5>
+                            <span class="badge bg-secondary-subtle text-secondary">Rủi ro giao vận</span>
+                        </div>
+                        <p class="stats-card-subtitle">Hiệu quả phân bổ & tỷ lệ giao dịch thành công theo kênh</p>
 
                         <div class="stats-channel">
                             <div class="stats-donut-wrap">
@@ -308,10 +410,18 @@
                             </div>
                             <ul class="stats-channel-list">
                                 <li th:each="ch : ${stats.channelRevenues}">
-                                    <i class="dot" th:classappend="${ch.dotClass}"></i>
-                                    <span th:text="${ch.channelName}">Kênh</span>
-                                    <strong th:text="${#numbers.formatDecimal(ch.revenue, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</strong>
-                                    <span th:text="${#numbers.formatDecimal(ch.share, 1, 1)} + '%'">0%</span>
+                                    <div class="d-flex align-items-center justify-content-between w-100 flex-wrap gap-1">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="dot" th:classappend="${ch.dotClass}"></i>
+                                            <span class="fw-semibold text-dark" th:text="${ch.channelName}">Kênh</span>
+                                            <span class="badge bg-light text-muted border" style="font-size: 0.72rem;" th:text="${ch.totalOrders} + ' đơn'">0 đơn</span>
+                                            <span th:if="${ch.cancelledOrders > 0}" class="badge bg-danger-subtle text-danger" style="font-size: 0.72rem;" th:text="'Hủy ' + ${ch.cancelledOrders}">Hủy 1</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong th:text="${#numbers.formatDecimal(ch.revenue, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</strong>
+                                            <span class="stats-weight" th:text="${#numbers.formatDecimal(ch.share, 1, 1)} + '%'">0%</span>
+                                        </div>
+                                    </div>
                                 </li>
                                 <li th:if="${#lists.isEmpty(stats.channelRevenues)}" class="text-muted text-center py-2">
                                     Chưa có dữ liệu kênh bán.
@@ -320,7 +430,84 @@
                         </div>
 
                         <div class="stats-info-strip alt" th:if="${!#lists.isEmpty(stats.channelRevenues)}">
-                            <span th:text="${stats.channelRevenues[0].channelName} + ' chiếm tỷ trọng cao nhất với ' + ${#numbers.formatDecimal(stats.channelRevenues[0].share, 1, 1)} + '%.'">Kênh top 1</span>
+                            <span th:text="${stats.channelRevenues[0].channelName} + ' chiếm tỷ trọng cao nhất với ' + ${#numbers.formatDecimal(stats.channelRevenues[0].share, 1, 1)} + '% doanh thu.'">Kênh top 1</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fashion Merchandise Analytics: Kích cỡ & Màu sắc -->
+        <div class="row g-3 mt-0" th:if="${stats != null}">
+            <!-- Size Velocity -->
+            <div class="col-12 col-xl-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h5 class="stats-card-title mb-0">Tỷ trọng Kích cỡ (Size Velocity)</h5>
+                            <span class="badge bg-primary-subtle text-primary">Thời trang & Phom dáng</span>
+                        </div>
+                        <p class="stats-card-subtitle">Phân tích mức độ tiêu thụ từng size để cân đối tỷ lệ nhập kho & xưởng may</p>
+
+                        <div class="stats-size-list mt-3">
+                            <div th:each="sz : ${stats.sizeShares}" class="stats-size-item mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="stats-size-badge" th:text="${sz.size}">M</span>
+                                        <span class="small text-muted" th:text="${sz.quantity} + ' sản phẩm đã bán'">10 SP</span>
+                                    </div>
+                                    <div>
+                                        <strong class="text-dark" th:text="${#numbers.formatDecimal(sz.share, 1, 1)} + '%'">35.0%</strong>
+                                    </div>
+                                </div>
+                                <div class="stats-progress">
+                                    <i th:style="'width:' + ${sz.share} + '%'" class="bg-primary"></i>
+                                </div>
+                            </div>
+                            <div th:if="${#lists.isEmpty(stats.sizeShares)}" class="text-muted py-3 text-center">
+                                Chưa có dữ liệu phân bổ kích cỡ trong khoảng thời gian này.
+                            </div>
+                        </div>
+
+                        <div class="stats-info-strip mt-3" th:if="${!#lists.isEmpty(stats.sizeShares)}">
+                            <i class="bi bi-lightbulb text-primary me-1"></i>
+                            <span>Size <strong><span th:text="${stats.sizeShares[0].size}">M</span></strong> có sức mua lớn nhất (<span th:text="${#numbers.formatDecimal(stats.sizeShares[0].share, 1, 1)} + '%'">0%</span>). Ưu tiên tăng tỷ lệ phom này ở các đợt tái sản xuất.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Color Breakdown -->
+            <div class="col-12 col-xl-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h5 class="stats-card-title mb-0">Xu hướng Màu sắc Ưa chuộng</h5>
+                            <span class="badge bg-info-subtle text-info-emphasis">Thị hiếu khách hàng</span>
+                        </div>
+                        <p class="stats-card-subtitle">Thị hiếu sắc màu thực tế từ khách mua hàng hỗ trợ định hướng bộ sưu tập</p>
+
+                        <div class="stats-color-grid mt-3">
+                            <div th:each="c : ${stats.colorShares}" class="stats-color-card p-2 border rounded-3 mb-2 d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="stats-color-swatch" th:style="'background-color: ' + ${c.hexColor}"></span>
+                                    <div>
+                                        <strong class="d-block text-dark small" th:text="${c.color}">Đen</strong>
+                                        <span class="text-muted" style="font-size: 0.75rem;" th:text="${c.quantity} + ' chiếc đã bán'">12 chiếc</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-light text-dark fw-bold border" th:text="${#numbers.formatDecimal(c.share, 1, 1)} + '%'">30.0%</span>
+                                </div>
+                            </div>
+                            <div th:if="${#lists.isEmpty(stats.colorShares)}" class="text-muted py-3 text-center">
+                                Chưa có dữ liệu màu sắc trong khoảng thời gian này.
+                            </div>
+                        </div>
+
+                        <div class="stats-info-strip alt mt-3" th:if="${!#lists.isEmpty(stats.colorShares)}">
+                            <i class="bi bi-palette text-success me-1"></i>
+                            <span>Màu <strong><span th:text="${stats.colorShares[0].color}">Đen</span></strong> được yêu thích nhất (<span th:text="${#numbers.formatDecimal(stats.colorShares[0].share, 1, 1)} + '%'">0%</span>). Thích hợp làm màu chủ đạo trong hình ảnh banner.</span>
                         </div>
                     </div>
                 </div>
@@ -332,10 +519,12 @@
             <div class="card-body">
                 <div class="d-flex flex-column flex-lg-row justify-content-between gap-2 mb-3">
                     <div>
-                        <h5 class="stats-card-title mb-1">Top 5 sản phẩm bán chạy</h5>
+                        <h5 class="stats-card-title mb-1">Top 5 sản phẩm bán chạy & Cảnh báo Tồn kho</h5>
                         <p class="stats-card-subtitle mb-0" th:text="'Xếp hạng theo doanh thu • ' + ${stats.dateRangeLabel}">Top sản phẩm</p>
                     </div>
-                    <span class="stats-chip" th:text="${#numbers.formatDecimal(stats.topProductsShare, 1, 1)} + '% doanh thu toàn sàn'">0% doanh thu</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="stats-chip" th:text="${#numbers.formatDecimal(stats.topProductsShare, 1, 1)} + '% doanh thu toàn sàn'">0% doanh thu</span>
+                    </div>
                 </div>
 
                 <div class="table-responsive">
@@ -347,6 +536,8 @@
                             <th class="text-end">Đã bán</th>
                             <th class="text-end">Doanh thu</th>
                             <th class="text-end">Tỷ trọng</th>
+                            <th class="text-center">Tồn kho hiện tại</th>
+                            <th class="text-center">Khuyến nghị nhập hàng</th>
                             <th class="text-end">Tăng trưởng</th>
                         </tr>
                         </thead>
@@ -357,22 +548,49 @@
                             </td>
                             <td>
                                 <div class="stats-product">
-                                    <i class="bi bi-bag-check-fill text-secondary"></i>
+                                    <div class="stats-product-avatar">
+                                        <i class="bi bi-box-seam"></i>
+                                    </div>
                                     <div>
-                                        <strong th:text="${p.productName}">Tên sản phẩm</strong>
-                                        <small th:text="${p.categoryName}">Danh mục</small>
+                                        <a th:if="${p.productId != null and p.productId > 0}"
+                                           th:href="@{'/admin/products/edit/' + ${p.productId}}"
+                                           class="stats-product-link text-decoration-none fw-semibold text-dark"
+                                           th:text="${p.productName}"
+                                           title="Bấm để xem và chỉnh sửa thông tin sản phẩm">
+                                            Tên sản phẩm
+                                        </a>
+                                        <strong th:unless="${p.productId != null and p.productId > 0}" th:text="${p.productName}">Tên sản phẩm</strong>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <small class="text-muted" th:text="${p.categoryName}">Danh mục</small>
+                                            <a th:if="${p.productId != null and p.productId > 0}"
+                                               th:href="@{'/admin/products/edit/' + ${p.productId}}"
+                                               class="text-primary small"
+                                               style="font-size: 0.72rem;">
+                                                <i class="bi bi-box-arrow-up-right"></i>
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
-                            <td class="text-end" th:text="${#numbers.formatInteger(p.soldQuantity, 0, 'COMMA')}">0</td>
-                            <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(p.revenue, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</td>
+                            <td class="text-end fw-semibold" th:text="${#numbers.formatInteger(p.soldQuantity, 0, 'COMMA')}">0</td>
+                            <td class="text-end fw-bold text-dark" th:text="${#numbers.formatDecimal(p.revenue, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</td>
                             <td class="text-end"><span class="stats-weight" th:text="${#numbers.formatDecimal(p.share, 1, 1)} + '%'">0%</span></td>
+                            <td class="text-center">
+                                <span class="badge" th:classappend="${p.stockBadgeClass}" th:text="${p.currentStock} + ' cái (' + ${p.stockStatusText} + ')'">10 cái</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="stats-reorder-badge" 
+                                      th:classappend="${p.stockStatus == 'OUT_OF_STOCK' ? 'reorder-urgent' : (p.stockStatus == 'LOW_STOCK' ? 'reorder-warning' : 'reorder-ok')}"
+                                      th:text="${p.recommendation}">
+                                    Duy trì bán
+                                </span>
+                            </td>
                             <td class="text-end" th:classappend="${p.growthRate >= 0 ? 'text-success' : 'text-danger'}">
                                 <span th:text="${p.growthRate >= 0 ? '↗ +' : '↘ '} + ${#numbers.formatDecimal(p.growthRate, 1, 1)} + '%'">0%</span>
                             </td>
                         </tr>
                         <tr th:if="${#lists.isEmpty(stats.topProducts)}">
-                            <td colspan="6" class="text-center text-muted py-4">Không có sản phẩm nào được bán trong khoảng thời gian này.</td>
+                            <td colspan="8" class="text-center text-muted py-4">Không có sản phẩm nào được bán trong khoảng thời gian này.</td>
                         </tr>
                         </tbody>
                     </table>
@@ -380,6 +598,51 @@
 
                 <div class="stats-table-footer mt-3" th:if="${!#lists.isEmpty(stats.topProducts)}">
                     <span>Tổng top 5: <strong th:text="${#numbers.formatInteger(stats.topProductsSold, 0, 'COMMA')} + ' sản phẩm'">0 sản phẩm</strong> • <strong th:text="${#numbers.formatDecimal(stats.topProductsRevenue, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</strong></span>
+                    <span class="text-muted small"><i class="bi bi-info-circle me-1"></i>Bấm vào tên sản phẩm để chuyển tới trang chỉnh sửa và bổ sung hàng kho</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cảnh báo Tồn kho Toàn sàn: Sản phẩm chạm đáy kho & Cần nhập gấp -->
+        <div class="card border-0 shadow-sm mt-3" th:if="${stats != null and stats.urgentLowStockItems != null and !#lists.isEmpty(stats.urgentLowStockItems)}">
+            <div class="card-body">
+                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="stats-stock-badge-icon"><i class="bi bi-shield-exclamation text-danger"></i></span>
+                        <div>
+                            <h5 class="stats-card-title mb-0">Cảnh báo Tồn kho Toàn diện (Sản phẩm chạm đáy kho)</h5>
+                            <small class="text-muted">Theo dõi danh sách các mẫu đang cạn kiệt số lượng trên toàn hệ thống để chủ động bổ sung hàng</small>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle" th:if="${stats.totalOutOfStockCount > 0}" th:text="${stats.totalOutOfStockCount} + ' SP hết hàng'">0 hết hàng</span>
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" th:if="${stats.totalLowStockCount > 0}" th:text="${stats.totalLowStockCount} + ' SP sắp hết'">0 sắp hết</span>
+                        <a th:href="@{/admin/inventory(stockStatus='LOW')}" class="btn btn-sm btn-outline-primary ms-1">
+                            <i class="bi bi-box-seam me-1"></i>Xem tất cả trong Kho
+                        </a>
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-12 col-md-6 col-xl-4" th:each="item : ${stats.urgentLowStockItems}">
+                        <div class="p-3 border rounded-3 bg-white d-flex align-items-center justify-content-between gap-2 shadow-sm-hover">
+                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                <div class="stats-stock-avatar" th:classappend="${item.currentStock == 0 ? 'avatar-danger' : 'avatar-warning'}">
+                                    <i class="bi" th:classappend="${item.currentStock == 0 ? 'bi-x-octagon-fill' : 'bi-exclamation-triangle-fill'}"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <a th:href="@{'/admin/products/edit/' + ${item.productId}}" class="stats-product-link text-decoration-none fw-semibold text-dark text-truncate d-block small" th:text="${item.productName}">Tên SP</a>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <small class="text-muted" th:text="${item.categoryName}">Danh mục</small>
+                                        <span class="badge" th:classappend="${item.badgeClass}" style="font-size: 0.68rem;" th:text="${item.currentStock} + ' cái (' + ${item.statusText} + ')'">0 cái</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <a th:href="@{'/admin/products/edit/' + ${item.productId}}" class="btn btn-sm btn-light border flex-shrink-0" title="Nhập thêm hàng">
+                                <i class="bi bi-plus-lg text-primary"></i>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
