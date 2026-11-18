@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -20,49 +19,108 @@ public class EmailService {
     @Autowired(required = false)
     private JavaMailSender mailSender;
 
-    @Value("${spring.mail.username:fashionshop.system@gmail.com}")
+    @Value("${spring.mail.username:fashionshop.iuh2026@gmail.com}")
     private String fromEmail;
 
     /**
      * Gửi email mã OTP xác thực kích hoạt tài khoản.
-     * Phương thức chạy an toàn: nếu gửi mail thật bị lỗi mạng hoặc chưa cấu hình password thật,
-     * mã OTP vẫn sẽ được in to rõ ràng ra Console để test và không làm gián đoạn đăng ký.
+     * Áp dụng tiêu chuẩn chống Spam (Multipart HTML + Plain text, Sender Header chuẩn).
      */
     public boolean sendOtpVerificationEmail(String toEmail, String otpCode, String recipientName) {
-        log.info("================================================================================");
-        log.info(">> [FASHION SHOP - EMAIL VERIFICATION]");
-        log.info(">> Gửi mã OTP tới email: {}", toEmail);
-        log.info(">> Tên khách hàng: {}", recipientName != null ? recipientName : "Quý khách");
-        log.info(">> MÃ XÁC THỰC OTP (Hiệu lực 5 phút): >>> {} <<<", otpCode);
-        log.info(">> MÃ BYPASS DEMO NHANH: >>> 111111 <<<");
-        log.info("================================================================================");
+        log.info("Yêu cầu gửi email xác thực tài khoản tới: {}", toEmail);
 
         if (mailSender == null) {
-            log.warn("JavaMailSender chưa được cấu hình. Mã OTP đã được in ra console để kiểm thử.");
+            log.warn("JavaMailSender chưa được cấu hình. Không thể gửi email xác thực tới: {}", toEmail);
             return false;
         }
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
+            // Thêm các Header tiêu chuẩn chống Spam
+            message.setHeader("Auto-Submitted", "auto-generated");
+            message.setHeader("X-Auto-Response-Suppress", "All");
+            message.setHeader("X-Mailer", "FashionShop Security Mailer v2.0");
+
             MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
 
-            helper.setFrom(fromEmail, "FASHION SHOP ATELIER");
+            helper.setFrom(fromEmail, "Fashion Shop");
             helper.setTo(toEmail);
-            helper.setSubject("Mã xác thực đăng ký tài khoản Fashion Shop: " + otpCode);
+            helper.setSubject("Mã xác thực tài khoản Fashion Shop: " + otpCode);
 
+            String plainText = buildPlainTextEmail(recipientName, otpCode, "xác thực tài khoản");
             String htmlContent = buildEmailTemplate(recipientName, otpCode);
-            helper.setText(htmlContent, true);
+
+            // Gửi cả 2 định dạng Plain Text và HTML (Yếu tố quan trọng nhất để không vào thư rác)
+            helper.setText(plainText, htmlContent);
 
             mailSender.send(message);
-            log.info(">> Gửi email xác thực thành công tới: {}", toEmail);
+            log.info("Gửi email xác thực thành công tới: {}", toEmail);
             return true;
         } catch (Exception ex) {
-            log.error(">> Không thể gửi email qua SMTP: {}", ex.getMessage(), ex);
-            log.info(">> Vui lòng dùng mã OTP in ở console phía trên hoặc mã demo nhanh '111111' để tiếp tục.");
+            log.error("Không thể gửi email xác thực qua SMTP tới {}: {}", toEmail, ex.getMessage());
             return false;
         }
     }
 
+    /**
+     * Gửi email đặt lại mật khẩu cho tài khoản.
+     */
+    public boolean sendPasswordResetEmail(String toEmail, String resetCode, String recipientName) {
+        log.info("Yêu cầu gửi email đặt lại mật khẩu tới: {}", toEmail);
+
+        if (mailSender == null) {
+            log.warn("JavaMailSender chưa được cấu hình. Không thể gửi email đặt lại mật khẩu tới: {}", toEmail);
+            return false;
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            message.setHeader("Auto-Submitted", "auto-generated");
+            message.setHeader("X-Auto-Response-Suppress", "All");
+            message.setHeader("X-Mailer", "FashionShop Security Mailer v2.0");
+
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+
+            helper.setFrom(fromEmail, "Fashion Shop");
+            helper.setTo(toEmail);
+            helper.setSubject("Mã đặt lại mật khẩu Fashion Shop: " + resetCode);
+
+            String plainText = buildPlainTextEmail(recipientName, resetCode, "đặt lại mật khẩu");
+            String htmlContent = buildPasswordResetEmailTemplate(recipientName, resetCode);
+
+            helper.setText(plainText, htmlContent);
+
+            mailSender.send(message);
+            log.info("Gửi email đặt lại mật khẩu thành công tới: {}", toEmail);
+            return true;
+        } catch (Exception ex) {
+            log.error("Không thể gửi email đặt lại mật khẩu qua SMTP tới {}: {}", toEmail, ex.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Mẫu Plain Text hỗ trợ các trình đọc thư thuần và giảm tỷ lệ spam xuống mức thấp nhất
+     */
+    private String buildPlainTextEmail(String recipientName, String code, String action) {
+        String name = (recipientName != null && !recipientName.isBlank()) ? recipientName : "Quý khách";
+        return String.format(
+            "FASHION SHOP - STUDIO & ATELIER\n\n" +
+            "Xin chào %s,\n\n" +
+            "Bạn vừa yêu cầu mã bảo mật để %s tại Fashion Shop.\n" +
+            "Mã xác thực gồm 6 chữ số của bạn là: %s\n\n" +
+            "Mã này có hiệu lực trong vòng 5 phút.\n" +
+            "Lưu ý: Tuyệt đối không chia sẻ mã này cho bất kỳ ai để bảo vệ an toàn tài khoản.\n\n" +
+            "Trân trọng,\n" +
+            "Đội ngũ Fashion Shop Studio & Atelier\n" +
+            "Hotline hỗ trợ: 1900 6868 | Website: fashionshop.com",
+            name, action, code
+        );
+    }
+
+    /**
+     * Mẫu Email HTML Sạch - Trong - Tinh tế (Minimalist Luxury)
+     */
     private String buildEmailTemplate(String recipientName, String otpCode) {
         String name = (recipientName != null && !recipientName.isBlank()) ? recipientName : "Quý khách";
         return """
@@ -73,61 +131,70 @@ public class EmailService {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Xác thực tài khoản Fashion Shop</title>
             </head>
-            <body style="margin: 0; padding: 0; background-color: #f7f7f9; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #222222;">
-                <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 15px;">
+            <body style="margin: 0; padding: 0; background-color: #f7f4ef; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #222222; -webkit-font-smoothing: antialiased;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="padding: 35px 15px; background-color: #f7f4ef;">
                     <tr>
                         <td align="center">
-                            <table width="100%" max-width="560px" style="max-width: 560px; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.06); border: 1px solid #e5e7eb;" cellpadding="0" cellspacing="0">
-                                <!-- Header -->
+                            <table width="100%" style="max-width: 520px; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #ebdcd0; box-shadow: 0 4px 20px rgba(0,0,0,0.03);" cellpadding="0" cellspacing="0">
+                                
+                                <!-- Brand Header: Thanh lịch, tinh tế, không dùng mảng đen dày -->
                                 <tr>
-                                    <td style="background-color: #111111; padding: 32px 30px; text-align: center;">
-                                        <div style="font-size: 22px; font-weight: 800; letter-spacing: 4px; color: #ffffff; text-transform: uppercase;">
+                                    <td style="padding: 32px 30px 24px; text-align: center; border-bottom: 1px solid #f2ece4;">
+                                        <div style="font-family: Georgia, serif; font-size: 21px; font-weight: 700; letter-spacing: 3px; color: #111111; text-transform: uppercase;">
                                             FASHION SHOP
                                         </div>
-                                        <div style="font-size: 11px; letter-spacing: 2px; color: #d4af37; text-transform: uppercase; margin-top: 6px;">
-                                            Haute Couture & Bespoke Tailoring
+                                        <div style="font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #8a8279; margin-top: 4px;">
+                                            STUDIO &amp; ATELIER
                                         </div>
                                     </td>
                                 </tr>
-                                <!-- Body -->
+
+                                <!-- Body Content -->
                                 <tr>
-                                    <td style="padding: 40px 35px 30px 35px;">
-                                        <h2 style="margin: 0 0 14px 0; font-size: 20px; font-weight: 700; color: #111827;">
+                                    <td style="padding: 32px 32px 28px;">
+                                        <h1 style="margin: 0 0 14px 0; font-size: 18px; font-weight: 700; color: #111111; letter-spacing: -0.2px;">
                                             Xác thực tài khoản của bạn
-                                        </h2>
-                                        <p style="margin: 0 0 20px 0; font-size: 14px; line-height: 1.6; color: #4b5563;">
-                                            Xin chào <strong>{{CUSTOMER_NAME}}</strong>,<br>
-                                            Cảm ơn bạn đã lựa chọn trở thành thành viên tại <strong>Fashion Shop</strong>. Để hoàn tất kích hoạt tài khoản, vui lòng sử dụng mã xác thực bên dưới:
+                                        </h1>
+                                        <p style="margin: 0 0 8px 0; font-size: 14px; line-height: 1.6; color: #444444;">
+                                            Xin chào <strong>{{CUSTOMER_NAME}}</strong>,
                                         </p>
-                                        
-                                        <!-- OTP Box -->
-                                        <div style="background: #111827; border-radius: 12px; padding: 24px; text-align: center; margin: 25px 0; border: 1px solid #374151;">
-                                            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #9ca3af; margin-bottom: 8px;">
-                                                MÃ XÁC THỰC CỦA BẠN
+                                        <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #555555;">
+                                            Cảm ơn bạn đã lựa chọn đăng ký tài khoản tại <strong>Fashion Shop</strong>. Để hoàn tất kích hoạt quyền truy cập, vui lòng sử dụng mã xác thực bảo mật bên dưới:
+                                        </p>
+
+                                        <!-- OTP Box: Nền kem trang nhã, số đen sắc nét, dễ đọc -->
+                                        <div style="background-color: #faf7f2; border: 1px solid #ebdcd0; border-radius: 10px; padding: 22px 20px; text-align: center; margin: 20px 0 24px;">
+                                            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.8px; color: #7a736a; margin-bottom: 8px;">
+                                                MÃ XÁC THỰC BẢO MẬT
                                             </div>
-                                            <div style="font-size: 36px; font-weight: 800; letter-spacing: 12px; color: #38bdf8; font-family: 'Courier New', monospace; padding-left: 12px;">
+                                            <div style="font-size: 34px; font-weight: 800; letter-spacing: 10px; color: #111111; font-family: 'SF Pro Display', Consolas, monospace; padding-left: 10px;">
                                                 {{OTP_CODE}}
                                             </div>
-                                            <div style="font-size: 12px; color: #cbd5e1; margin-top: 10px;">
+                                            <div style="font-size: 12px; color: #8a8279; margin-top: 8px;">
                                                 ⏱️ Mã có hiệu lực trong <strong>5 phút</strong>
                                             </div>
                                         </div>
 
-                                        <p style="margin: 0 0 10px 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
-                                            * Tuyệt đối không chia sẻ mã xác thực này cho người khác để bảo vệ an toàn cho tài khoản.
-                                        </p>
-                                        <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
-                                            Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.
+                                        <!-- Hộp ghi chú bảo mật -->
+                                        <div style="background-color: #fbf9f6; border-left: 3px solid #111111; border-radius: 4px; padding: 12px 14px; margin-bottom: 20px; font-size: 13px; line-height: 1.5; color: #666057;">
+                                            <strong>Bảo mật:</strong> Tuyệt đối không chia sẻ mã này cho người khác. Nhân viên Fashion Shop sẽ không bao giờ hỏi mã OTP của bạn.
+                                        </div>
+
+                                        <p style="margin: 0; font-size: 12.5px; line-height: 1.5; color: #888279;">
+                                            Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua thư này hoặc thông báo cho bộ phận hỗ trợ của chúng tôi.
                                         </p>
                                     </td>
                                 </tr>
-                                <!-- Footer -->
+
+                                <!-- Footer: Nhẹ nhàng, thông tin rõ ràng -->
                                 <tr>
-                                    <td style="background-color: #f8fafc; padding: 22px 30px; text-align: center; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
-                                        Fashion Shop Atelier © 2026. Mọi quyền được bảo lưu.<br>
-                                        Email tự động, vui lòng không trả lời thư này.
+                                    <td style="background-color: #faf8f5; padding: 22px 30px; text-align: center; border-top: 1px solid #f0eae1; font-size: 12px; color: #91897f; line-height: 1.6;">
+                                        <strong>Fashion Shop Studio &amp; Atelier</strong><br>
+                                        Hỗ trợ trực tuyến 24/7 &bull; Email: fashionshop.iuh2026@gmail.com<br>
+                                        &copy; 2026 Fashion Shop. Mọi quyền được bảo lưu.
                                     </td>
                                 </tr>
+
                             </table>
                         </td>
                     </tr>
@@ -137,5 +204,93 @@ public class EmailService {
             """
             .replace("{{CUSTOMER_NAME}}", name)
             .replace("{{OTP_CODE}}", otpCode);
+    }
+
+    /**
+     * Mẫu Email HTML Đặt Lại Mật Khẩu Sạch - Trong - Tinh tế
+     */
+    private String buildPasswordResetEmailTemplate(String recipientName, String resetCode) {
+        String name = (recipientName != null && !recipientName.isBlank()) ? recipientName : "Quý khách";
+        return """
+            <!DOCTYPE html>
+            <html lang="vi">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Đặt lại mật khẩu Fashion Shop</title>
+            </head>
+            <body style="margin: 0; padding: 0; background-color: #f7f4ef; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #222222; -webkit-font-smoothing: antialiased;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="padding: 35px 15px; background-color: #f7f4ef;">
+                    <tr>
+                        <td align="center">
+                            <table width="100%" style="max-width: 520px; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #ebdcd0; box-shadow: 0 4px 20px rgba(0,0,0,0.03);" cellpadding="0" cellspacing="0">
+                                
+                                <!-- Brand Header -->
+                                <tr>
+                                    <td style="padding: 32px 30px 24px; text-align: center; border-bottom: 1px solid #f2ece4;">
+                                        <div style="font-family: Georgia, serif; font-size: 21px; font-weight: 700; letter-spacing: 3px; color: #111111; text-transform: uppercase;">
+                                            FASHION SHOP
+                                        </div>
+                                        <div style="font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #8a8279; margin-top: 4px;">
+                                            BẢO MẬT TÀI KHOẢN
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Body Content -->
+                                <tr>
+                                    <td style="padding: 32px 32px 28px;">
+                                        <h1 style="margin: 0 0 14px 0; font-size: 18px; font-weight: 700; color: #111111; letter-spacing: -0.2px;">
+                                            Yêu cầu thiết lập lại mật khẩu
+                                        </h1>
+                                        <p style="margin: 0 0 8px 0; font-size: 14px; line-height: 1.6; color: #444444;">
+                                            Xin chào <strong>{{CUSTOMER_NAME}}</strong>,
+                                        </p>
+                                        <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #555555;">
+                                            Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản Fashion Shop của bạn. Vui lòng nhập mã bảo mật dưới đây để thiết lập mật khẩu mới:
+                                        </p>
+
+                                        <!-- OTP Box -->
+                                        <div style="background-color: #faf7f2; border: 1px solid #ebdcd0; border-radius: 10px; padding: 22px 20px; text-align: center; margin: 20px 0 24px;">
+                                            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.8px; color: #7a736a; margin-bottom: 8px;">
+                                                MÃ ĐẶT LẠI MẬT KHẨU
+                                            </div>
+                                            <div style="font-size: 34px; font-weight: 800; letter-spacing: 10px; color: #111111; font-family: 'SF Pro Display', Consolas, monospace; padding-left: 10px;">
+                                                {{RESET_CODE}}
+                                            </div>
+                                            <div style="font-size: 12px; color: #8a8279; margin-top: 8px;">
+                                                ⏱️ Mã có hiệu lực trong <strong>5 phút</strong>
+                                            </div>
+                                        </div>
+
+                                        <!-- Lưu ý an toàn -->
+                                        <div style="background-color: #fbf9f6; border-left: 3px solid #111111; border-radius: 4px; padding: 12px 14px; margin-bottom: 20px; font-size: 13px; line-height: 1.5; color: #666057;">
+                                            <strong>Bảo mật:</strong> Nếu bạn không yêu cầu đặt lại mật khẩu, xin hãy bỏ qua email này hoặc liên hệ ngay với chúng tôi để bảo vệ tài khoản.
+                                        </div>
+
+                                        <p style="margin: 0; font-size: 12.5px; line-height: 1.5; color: #888279;">
+                                            Email này được gửi tự động bởi hệ thống bảo mật của Fashion Shop.
+                                        </p>
+                                    </td>
+                                </tr>
+
+                                <!-- Footer -->
+                                <tr>
+                                    <td style="background-color: #faf8f5; padding: 22px 30px; text-align: center; border-top: 1px solid #f0eae1; font-size: 12px; color: #91897f; line-height: 1.6;">
+                                        <strong>Fashion Shop Studio &amp; Atelier</strong><br>
+                                        Hỗ trợ trực tuyến 24/7 &bull; Email: fashionshop.iuh2026@gmail.com<br>
+                                        &copy; 2026 Fashion Shop. Mọi quyền được bảo lưu.
+                                    </td>
+                                </tr>
+
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </body>
+            </html>
+            """
+            .replace("{{CUSTOMER_NAME}}", name)
+            .replace("{{RESET_CODE}}", resetCode);
     }
 }

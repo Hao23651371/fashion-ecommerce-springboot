@@ -80,6 +80,70 @@ public class AuthController {
         return "auth/terms";
     }
 
+    @GetMapping("/forgot-password")
+    public String showForgotPasswordPage(Authentication auth, Model model) {
+        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+            return "redirect:/";
+        }
+        return "auth/forgot-password";
+    }
+
+    @PostMapping("/forgot-password/send-otp")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> sendForgotPasswordOtp(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
+        if (email == null || email.isBlank()) {
+            email = payload.get("credential");
+        }
+        Map<String, Object> result = accountService.initiateForgotPassword(email);
+        if (Boolean.TRUE.equals(result.get("success"))) {
+            return ResponseEntity.ok(result);
+        } else {
+            return ResponseEntity.badRequest().body(result);
+        }
+    }
+
+    @PostMapping("/forgot-password/verify-otp")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> verifyForgotPasswordOtp(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
+        String otp = payload.get("otp");
+        Map<String, Object> result = accountService.verifyResetOtp(email, otp);
+        if (Boolean.TRUE.equals(result.get("success"))) {
+            return ResponseEntity.ok(result);
+        } else {
+            return ResponseEntity.badRequest().body(result);
+        }
+    }
+
+    @PostMapping("/forgot-password/resend-otp")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> resendForgotPasswordOtp(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
+        Map<String, Object> result = accountService.resendResetOtp(email);
+        if (Boolean.TRUE.equals(result.get("success"))) {
+            return ResponseEntity.ok(result);
+        } else {
+            return ResponseEntity.badRequest().body(result);
+        }
+    }
+
+    @PostMapping("/forgot-password/reset-password")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> resetPasswordWithOtp(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
+        String otp = payload.get("otp");
+        String newPassword = payload.get("newPassword");
+        String confirmPassword = payload.get("confirmPassword");
+
+        Map<String, Object> result = accountService.resetPasswordWithOtp(email, otp, newPassword, confirmPassword);
+        if (Boolean.TRUE.equals(result.get("success"))) {
+            return ResponseEntity.ok(result);
+        } else {
+            return ResponseEntity.badRequest().body(result);
+        }
+    }
+
     @GetMapping("/register")
     public String showRegisterPage(Authentication auth, @ModelAttribute("registerForm") RegisterForm registerForm) {
         if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {

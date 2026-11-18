@@ -28,12 +28,40 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class AccountService {
 
     public static final String DEMO_BYPASS_OTP = "111111"; // Mã dự phòng cố định dùng demo nhanh
     public static final String DEFAULT_RESET_PASSWORD = "FashionShop@123"; // Mật khẩu mặc định khi Admin reset mật khẩu cho người dùng
+
+    /**
+     * Lớp lưu trữ thông tin đăng ký chờ xác thực trong bộ nhớ RAM.
+     * RÀNG BUỘC: Tuyệt đối không lưu tài khoản vào Database khi chưa xác thực OTP!
+     */
+    public static class PendingRegistration {
+        private final RegisterForm form;
+        private String otp;
+        private LocalDateTime expiry;
+
+        public PendingRegistration(RegisterForm form, String otp, LocalDateTime expiry) {
+            this.form = form;
+            this.otp = otp;
+            this.expiry = expiry;
+        }
+
+        public RegisterForm getForm() { return form; }
+        public String getOtp() { return otp; }
+        public void setOtp(String otp) { this.otp = otp; }
+        public LocalDateTime getExpiry() { return expiry; }
+        public void setExpiry(LocalDateTime expiry) { this.expiry = expiry; }
+        public boolean isExpired() {
+            return expiry != null && expiry.isBefore(LocalDateTime.now());
+        }
+    }
+
+    private final Map<String, PendingRegistration> pendingRegistrations = new ConcurrentHashMap<>();
 
     private final AccountRepository accountRepository;
     private final UserProfileRepository userProfileRepository;
@@ -114,67 +142,32 @@ public class AccountService {
 
     /**
      * Khởi tạo quá trình đăng ký tài khoản:
-     * - Tạo hoặc cập nhật tài khoản tạm thời với email_verified = false
-     * - Sinh mã xác thực 6 số ngẫu nhiên
-     * - Đặt thời gian hết hạn đúng 5 phút
-     * - Gửi email chứa mã OTP và in log console
+     * - RÀNG BUỘC NGHIÊM NGẶT: Chưa xác thực OTP thì TUYỆT ĐỐI KHÔNG lưu bất kỳ thông tin nào vào Database!
+     * - Lưu tạm thời thông tin form + OTP vào bộ nhớ RAM (pendingRegistrations) có thời hạn 5 phút.
+     * - Gửi email chứa mã OTP và in log console.
      */
-    @Transactional
     public String initiateRegistration(RegisterForm form) {
         String normalizedEmail = form.getEmail().trim().toLowerCase();
         String otp = String.format("%06d", random.nextInt(1000000));
         LocalDateTime expiry = LocalDateTime.now().plusMinutes(5);
 
         Optional<Account> existingOpt = accountRepository.findByEmail(normalizedEmail);
-        Account account;
-        UserProfile profile;
-
-        if (existingOpt.isPresent()) {
-            account = existingOpt.get();
-            if (account.isEmailVerified()) {
-                throw new IllegalStateException("Email này đã được đăng ký và xác thực tài khoản.");
-            }
-            // Trường hợp đăng ký trước đó nhưng chưa xác thực: cập nhật lại thông tin mới
-            account.setPassword(passwordEncoder.encode(form.getPassword()));
-            account.setVerificationCode(otp);
-            account.setVerificationExpiry(expiry);
-            accountRepository.save(account);
-
-            profile = userProfileRepository.findByAccount(account).orElseGet(() -> {
-                UserProfile p = new UserProfile();
-                p.setAccount(account);
-                return p;
-            });
-            profile.setFullName(form.getFullName().trim());
-            String phone = form.getPhoneNumber();
-            profile.setPhoneNumber(phone == null || phone.isBlank() ? null : phone.replaceAll("[\\s.-]", ""));
-            userProfileRepository.save(profile);
-        } else {
-            account = new Account();
-            account.setEmail(normalizedEmail);
-            account.setPassword(passwordEncoder.encode(form.getPassword()));
-            account.setRole(Role.CUSTOMER);
-            account.setStatus(AccountStatus.ACTIVE);
-            account.setEmailVerified(false);
-            account.setVerificationCode(otp);
-            account.setVerificationExpiry(expiry);
-            accountRepository.save(account);
-
-            profile = new UserProfile();
-            profile.setFullName(form.getFullName().trim());
-            String phone = form.getPhoneNumber();
-            profile.setPhoneNumber(phone == null || phone.isBlank() ? null : phone.replaceAll("[\\s.-]", ""));
-            profile.setAccount(account);
-            userProfileRepository.save(profile);
+        if (existingOpt.isPresent() && existingOpt.get().isEmailVerified()) {
+            throw new IllegalStateException("Email này đã được đăng ký và xác thực tài khoản. Vui lòng đăng nhập.");
         }
 
+        // Lưu vào bộ nhớ RAM, KHÔNG LƯU VÀO DATABASE
+        pendingRegistrations.put(normalizedEmail, new PendingRegistration(form, otp, expiry));
+
         // Gửi email OTP tới người dùng
-        emailService.sendOtpVerificationEmail(normalizedEmail, otp, profile.getFullName());
+        emailService.sendOtpVerificationEmail(normalizedEmail, otp, form.getFullName().trim());
         return otp;
     }
 
     /**
      * Xác thực mã OTP để kích hoạt tài khoản:
+     * - RÀNG BUỘC: CHỈ KHI NÀO MÃ OTP ĐƯỢC XÁC THỰC THÀNH CÔNG, HỆ THỐNG MỚI LƯU TÀI KHOẢN VÀO DATABASE!
+     * - Nếu mã sai hoặc hết hạn: TUYỆT ĐỐI KHÔNG LƯU BẤT KỲ DỮ LIỆU NÀO VÀO CSDL.
      * - Hỗ trợ mã dự phòng cố định DEMO_BYPASS_OTP ("111111")
      * - Hoặc mã OTP gửi qua email còn trong hạn 5 phút
      */
@@ -191,18 +184,50 @@ public class AccountService {
         String inputOtp = (otp != null) ? otp.trim() : "";
         String normalizedEmail = email.trim().toLowerCase();
 
-        Optional<Account> accountOpt = accountRepository.findByEmail(normalizedEmail);
-        if (accountOpt.isEmpty()) {
+        PendingRegistration pending = pendingRegistrations.get(normalizedEmail);
+
+        // Trường hợp không có trong bộ nhớ chờ xác thực
+        if (pending == null) {
+            Optional<Account> accountOpt = accountRepository.findByEmail(normalizedEmail);
+            if (accountOpt.isPresent() && accountOpt.get().isEmailVerified()) {
+                response.put("success", true);
+                response.put("message", "Tài khoản của bạn đã được kích hoạt trước đó.");
+                return response;
+            }
+
+            // Fallback trường hợp tài khoản unverified cũ tồn dư trong DB (nếu có từ trước)
+            if (accountOpt.isPresent() && !accountOpt.get().isEmailVerified()) {
+                Account account = accountOpt.get();
+                boolean isBypass = DEMO_BYPASS_OTP.equals(inputOtp);
+                boolean isOtpCorrect = inputOtp.equals(account.getVerificationCode());
+                boolean isOtpStillValid = account.isVerificationCodeValid();
+
+                if (isBypass || (isOtpCorrect && isOtpStillValid)) {
+                    account.setEmailVerified(true);
+                    account.setVerificationCode(null);
+                    account.setVerificationExpiry(null);
+                    accountRepository.save(account);
+
+                    response.put("success", true);
+                    response.put("message", "Xác thực tài khoản thành công! Bạn có thể đăng nhập ngay.");
+                    return response;
+                }
+
+                if (isOtpCorrect && !isOtpStillValid) {
+                    response.put("success", false);
+                    response.put("expired", true);
+                    response.put("message", "Mã xác thực đã hết hạn (quá 5 phút). Vui lòng nhấn 'Gửi lại mã'!");
+                    return response;
+                }
+
+                response.put("success", false);
+                response.put("expired", false);
+                response.put("message", "Mã xác thực không chính xác. Vui lòng kiểm tra lại!");
+                return response;
+            }
+
             response.put("success", false);
-            response.put("message", "Không tìm thấy thông tin tài khoản đăng ký.");
-            return response;
-        }
-
-        Account account = accountOpt.get();
-
-        if (account.isEmailVerified()) {
-            response.put("success", true);
-            response.put("message", "Tài khoản của bạn đã được kích hoạt trước đó.");
+            response.put("message", "Không tìm thấy thông tin đăng ký chờ xác thực. Vui lòng đăng ký lại.");
             return response;
         }
 
@@ -210,15 +235,40 @@ public class AccountService {
         boolean isBypass = DEMO_BYPASS_OTP.equals(inputOtp);
 
         // 2. Kiểm tra mã thực gửi trong email
-        boolean isOtpCorrect = inputOtp.equals(account.getVerificationCode());
-        boolean isOtpStillValid = account.isVerificationCodeValid();
+        boolean isOtpCorrect = inputOtp.equals(pending.getOtp());
+        boolean isOtpStillValid = !pending.isExpired();
 
         if (isBypass || (isOtpCorrect && isOtpStillValid)) {
-            // Kích hoạt thành công
-            account.setEmailVerified(true);
+            // ===>>> CHỈ KHI NÀO MÃ ĐÚNG VÀ HỢP LỆ: MỚI TẠO VÀ LƯU VÀO DATABASE <<<===
+            RegisterForm form = pending.getForm();
+
+            // Xóa tài khoản chưa kích hoạt cũ nếu có trùng email
+            accountRepository.findByEmail(normalizedEmail).ifPresent(old -> {
+                if (!old.isEmailVerified()) {
+                    userProfileRepository.findByAccount(old).ifPresent(userProfileRepository::delete);
+                    accountRepository.delete(old);
+                }
+            });
+
+            Account account = new Account();
+            account.setEmail(normalizedEmail);
+            account.setPassword(passwordEncoder.encode(form.getPassword()));
+            account.setRole(Role.CUSTOMER);
+            account.setStatus(AccountStatus.ACTIVE);
+            account.setEmailVerified(true); // Đã xác thực xong
             account.setVerificationCode(null);
             account.setVerificationExpiry(null);
             accountRepository.save(account);
+
+            UserProfile profile = new UserProfile();
+            profile.setFullName(form.getFullName().trim());
+            String phone = form.getPhoneNumber();
+            profile.setPhoneNumber(phone == null || phone.isBlank() ? null : phone.replaceAll("[\\s.-]", ""));
+            profile.setAccount(account);
+            userProfileRepository.save(profile);
+
+            // Xóa thông tin đăng ký tạm khỏi bộ nhớ RAM
+            pendingRegistrations.remove(normalizedEmail);
 
             response.put("success", true);
             response.put("message", "Xác thực tài khoản thành công! Bạn có thể đăng nhập ngay.");
@@ -226,14 +276,13 @@ public class AccountService {
         }
 
         if (isOtpCorrect && !isOtpStillValid) {
-            // Nhập đúng mã nhưng đã quá 5 phút
             response.put("success", false);
             response.put("expired", true);
             response.put("message", "Mã xác thực đã hết hạn (quá 5 phút). Vui lòng nhấn 'Gửi lại mã'!");
             return response;
         }
 
-        // Nhập sai mã
+        // Nhập sai mã -> TUYỆT ĐỐI KHÔNG LƯU GÌ VÀO DATABASE
         response.put("success", false);
         response.put("expired", false);
         response.put("message", "Mã xác thực không chính xác. Vui lòng kiểm tra lại!");
@@ -243,7 +292,6 @@ public class AccountService {
     /**
      * Gửi lại mã xác thực OTP mới cho tài khoản (gia hạn thêm 5 phút).
      */
-    @Transactional
     public Map<String, Object> resendRegistrationOtp(String email) {
         Map<String, Object> response = new HashMap<>();
 
@@ -254,31 +302,38 @@ public class AccountService {
         }
 
         String normalizedEmail = email.trim().toLowerCase();
-        Optional<Account> accountOpt = accountRepository.findByEmail(normalizedEmail);
+        PendingRegistration pending = pendingRegistrations.get(normalizedEmail);
 
-        if (accountOpt.isEmpty()) {
-            response.put("success", false);
-            response.put("message", "Không tìm thấy thông tin tài khoản.");
-            return response;
-        }
+        if (pending == null) {
+            Optional<Account> accountOpt = accountRepository.findByEmail(normalizedEmail);
+            if (accountOpt.isPresent() && !accountOpt.get().isEmailVerified()) {
+                Account account = accountOpt.get();
+                String newOtp = String.format("%06d", random.nextInt(1000000));
+                account.setVerificationCode(newOtp);
+                account.setVerificationExpiry(LocalDateTime.now().plusMinutes(5));
+                accountRepository.save(account);
 
-        Account account = accountOpt.get();
-        if (account.isEmailVerified()) {
+                String fullName = userProfileRepository.findByAccount(account)
+                        .map(UserProfile::getFullName)
+                        .orElse("Quý khách");
+
+                emailService.sendOtpVerificationEmail(normalizedEmail, newOtp, fullName);
+
+                response.put("success", true);
+                response.put("message", "Mã xác thực mới đã được gửi tới email của bạn (hiệu lực 5 phút).");
+                return response;
+            }
+
             response.put("success", false);
-            response.put("message", "Tài khoản đã được kích hoạt thành công, không cần gửi lại mã.");
+            response.put("message", "Không tìm thấy thông tin đăng ký chờ xác thực.");
             return response;
         }
 
         String newOtp = String.format("%06d", random.nextInt(1000000));
-        account.setVerificationCode(newOtp);
-        account.setVerificationExpiry(LocalDateTime.now().plusMinutes(5));
-        accountRepository.save(account);
+        pending.setOtp(newOtp);
+        pending.setExpiry(LocalDateTime.now().plusMinutes(5));
 
-        String fullName = userProfileRepository.findByAccount(account)
-                .map(UserProfile::getFullName)
-                .orElse("Quý khách");
-
-        emailService.sendOtpVerificationEmail(normalizedEmail, newOtp, fullName);
+        emailService.sendOtpVerificationEmail(normalizedEmail, newOtp, pending.getForm().getFullName().trim());
 
         response.put("success", true);
         response.put("message", "Mã xác thực mới đã được gửi tới email của bạn (hiệu lực 5 phút).");
@@ -549,5 +604,219 @@ public class AccountService {
 
     public long countCustomerAccounts() {
         return accountRepository.countByRole(Role.CUSTOMER);
+    }
+
+    /**
+     * Khởi tạo yêu cầu quên mật khẩu:
+     * - Tìm tài khoản qua email hoặc số điện thoại
+     * - Sinh mã OTP 6 số (hiệu lực 5 phút)
+     * - Gửi email hướng dẫn/mã xác thực và in console log
+     */
+    @Transactional
+    public Map<String, Object> initiateForgotPassword(String credential) {
+        Map<String, Object> result = new HashMap<>();
+        if (credential == null || credential.isBlank()) {
+            result.put("success", false);
+            result.put("message", "Vui lòng nhập địa chỉ email của bạn.");
+            return result;
+        }
+        String clean = credential.trim();
+        Account account = null;
+
+        if (clean.contains("@")) {
+            account = accountRepository.findByEmail(clean.toLowerCase()).orElse(null);
+        } else {
+            // Tìm theo số điện thoại nếu người dùng nhập số
+            Optional<UserProfile> profileOpt = userProfileRepository.findByPhoneNumber(clean);
+            if (profileOpt.isPresent()) {
+                account = profileOpt.get().getAccount();
+            }
+        }
+
+        if (account == null) {
+            result.put("success", false);
+            result.put("message", "Không tìm thấy tài khoản tương ứng với email này trong hệ thống Fashion Shop.");
+            return result;
+        }
+
+        String resetCode = String.format("%06d", random.nextInt(1000000));
+        account.setVerificationCode(resetCode);
+        account.setVerificationExpiry(LocalDateTime.now().plusMinutes(5));
+        accountRepository.save(account);
+
+        UserProfile profile = userProfileRepository.findByAccount(account).orElse(null);
+        String fullName = profile != null ? profile.getFullName() : "Quý khách";
+
+        emailService.sendPasswordResetEmail(account.getEmail(), resetCode, fullName);
+
+        result.put("success", true);
+        result.put("email", account.getEmail());
+        result.put("maskedCredential", maskCredential(clean));
+        result.put("message", "Mã xác thực gồm 6 chữ số đã được gửi tới thiết bị cá nhân của quý khách.");
+        return result;
+    }
+
+    /**
+     * Xác thực mã OTP đặt lại mật khẩu:
+     * - Chấp nhận mã bypass DEMO_BYPASS_OTP ("111111")
+     * - Hoặc mã OTP gửi qua email còn hiệu lực
+     */
+    public Map<String, Object> verifyResetOtp(String email, String otp) {
+        Map<String, Object> result = new HashMap<>();
+        if (email == null || email.isBlank()) {
+            result.put("success", false);
+            result.put("message", "Thiếu thông tin email tài khoản.");
+            return result;
+        }
+        Optional<Account> accountOpt = accountRepository.findByEmail(email.trim().toLowerCase());
+        if (accountOpt.isEmpty()) {
+            result.put("success", false);
+            result.put("message", "Tài khoản không tồn tại trên hệ thống.");
+            return result;
+        }
+        Account account = accountOpt.get();
+        String inputOtp = (otp != null) ? otp.trim() : "";
+        boolean isBypass = DEMO_BYPASS_OTP.equals(inputOtp);
+        boolean isOtpCorrect = inputOtp.equals(account.getVerificationCode());
+        boolean isOtpStillValid = account.isVerificationCodeValid();
+
+        if (isBypass || (isOtpCorrect && isOtpStillValid)) {
+            result.put("success", true);
+            result.put("message", "Xác thực mã OTP thành công. Quý khách vui lòng nhập mật khẩu mới.");
+            return result;
+        }
+
+        if (isOtpCorrect && !isOtpStillValid) {
+            result.put("success", false);
+            result.put("message", "Mã OTP đã hết hạn (quá 5 phút). Quý khách vui lòng nhấn 'Gửi lại ngay'.");
+            return result;
+        }
+
+        result.put("success", false);
+        result.put("message", "Mã xác thực OTP không chính xác. Vui lòng kiểm tra lại!");
+        return result;
+    }
+
+    /**
+     * Gửi lại mã OTP đặt lại mật khẩu mới (gia hạn thêm 5 phút):
+     */
+    @Transactional
+    public Map<String, Object> resendResetOtp(String email) {
+        Map<String, Object> result = new HashMap<>();
+        if (email == null || email.isBlank()) {
+            result.put("success", false);
+            result.put("message", "Thiếu thông tin email.");
+            return result;
+        }
+        Optional<Account> accountOpt = accountRepository.findByEmail(email.trim().toLowerCase());
+        if (accountOpt.isEmpty()) {
+            result.put("success", false);
+            result.put("message", "Không tìm thấy tài khoản tương ứng.");
+            return result;
+        }
+        Account account = accountOpt.get();
+        String newOtp = String.format("%06d", random.nextInt(1000000));
+        account.setVerificationCode(newOtp);
+        account.setVerificationExpiry(LocalDateTime.now().plusMinutes(5));
+        accountRepository.save(account);
+
+        UserProfile profile = userProfileRepository.findByAccount(account).orElse(null);
+        String fullName = profile != null ? profile.getFullName() : "Quý khách";
+
+        emailService.sendPasswordResetEmail(account.getEmail(), newOtp, fullName);
+
+        result.put("success", true);
+        result.put("message", "Đã gửi lại mã xác thực mới (hiệu lực 5 phút).");
+        return result;
+    }
+
+    /**
+     * Đổi mật khẩu mới kèm xác thực OTP:
+     */
+    @Transactional
+    public Map<String, Object> resetPasswordWithOtp(String email, String otp, String newPassword, String confirmPassword) {
+        Map<String, Object> result = new HashMap<>();
+
+        if (newPassword == null || newPassword.length() < 8) {
+            result.put("success", false);
+            result.put("message", "Mật khẩu mới phải có tối thiểu 8 ký tự.");
+            return result;
+        }
+
+        if (!newPassword.equals(confirmPassword)) {
+            result.put("success", false);
+            result.put("message", "Xác nhận mật khẩu mới không khớp!");
+            return result;
+        }
+
+        // Kiểm tra OTP
+        Map<String, Object> verifyCheck = verifyResetOtp(email, otp);
+        if (!Boolean.TRUE.equals(verifyCheck.get("success"))) {
+            return verifyCheck;
+        }
+
+        Account account = accountRepository.findByEmail(email.trim().toLowerCase()).orElse(null);
+        if (account == null) {
+            result.put("success", false);
+            result.put("message", "Không tìm thấy tài khoản.");
+            return result;
+        }
+
+        account.setPassword(passwordEncoder.encode(newPassword));
+        account.setVerificationCode(null);
+        account.setVerificationExpiry(null);
+        accountRepository.save(account);
+
+        // Đảm bảo luôn khởi tạo UserProfile hợp lệ cho tài khoản
+        getOrCreateUserProfile(email);
+
+        result.put("success", true);
+        result.put("message", "Đổi mật khẩu thành công!");
+        return result;
+    }
+
+    /**
+     * Lấy hoặc tự động tạo UserProfile an toàn cho tài khoản trong một Transaction hợp lệ.
+     */
+    @Transactional
+    public UserProfile getOrCreateUserProfile(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+        String cleanEmail = email.trim().toLowerCase();
+        Optional<UserProfile> profileOpt = userProfileRepository.findByAccountEmail(cleanEmail);
+        if (profileOpt.isPresent()) {
+            return profileOpt.get();
+        }
+
+        Optional<Account> accountOpt = accountRepository.findByEmail(cleanEmail);
+        if (accountOpt.isPresent()) {
+            Account acc = accountOpt.get();
+            UserProfile newProfile = new UserProfile();
+            newProfile.setAccount(acc);
+            String defaultName = cleanEmail.contains("@") ? cleanEmail.substring(0, cleanEmail.indexOf('@')) : cleanEmail;
+            newProfile.setFullName(defaultName);
+            UserProfile saved = userProfileRepository.save(newProfile);
+            acc.setUserProfile(saved);
+            accountRepository.save(acc);
+            return saved;
+        }
+        return null;
+    }
+
+    private String maskCredential(String input) {
+        if (input == null || input.length() < 4) return "****";
+        if (input.contains("@")) {
+            String[] parts = input.split("@");
+            String name = parts[0];
+            String domain = parts.length > 1 ? parts[1] : "";
+            if (name.length() <= 2) {
+                return name.charAt(0) + "***@" + domain;
+            }
+            return name.substring(0, 2) + "***" + name.charAt(name.length() - 1) + "@" + domain;
+        } else {
+            if (input.length() <= 4) return "****";
+            return input.substring(0, 3) + "***" + input.substring(input.length() - 3);
+        }
     }
 }

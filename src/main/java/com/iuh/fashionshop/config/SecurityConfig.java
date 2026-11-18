@@ -54,6 +54,7 @@ public class SecurityConfig {
                         // 2. Public - Các trang storefront & xác thực công khai
                         .requestMatchers("/", "/shop/**", "/sale",
                                          "/login", "/register/**", "/logout",
+                                         "/forgot-password/**",
                                          "/terms", "/policy", "/support", "/auth/terms").permitAll()
 
                         // 3. Public - Các REST API công khai (tìm kiếm & chatbot)
