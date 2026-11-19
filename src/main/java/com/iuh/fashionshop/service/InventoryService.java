@@ -1,16 +1,10 @@
 package com.iuh.fashionshop.service;
 
-import com.iuh.fashionshop.model.Category;
-import com.iuh.fashionshop.model.ImportReceipt;
-import com.iuh.fashionshop.model.Order;
-import com.iuh.fashionshop.model.Product;
-import com.iuh.fashionshop.model.ProductVariant;
-import com.iuh.fashionshop.model.StockHistory;
-import com.iuh.fashionshop.model.UserProfile;
+import com.iuh.fashionshop.dto.ReceiptForm;
+import com.iuh.fashionshop.model.*;
 import com.iuh.fashionshop.model.enums.StockMovementType;
 import com.iuh.fashionshop.model.enums.VariantStatus;
 import com.iuh.fashionshop.repository.CategoryRepository;
-import com.iuh.fashionshop.repository.ImportReceiptRepository;
 import com.iuh.fashionshop.repository.ProductVariantRepository;
 import com.iuh.fashionshop.repository.StockHistoryRepository;
 import com.iuh.fashionshop.repository.UserProfileRepository;
@@ -25,7 +19,10 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @Service
 public class InventoryService {
@@ -51,18 +48,15 @@ public class InventoryService {
     private final StockHistoryRepository stockHistoryRepository;
     private final UserProfileRepository userProfileRepository;
     private final CategoryRepository categoryRepository;
-    private final ImportReceiptRepository importReceiptRepository;
 
     public InventoryService(ProductVariantRepository variantRepository,
                             StockHistoryRepository stockHistoryRepository,
                             UserProfileRepository userProfileRepository,
-                            CategoryRepository categoryRepository,
-                            ImportReceiptRepository importReceiptRepository) {
+                            CategoryRepository categoryRepository) {
         this.variantRepository = variantRepository;
         this.stockHistoryRepository = stockHistoryRepository;
         this.userProfileRepository = userProfileRepository;
         this.categoryRepository = categoryRepository;
-        this.importReceiptRepository = importReceiptRepository;
     }
 
     public static String getHexColor(String colorName) {
@@ -96,7 +90,8 @@ public class InventoryService {
                             && categoryId.equals(v.getProduct().getCategory().getId());
                 })
                 .filter(v -> {
-                    if (stockStatus == null || stockStatus.isBlank() || "ALL".equalsIgnoreCase(stockStatus)) return true;
+                    if (stockStatus == null || stockStatus.isBlank() || "ALL".equalsIgnoreCase(stockStatus))
+                        return true;
                     int stock = v.getStockQuantity();
                     return switch (stockStatus.toUpperCase(Locale.ROOT)) {
                         case "OUT" -> stock == 0;
@@ -146,24 +141,37 @@ public class InventoryService {
         return variantRepository.findAllWithProductAndCategory();
     }
 
-    public record ImportItem(Long variantId, int quantity, BigDecimal importPrice) {}
-
     private synchronized String generateReceiptCode() {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        long nextNum = importReceiptRepository.count() + 1;
-        String code = String.format("PN-%s-%04d", datePrefix, nextNum);
-        int attempts = 0;
-        while (importReceiptRepository.findByReceiptCode(code).isPresent() && attempts < 100) {
-            attempts++;
-            code = String.format("PN-%s-%04d", datePrefix, nextNum + attempts);
-        }
-        return code;
+        long nextNum = stockHistoryRepository.count() + 1;
+        return String.format("PN-%s-%04d", datePrefix, nextNum);
     }
 
+    /**
+     * Nhập kho hàng loạt thông qua DTO ReceiptForm.
+     * Cập nhật tồn kho biến thể và ghi nhận lịch sử vào StockHistory mà không cần thực thể ImportReceipt.
+     */
     @Transactional
-    public ImportReceipt importMultiStock(List<ImportItem> items, String supplier, String reason, String performedByEmail) {
-        if (items == null || items.isEmpty()) {
-            throw new IllegalArgumentException("Danh sách mặt hàng nhập kho không được để trống");
+    public ReceiptForm importStockReceipt(ReceiptForm form, String performedByEmail) {
+        if (form == null) {
+            throw new IllegalArgumentException("Dữ liệu phiếu nhập không hợp lệ");
+        }
+        List<ReceiptForm.ReceiptItem> items = form.toReceiptItems();
+        if (items.isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng chọn ít nhất một biến thể để nhập kho.");
+        }
+
+        for (int i = 0; i < items.size(); i++) {
+            ReceiptForm.ReceiptItem item = items.get(i);
+            if (item.getVariantId() == null) {
+                throw new IllegalArgumentException("Dòng " + (i + 1) + ": Vui lòng chọn mã SKU / biến thể sản phẩm.");
+            }
+            if (item.getQuantity() == null || item.getQuantity() <= 0) {
+                throw new IllegalArgumentException("Dòng " + (i + 1) + ": Số lượng nhập kho phải lớn hơn 0.");
+            }
+            if (item.getImportPrice() != null && item.getImportPrice().signum() < 0) {
+                throw new IllegalArgumentException("Dòng " + (i + 1) + ": Đơn giá nhập không được âm.");
+            }
         }
 
         UserProfile performedBy = null;
@@ -171,62 +179,58 @@ public class InventoryService {
             performedBy = userProfileRepository.findByAccountEmail(performedByEmail).orElse(null);
         }
 
-        int totalQuantity = 0;
-        BigDecimal totalAmount = BigDecimal.ZERO;
-
-        for (ImportItem item : items) {
-            if (item.variantId() == null) {
-                throw new IllegalArgumentException("Mã biến thể không được để trống");
-            }
-            if (item.quantity() <= 0) {
-                throw new IllegalArgumentException("Số lượng nhập kho cho mỗi dòng phải lớn hơn 0");
-            }
-            if (item.importPrice() != null && item.importPrice().signum() < 0) {
-                throw new IllegalArgumentException("Giá nhập không được âm");
-            }
-            totalQuantity += item.quantity();
-            if (item.importPrice() != null) {
-                totalAmount = totalAmount.add(item.importPrice().multiply(BigDecimal.valueOf(item.quantity())));
-            }
-        }
-
         String receiptCode = generateReceiptCode();
-        String finalSupplier = (supplier != null && !supplier.isBlank()) ? supplier.trim() : null;
-        String finalReason = (reason != null && !reason.isBlank()) ? reason.trim() : "Nhập hàng vào kho";
+        String finalSupplier = (form.getSupplier() != null && !form.getSupplier().isBlank())
+                ? form.getSupplier().trim() : null;
+        String finalReason = (form.getReason() != null && !form.getReason().isBlank())
+                ? form.getReason().trim() : "Nhập hàng vào kho";
 
-        ImportReceipt receipt = new ImportReceipt();
-        receipt.setReceiptCode(receiptCode);
-        receipt.setSupplier(finalSupplier);
-        receipt.setReason(finalReason);
-        receipt.setTotalQuantity(totalQuantity);
-        receipt.setTotalAmount(totalAmount);
-        receipt.setPerformedBy(performedBy);
-        receipt.setCreatedAt(LocalDateTime.now());
-        receipt = importReceiptRepository.save(receipt);
+        for (ReceiptForm.ReceiptItem item : items) {
+            ProductVariant variant = variantRepository.findById(item.getVariantId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy biến thể sản phẩm có ID: " + item.getVariantId()));
 
-        for (ImportItem item : items) {
-            ProductVariant variant = variantRepository.findById(item.variantId())
-                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy biến thể sản phẩm có ID: " + item.variantId()));
-
-            variant.increaseStock(item.quantity());
+            variant.increaseStock(item.getQuantity());
             variantRepository.save(variant);
 
             StockHistory history = new StockHistory();
             history.setVariant(variant);
             history.setType(StockMovementType.IMPORT);
-            history.setQuantityChange(item.quantity());
+            history.setQuantityChange(item.getQuantity());
             history.setStockAfter(variant.getStockQuantity());
             history.setSupplier(finalSupplier);
-            history.setImportPrice(item.importPrice());
+            history.setImportPrice(item.getImportPrice());
             history.setReason(finalReason);
-            history.setReceipt(receipt);
             history.setReceiptCode(receiptCode);
             history.setPerformedBy(performedBy);
             history.setCreatedAt(LocalDateTime.now());
             stockHistoryRepository.save(history);
         }
 
-        return receipt;
+        form.setReceiptCode(receiptCode);
+        form.setSupplier(finalSupplier);
+        form.setReason(finalReason);
+        form.setCreatedAt(LocalDateTime.now());
+        if (performedBy != null) {
+            form.setPerformedBy(performedBy.getFullName() != null ? performedBy.getFullName() : performedByEmail);
+        } else {
+            form.setPerformedBy(performedByEmail);
+        }
+        return form;
+    }
+
+    @Transactional
+    public ReceiptForm importMultiStock(List<ImportItem> items, String supplier, String reason, String performedByEmail) {
+        ReceiptForm form = new ReceiptForm();
+        form.setSupplier(supplier);
+        form.setReason(reason);
+        if (items != null) {
+            for (ImportItem item : items) {
+                form.getVariantId().add(item.variantId());
+                form.getQuantity().add(item.quantity());
+                form.getImportPrice().add(item.importPrice());
+            }
+        }
+        return importStockReceipt(form, performedByEmail);
     }
 
     @Transactional
@@ -240,7 +244,7 @@ public class InventoryService {
     /**
      * Ghi 1 dòng lịch sử kho cho biến động do ĐƠN HÀNG gây ra
      * (SALE khi đặt hàng, CANCELLED_ORDER khi hủy đơn).
-     *
+     * <p>
      * Gọi SAU KHI đã cộng/trừ tồn kho trên variant (để stockAfter đúng) và SAU KHI đơn đã được lưu
      * (để có order_id). performedBy = null nghĩa là "Hệ thống tự động" trên trang Kho.
      *
@@ -349,7 +353,8 @@ public class InventoryService {
                     return !h.getCreatedAt().isAfter(endDate.atTime(23, 59, 59, 999999999));
                 })
                 .filter(h -> {
-                    if (movementType == null || movementType.isBlank() || "ALL".equalsIgnoreCase(movementType)) return true;
+                    if (movementType == null || movementType.isBlank() || "ALL".equalsIgnoreCase(movementType))
+                        return true;
                     return h.getType() != null && h.getType().name().equalsIgnoreCase(movementType.trim());
                 })
                 .filter(h -> {
@@ -483,13 +488,17 @@ public class InventoryService {
         );
     }
 
+    public record ImportItem(Long variantId, int quantity, BigDecimal importPrice) {
+    }
+
     public record InventorySummary(
             long totalSkus,
             long totalStock,
             long lowStockCount,
             long outOfStockCount,
             String totalInventoryValue
-    ) {}
+    ) {
+    }
 
     public record InventoryItemView(
             Long id,
@@ -506,7 +515,8 @@ public class InventoryService {
             String stockStatusText,
             String stockStatusClass,
             String status
-    ) {}
+    ) {
+    }
 
     public record StockHistoryItemView(
             Long id,
@@ -525,5 +535,6 @@ public class InventoryService {
             String reason,
             String performer,
             String createdAt
-    ) {}
+    ) {
+    }
 }

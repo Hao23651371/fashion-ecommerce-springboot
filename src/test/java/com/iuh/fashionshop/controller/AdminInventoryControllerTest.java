@@ -1,7 +1,6 @@
 package com.iuh.fashionshop.controller;
 
 import com.iuh.fashionshop.model.Category;
-import com.iuh.fashionshop.model.ImportReceipt;
 import com.iuh.fashionshop.model.Product;
 import com.iuh.fashionshop.model.ProductVariant;
 import com.iuh.fashionshop.model.StockHistory;
@@ -11,7 +10,6 @@ import com.iuh.fashionshop.model.enums.ProductStatus;
 import com.iuh.fashionshop.model.enums.StockMovementType;
 import com.iuh.fashionshop.model.enums.VariantStatus;
 import com.iuh.fashionshop.repository.CategoryRepository;
-import com.iuh.fashionshop.repository.ImportReceiptRepository;
 import com.iuh.fashionshop.repository.ProductRepository;
 import com.iuh.fashionshop.repository.ProductVariantRepository;
 import com.iuh.fashionshop.repository.StockHistoryRepository;
@@ -50,9 +48,6 @@ class AdminInventoryControllerTest {
 
     @Autowired
     private CategoryRepository categoryRepository;
-
-    @Autowired
-    private ImportReceiptRepository importReceiptRepository;
 
     @Autowired
     private StockHistoryRepository stockHistoryRepository;
@@ -123,27 +118,17 @@ class AdminInventoryControllerTest {
         assertEquals(20, updatedVar1.getStockQuantity(), "5 + 15 phải bằng 20");
         assertEquals(30, updatedVar2.getStockQuantity(), "10 + 20 phải bằng 30");
 
-        // 2. Kiểm tra phiếu nhập (ImportReceipt) đã được tạo
-        List<ImportReceipt> receipts = importReceiptRepository.findAll();
-        assertFalse(receipts.isEmpty());
-        ImportReceipt lastReceipt = receipts.get(receipts.size() - 1);
-        assertNotNull(lastReceipt.getReceiptCode());
-        assertTrue(lastReceipt.getReceiptCode().startsWith("PN-"));
-        assertEquals("Xưởng may Tân Bình", lastReceipt.getSupplier());
-        assertEquals("Nhập bổ sung đợt 1", lastReceipt.getReason());
-        assertEquals(35, lastReceipt.getTotalQuantity()); // 15 + 20 = 35
-        BigDecimal expectedAmount = BigDecimal.valueOf(15 * 100000 + 20 * 150000); // 1.500.000 + 3.000.000 = 4.500.000
-        assertEquals(0, expectedAmount.compareTo(lastReceipt.getTotalAmount()));
-
-        // 3. Kiểm tra lịch sử biến động kho (StockHistory)
+        // 2. Kiểm tra lịch sử biến động kho (StockHistory) được tạo với chung receiptCode
         List<StockHistory> histories1 = stockHistoryRepository.findByVariantIdOrderByCreatedAtDesc(var1.getId());
         assertFalse(histories1.isEmpty());
         StockHistory h1 = histories1.get(0);
         assertEquals(StockMovementType.IMPORT, h1.getType());
         assertEquals(15, h1.getQuantityChange());
         assertEquals(20, h1.getStockAfter());
-        assertEquals(lastReceipt.getReceiptCode(), h1.getReceiptCode());
+        assertNotNull(h1.getReceiptCode());
+        assertTrue(h1.getReceiptCode().startsWith("PN-"));
         assertEquals("Xưởng may Tân Bình", h1.getSupplier());
+        assertEquals("Nhập bổ sung đợt 1", h1.getReason());
 
         List<StockHistory> histories2 = stockHistoryRepository.findByVariantIdOrderByCreatedAtDesc(var2.getId());
         assertFalse(histories2.isEmpty());
@@ -151,7 +136,8 @@ class AdminInventoryControllerTest {
         assertEquals(StockMovementType.IMPORT, h2.getType());
         assertEquals(20, h2.getQuantityChange());
         assertEquals(30, h2.getStockAfter());
-        assertEquals(lastReceipt.getReceiptCode(), h2.getReceiptCode());
+        assertEquals(h1.getReceiptCode(), h2.getReceiptCode());
+        assertEquals("Xưởng may Tân Bình", h2.getSupplier());
     }
 
     @Test

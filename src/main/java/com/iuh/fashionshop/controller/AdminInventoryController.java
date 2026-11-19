@@ -1,5 +1,6 @@
 package com.iuh.fashionshop.controller;
 
+import com.iuh.fashionshop.dto.ReceiptForm;
 import com.iuh.fashionshop.repository.CategoryRepository;
 import com.iuh.fashionshop.service.InventoryService;
 import org.springframework.data.domain.Page;
@@ -14,7 +15,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -68,6 +68,7 @@ public class AdminInventoryController {
         model.addAttribute("allVariants", inventoryService.getAllVariantsForSelection());
         model.addAttribute("performers", inventoryService.getDistinctPerformers());
         model.addAttribute("totalHistoryCount", inventoryService.getTotalHistoryCount());
+        model.addAttribute("receiptForm", new ReceiptForm());
 
         // Params cho tab Tồn kho
         model.addAttribute("keyword", keyword != null ? keyword : "");
@@ -86,47 +87,16 @@ public class AdminInventoryController {
     }
 
     @PostMapping("/import")
-    public String importStock(@RequestParam(name = "variantId", required = false) List<Long> variantIds,
-                              @RequestParam(name = "quantity", required = false) List<Integer> quantities,
-                              @RequestParam(name = "importPrice", required = false) List<BigDecimal> importPrices,
-                              @RequestParam(required = false) String supplier,
-                              @RequestParam(required = false) String reason,
+    public String importStock(@ModelAttribute ReceiptForm receiptForm,
                               RedirectAttributes redirectAttributes) {
         try {
-            if (variantIds == null || variantIds.isEmpty()) {
-                throw new IllegalArgumentException("Vui lòng chọn ít nhất một biến thể để nhập kho.");
-            }
-
-            List<InventoryService.ImportItem> items = new java.util.ArrayList<>();
-            for (int i = 0; i < variantIds.size(); i++) {
-                Long vId = variantIds.get(i);
-                if (vId == null) {
-                    continue;
-                }
-                int qty = (quantities != null && quantities.size() > i && quantities.get(i) != null)
-                        ? quantities.get(i) : 0;
-                if (qty <= 0) {
-                    throw new IllegalArgumentException("Số lượng nhập ở mỗi dòng phải lớn hơn 0.");
-                }
-                BigDecimal price = (importPrices != null && importPrices.size() > i)
-                        ? importPrices.get(i) : null;
-                if (price != null && price.signum() < 0) {
-                    throw new IllegalArgumentException("Đơn giá nhập không được âm.");
-                }
-                items.add(new InventoryService.ImportItem(vId, qty, price));
-            }
-
-            if (items.isEmpty()) {
-                throw new IllegalArgumentException("Vui lòng chọn ít nhất một biến thể hợp lệ để nhập kho.");
-            }
-
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String userEmail = (auth != null) ? auth.getName() : null;
 
-            var receipt = inventoryService.importMultiStock(items, supplier, reason, userEmail);
+            ReceiptForm receipt = inventoryService.importStockReceipt(receiptForm, userEmail);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Đã tạo phiếu nhập " + receipt.getReceiptCode() + " thành công cho "
-                            + receipt.getTotalQuantity() + " sản phẩm (" + items.size() + " mã SKU).");
+                            + receipt.getTotalQuantity() + " sản phẩm (" + receipt.toReceiptItems().size() + " mã SKU).");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Lỗi khi nhập kho: " + e.getMessage());
