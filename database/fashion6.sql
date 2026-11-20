@@ -25,81 +25,22 @@ SET @prev_m_last_day := DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE()) DAY);
 SET @cur_m_start := STR_TO_DATE(DATE_FORMAT(CURDATE(), '%Y-%m-01 00:00:00'), '%Y-%m-%d %H:%i:%s');
 SET @cur_span := GREATEST(TIMESTAMPDIFF(SECOND, @cur_m_start, NOW(6)), 60);
 
-SELECT up.id
-INTO @prof_staff1
-FROM user_profile up
-         JOIN account a ON up.account_id = a.id
-WHERE a.email = 'staff1@fashionshop.vn'
-LIMIT 1;
-SELECT up.id
-INTO @prof_khach1
-FROM user_profile up
-         JOIN account a ON up.account_id = a.id
-WHERE a.email = 'khach1@gmail.com'
-LIMIT 1;
-SELECT up.id
-INTO @prof_khach2
-FROM user_profile up
-         JOIN account a ON up.account_id = a.id
-WHERE a.email = 'khach2@gmail.com'
-LIMIT 1;
+SET @prof_staff1 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'staff1@fashionshop.vn' LIMIT 1);
+SET @prof_khach1 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach1@gmail.com' LIMIT 1);
+SET @prof_khach2 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach2@gmail.com' LIMIT 1);
 
-SELECT id
-INTO @cat_dam
-FROM category
-WHERE name = 'Đầm'
-LIMIT 1;
-SELECT id
-INTO @cat_somi
-FROM category
-WHERE name = 'Áo sơ mi'
-LIMIT 1;
-SELECT id
-INTO @cat_quan
-FROM category
-WHERE name = 'Quần'
-LIMIT 1;
-SELECT id
-INTO @cat_khoac
-FROM category
-WHERE name = 'Áo khoác'
-LIMIT 1;
-SELECT id
-INTO @cat_thun
-FROM category
-WHERE name = 'Áo thun'
-LIMIT 1;
-SELECT id
-INTO @cat_hoodie
-FROM category
-WHERE name = 'Áo hoodie'
-LIMIT 1;
-SELECT id
-INTO @cat_len
-FROM category
-WHERE name = 'Áo len'
-LIMIT 1;
+SET @cat_dam := (SELECT id FROM category WHERE name = 'Đầm' LIMIT 1);
+SET @cat_somi := (SELECT id FROM category WHERE name = 'Áo sơ mi' LIMIT 1);
+SET @cat_quan := (SELECT id FROM category WHERE name = 'Quần' LIMIT 1);
+SET @cat_khoac := (SELECT id FROM category WHERE name = 'Áo khoác' LIMIT 1);
+SET @cat_thun := (SELECT id FROM category WHERE name = 'Áo thun' LIMIT 1);
+SET @cat_hoodie := (SELECT id FROM category WHERE name = 'Áo hoodie' LIMIT 1);
+SET @cat_len := (SELECT id FROM category WHERE name = 'Áo len' LIMIT 1);
 
-SELECT id
-INTO @var_dam_lua_be_s
-FROM product_variant
-WHERE sku = 'DAM-LUA-BE-S'
-LIMIT 1;
-SELECT id
-INTO @var_sm_linen_tr_m
-FROM product_variant
-WHERE sku = 'SM-LINEN-TR-M'
-LIMIT 1;
-SELECT id
-INTO @var_at_basic_tr_l
-FROM product_variant
-WHERE sku = 'AT-BASIC-TR-L'
-LIMIT 1;
-SELECT id
-INTO @var_cv_xeply_m
-FROM product_variant
-WHERE sku = 'CV-XEPLY-KEM-M'
-LIMIT 1;
+SET @var_dam_lua_be_s := (SELECT id FROM product_variant WHERE sku = 'DAM-LUA-BE-S' LIMIT 1);
+SET @var_sm_linen_tr_m := (SELECT id FROM product_variant WHERE sku = 'SM-LINEN-TR-M' LIMIT 1);
+SET @var_at_basic_tr_l := (SELECT id FROM product_variant WHERE sku = 'AT-BASIC-TR-L' LIMIT 1);
+SET @var_cv_xeply_m := (SELECT id FROM product_variant WHERE sku = 'CV-XEPLY-KEM-M' LIMIT 1);
 
 -- ============================================================================
 -- MỤC 1: TÀI KHOẢN, HỒ SƠ & ĐỊA CHỈ GIAO HÀNG (51 tài khoản mới)
@@ -1750,8 +1691,7 @@ SELECT (SELECT COUNT(*)
            OR o.total_amount <> o.subtotal - o.discount_amount + o.shipping_fee)                                    AS so_don_sai_tong_tien,
        (SELECT COUNT(*)
         FROM product_variant v
-                 JOIN stock_history h ON h.id = (SELECT MAX(id) FROM stock_history WHERE variant_id = v.id)
-        WHERE h.stock_after <> v.stock_quantity)                                                                    AS so_bien_the_lech_kho,
+        WHERE v.stock_quantity <> (SELECT h.stock_after FROM stock_history h WHERE h.variant_id = v.id ORDER BY h.id DESC LIMIT 1)) AS so_bien_the_lech_kho,
        (SELECT COUNT(*)
         FROM coupon c
         WHERE c.code IN ('WELCOME15', 'FREESHIP30', 'VIP200K', 'SALETET20', 'THANGVANG', 'NOEL2025')

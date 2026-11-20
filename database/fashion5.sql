@@ -79,11 +79,3 @@ INSERT INTO stock_history (variant_id, type, quantity_change, stock_after, suppl
     ((SELECT id FROM product_variant WHERE sku = 'QS-KAKI-REU-L'), 'SALE', -1, 16, NULL, NULL, NULL,
      (SELECT id FROM orders WHERE order_code = 'FS20261002001'), NULL, DATE_SUB(NOW(6), INTERVAL 20 DAY));
 
-
--- ================= KIEM TRA SAU KHI CHAY (dung: 22, 0) =================
-SELECT COUNT(*) AS so_dong_lich_su FROM stock_history;
--- Dòng mới nhất của mỗi biến thể phải bằng tồn kho hiện tại. PHẢI ra 0 (nếu > 0 thì có biến thể bị lệch kho).
-SELECT COUNT(*) AS so_bien_the_lech_kho
-FROM product_variant v
-JOIN stock_history h ON h.id = (SELECT MAX(id) FROM stock_history WHERE variant_id = v.id)
-WHERE h.stock_after <> v.stock_quantity;

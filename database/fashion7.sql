@@ -31,67 +31,103 @@ SET @y0_start := STR_TO_DATE(CONCAT(@y0_num, '-01-01 00:00:00'), '%Y-%m-%d %H:%i
 SET @cur_m_start := STR_TO_DATE(DATE_FORMAT(CURDATE(), '%Y-%m-01 00:00:00'), '%Y-%m-%d %H:%i:%s');
 SET @ytd_prev_span := GREATEST(TIMESTAMPDIFF(SECOND, @y0_start, DATE_SUB(@cur_m_start, INTERVAL 1 DAY)), 86400);
 
-SELECT up.id INTO @prof_staff3 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'staff3@fashionshop.vn' LIMIT 1;
+SET @prof_staff3 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'staff3@fashionshop.vn' LIMIT 1);
 
-SELECT up.id INTO @prof_khach5 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach5@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach6 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach6@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach7 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach7@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach8 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach8@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach9 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach9@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach10 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach10@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach11 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach11@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach12 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach12@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach13 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach13@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach14 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach14@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach15 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach15@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach16 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach16@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach17 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach17@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach18 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach18@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach19 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach19@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach20 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach20@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach21 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach21@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach22 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach22@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach23 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach23@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach24 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach24@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach25 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach25@gmail.com' LIMIT 1;
-SELECT up.id INTO @prof_khach26 FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach26@gmail.com' LIMIT 1;
+SET @prof_khach5 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach5@gmail.com' LIMIT 1);
+SET @prof_khach6 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach6@gmail.com' LIMIT 1);
+SET @prof_khach7 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach7@gmail.com' LIMIT 1);
+SET @prof_khach8 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach8@gmail.com' LIMIT 1);
+SET @prof_khach9 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach9@gmail.com' LIMIT 1);
+SET @prof_khach10 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach10@gmail.com' LIMIT 1);
+SET @prof_khach11 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach11@gmail.com' LIMIT 1);
+SET @prof_khach12 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach12@gmail.com' LIMIT 1);
+SET @prof_khach13 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach13@gmail.com' LIMIT 1);
+SET @prof_khach14 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach14@gmail.com' LIMIT 1);
+SET @prof_khach15 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach15@gmail.com' LIMIT 1);
+SET @prof_khach16 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach16@gmail.com' LIMIT 1);
+SET @prof_khach17 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach17@gmail.com' LIMIT 1);
+SET @prof_khach18 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach18@gmail.com' LIMIT 1);
+SET @prof_khach19 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach19@gmail.com' LIMIT 1);
+SET @prof_khach20 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach20@gmail.com' LIMIT 1);
+SET @prof_khach21 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach21@gmail.com' LIMIT 1);
+SET @prof_khach22 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach22@gmail.com' LIMIT 1);
+SET @prof_khach23 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach23@gmail.com' LIMIT 1);
+SET @prof_khach24 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach24@gmail.com' LIMIT 1);
+SET @prof_khach25 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach25@gmail.com' LIMIT 1);
+SET @prof_khach26 := (SELECT up.id FROM user_profile up JOIN account a ON up.account_id = a.id WHERE a.email = 'khach26@gmail.com' LIMIT 1);
 
-SELECT id, stock_quantity INTO @var_plo_reu_m, @base_plo_reu_m FROM product_variant WHERE sku = 'PLO-REU-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_plo_reu_l, @base_plo_reu_l FROM product_variant WHERE sku = 'PLO-REU-L' LIMIT 1;
-SELECT id, stock_quantity INTO @var_plo_kem_s, @base_plo_kem_s FROM product_variant WHERE sku = 'PLO-KEM-S' LIMIT 1;
-SELECT id, stock_quantity INTO @var_plo_kem_m, @base_plo_kem_m FROM product_variant WHERE sku = 'PLO-KEM-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_dam_pas_s, @base_dam_pas_s FROM product_variant WHERE sku = 'DAM-PAS-S' LIMIT 1;
-SELECT id, stock_quantity INTO @var_dam_pas_m, @base_dam_pas_m FROM product_variant WHERE sku = 'DAM-PAS-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_dam_do_s, @base_dam_do_s FROM product_variant WHERE sku = 'DAM-DO-S' LIMIT 1;
-SELECT id, stock_quantity INTO @var_dam_do_m, @base_dam_do_m FROM product_variant WHERE sku = 'DAM-DO-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_sm_oxf_m, @base_sm_oxf_m FROM product_variant WHERE sku = 'SM-OXF-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_sm_oxf_l, @base_sm_oxf_l FROM product_variant WHERE sku = 'SM-OXF-L' LIMIT 1;
-SELECT id, stock_quantity INTO @var_qn_cul_s, @base_qn_cul_s FROM product_variant WHERE sku = 'QN-CUL-S' LIMIT 1;
-SELECT id, stock_quantity INTO @var_qn_cul_m, @base_qn_cul_m FROM product_variant WHERE sku = 'QN-CUL-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_qn_jog_m, @base_qn_jog_m FROM product_variant WHERE sku = 'QN-JOG-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_ak_blz_s, @base_ak_blz_s FROM product_variant WHERE sku = 'AK-BLZ-S' LIMIT 1;
-SELECT id, stock_quantity INTO @var_ak_blz_m, @base_ak_blz_m FROM product_variant WHERE sku = 'AK-BLZ-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_at_gym_m, @base_at_gym_m FROM product_variant WHERE sku = 'AT-GYM-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_at_gym_l, @base_at_gym_l FROM product_variant WHERE sku = 'AT-GYM-L' LIMIT 1;
-SELECT id, stock_quantity INTO @var_al_gil_s, @base_al_gil_s FROM product_variant WHERE sku = 'AL-GIL-S' LIMIT 1;
-SELECT id, stock_quantity INTO @var_al_gil_m, @base_al_gil_m FROM product_variant WHERE sku = 'AL-GIL-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_vs_den_m, @base_vs_den_m FROM product_variant WHERE sku = 'VS-DEN-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_vs_xam_l, @base_vs_xam_l FROM product_variant WHERE sku = 'VS-XAM-L' LIMIT 1;
-SELECT id, stock_quantity INTO @var_cd_kem_m, @base_cd_kem_m FROM product_variant WHERE sku = 'CD-KEM-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_cd_den_l, @base_cd_den_l FROM product_variant WHERE sku = 'CD-DEN-L' LIMIT 1;
-SELECT id, stock_quantity INTO @var_tt_gym_s, @base_tt_gym_s FROM product_variant WHERE sku = 'TT-GYM-S' LIMIT 1;
-SELECT id, stock_quantity INTO @var_sm_linen_tr_m, @base_sm_linen_tr_m FROM product_variant WHERE sku = 'SM-LINEN-TR-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_at_basic_tr_l, @base_at_basic_tr_l FROM product_variant WHERE sku = 'AT-BASIC-TR-L' LIMIT 1;
-SELECT id, stock_quantity INTO @var_cv_xeply_m, @base_cv_xeply_m FROM product_variant WHERE sku = 'CV-XEPLY-KEM-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_dam_lua_be_m, @base_dam_lua_be_m FROM product_variant WHERE sku = 'DAM-LUA-BE-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_trench_camel_m, @base_trench_camel_m FROM product_variant WHERE sku = 'TRENCH-CAMEL-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_blz_nam_xam_m, @base_blz_nam_xam_m FROM product_variant WHERE sku = 'BLAZER-NAM-XAM-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_qj_ongrong_m, @base_qj_ongrong_m FROM product_variant WHERE sku = 'QJ-ONGRONG-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_ak_denim_l, @base_ak_denim_l FROM product_variant WHERE sku = 'AK-DENIM-L' LIMIT 1;
-SELECT id, stock_quantity INTO @var_al_colo_m, @base_al_colo_m FROM product_variant WHERE sku = 'AL-COLO-NAU-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_qs_kaki_m, @base_qs_kaki_m FROM product_variant WHERE sku = 'QS-KAKI-REU-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_dam_hoanhi_m, @base_dam_hoanhi_m FROM product_variant WHERE sku = 'DAM-HOANHI-HP-M' LIMIT 1;
-SELECT id, stock_quantity INTO @var_sm_nam_ks_l, @base_sm_nam_ks_l FROM product_variant WHERE sku = 'SM-NAM-KS-L' LIMIT 1;
+SET @var_plo_reu_m := (SELECT id FROM product_variant WHERE sku = 'PLO-REU-M' LIMIT 1);
+SET @base_plo_reu_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'PLO-REU-M' LIMIT 1);
+SET @var_plo_reu_l := (SELECT id FROM product_variant WHERE sku = 'PLO-REU-L' LIMIT 1);
+SET @base_plo_reu_l := (SELECT stock_quantity FROM product_variant WHERE sku = 'PLO-REU-L' LIMIT 1);
+SET @var_plo_kem_s := (SELECT id FROM product_variant WHERE sku = 'PLO-KEM-S' LIMIT 1);
+SET @base_plo_kem_s := (SELECT stock_quantity FROM product_variant WHERE sku = 'PLO-KEM-S' LIMIT 1);
+SET @var_plo_kem_m := (SELECT id FROM product_variant WHERE sku = 'PLO-KEM-M' LIMIT 1);
+SET @base_plo_kem_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'PLO-KEM-M' LIMIT 1);
+SET @var_dam_pas_s := (SELECT id FROM product_variant WHERE sku = 'DAM-PAS-S' LIMIT 1);
+SET @base_dam_pas_s := (SELECT stock_quantity FROM product_variant WHERE sku = 'DAM-PAS-S' LIMIT 1);
+SET @var_dam_pas_m := (SELECT id FROM product_variant WHERE sku = 'DAM-PAS-M' LIMIT 1);
+SET @base_dam_pas_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'DAM-PAS-M' LIMIT 1);
+SET @var_dam_do_s := (SELECT id FROM product_variant WHERE sku = 'DAM-DO-S' LIMIT 1);
+SET @base_dam_do_s := (SELECT stock_quantity FROM product_variant WHERE sku = 'DAM-DO-S' LIMIT 1);
+SET @var_dam_do_m := (SELECT id FROM product_variant WHERE sku = 'DAM-DO-M' LIMIT 1);
+SET @base_dam_do_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'DAM-DO-M' LIMIT 1);
+SET @var_sm_oxf_m := (SELECT id FROM product_variant WHERE sku = 'SM-OXF-M' LIMIT 1);
+SET @base_sm_oxf_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'SM-OXF-M' LIMIT 1);
+SET @var_sm_oxf_l := (SELECT id FROM product_variant WHERE sku = 'SM-OXF-L' LIMIT 1);
+SET @base_sm_oxf_l := (SELECT stock_quantity FROM product_variant WHERE sku = 'SM-OXF-L' LIMIT 1);
+SET @var_qn_cul_s := (SELECT id FROM product_variant WHERE sku = 'QN-CUL-S' LIMIT 1);
+SET @base_qn_cul_s := (SELECT stock_quantity FROM product_variant WHERE sku = 'QN-CUL-S' LIMIT 1);
+SET @var_qn_cul_m := (SELECT id FROM product_variant WHERE sku = 'QN-CUL-M' LIMIT 1);
+SET @base_qn_cul_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'QN-CUL-M' LIMIT 1);
+SET @var_qn_jog_m := (SELECT id FROM product_variant WHERE sku = 'QN-JOG-M' LIMIT 1);
+SET @base_qn_jog_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'QN-JOG-M' LIMIT 1);
+SET @var_ak_blz_s := (SELECT id FROM product_variant WHERE sku = 'AK-BLZ-S' LIMIT 1);
+SET @base_ak_blz_s := (SELECT stock_quantity FROM product_variant WHERE sku = 'AK-BLZ-S' LIMIT 1);
+SET @var_ak_blz_m := (SELECT id FROM product_variant WHERE sku = 'AK-BLZ-M' LIMIT 1);
+SET @base_ak_blz_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'AK-BLZ-M' LIMIT 1);
+SET @var_at_gym_m := (SELECT id FROM product_variant WHERE sku = 'AT-GYM-M' LIMIT 1);
+SET @base_at_gym_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'AT-GYM-M' LIMIT 1);
+SET @var_at_gym_l := (SELECT id FROM product_variant WHERE sku = 'AT-GYM-L' LIMIT 1);
+SET @base_at_gym_l := (SELECT stock_quantity FROM product_variant WHERE sku = 'AT-GYM-L' LIMIT 1);
+SET @var_al_gil_s := (SELECT id FROM product_variant WHERE sku = 'AL-GIL-S' LIMIT 1);
+SET @base_al_gil_s := (SELECT stock_quantity FROM product_variant WHERE sku = 'AL-GIL-S' LIMIT 1);
+SET @var_al_gil_m := (SELECT id FROM product_variant WHERE sku = 'AL-GIL-M' LIMIT 1);
+SET @base_al_gil_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'AL-GIL-M' LIMIT 1);
+SET @var_vs_den_m := (SELECT id FROM product_variant WHERE sku = 'VS-DEN-M' LIMIT 1);
+SET @base_vs_den_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'VS-DEN-M' LIMIT 1);
+SET @var_vs_xam_l := (SELECT id FROM product_variant WHERE sku = 'VS-XAM-L' LIMIT 1);
+SET @base_vs_xam_l := (SELECT stock_quantity FROM product_variant WHERE sku = 'VS-XAM-L' LIMIT 1);
+SET @var_cd_kem_m := (SELECT id FROM product_variant WHERE sku = 'CD-KEM-M' LIMIT 1);
+SET @base_cd_kem_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'CD-KEM-M' LIMIT 1);
+SET @var_cd_den_l := (SELECT id FROM product_variant WHERE sku = 'CD-DEN-L' LIMIT 1);
+SET @base_cd_den_l := (SELECT stock_quantity FROM product_variant WHERE sku = 'CD-DEN-L' LIMIT 1);
+SET @var_tt_gym_s := (SELECT id FROM product_variant WHERE sku = 'TT-GYM-S' LIMIT 1);
+SET @base_tt_gym_s := (SELECT stock_quantity FROM product_variant WHERE sku = 'TT-GYM-S' LIMIT 1);
+SET @var_sm_linen_tr_m := (SELECT id FROM product_variant WHERE sku = 'SM-LINEN-TR-M' LIMIT 1);
+SET @base_sm_linen_tr_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'SM-LINEN-TR-M' LIMIT 1);
+SET @var_at_basic_tr_l := (SELECT id FROM product_variant WHERE sku = 'AT-BASIC-TR-L' LIMIT 1);
+SET @base_at_basic_tr_l := (SELECT stock_quantity FROM product_variant WHERE sku = 'AT-BASIC-TR-L' LIMIT 1);
+SET @var_cv_xeply_m := (SELECT id FROM product_variant WHERE sku = 'CV-XEPLY-KEM-M' LIMIT 1);
+SET @base_cv_xeply_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'CV-XEPLY-KEM-M' LIMIT 1);
+SET @var_dam_lua_be_m := (SELECT id FROM product_variant WHERE sku = 'DAM-LUA-BE-M' LIMIT 1);
+SET @base_dam_lua_be_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'DAM-LUA-BE-M' LIMIT 1);
+SET @var_trench_camel_m := (SELECT id FROM product_variant WHERE sku = 'TRENCH-CAMEL-M' LIMIT 1);
+SET @base_trench_camel_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'TRENCH-CAMEL-M' LIMIT 1);
+SET @var_blz_nam_xam_m := (SELECT id FROM product_variant WHERE sku = 'BLAZER-NAM-XAM-M' LIMIT 1);
+SET @base_blz_nam_xam_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'BLAZER-NAM-XAM-M' LIMIT 1);
+SET @var_qj_ongrong_m := (SELECT id FROM product_variant WHERE sku = 'QJ-ONGRONG-M' LIMIT 1);
+SET @base_qj_ongrong_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'QJ-ONGRONG-M' LIMIT 1);
+SET @var_ak_denim_l := (SELECT id FROM product_variant WHERE sku = 'AK-DENIM-L' LIMIT 1);
+SET @base_ak_denim_l := (SELECT stock_quantity FROM product_variant WHERE sku = 'AK-DENIM-L' LIMIT 1);
+SET @var_al_colo_m := (SELECT id FROM product_variant WHERE sku = 'AL-COLO-NAU-M' LIMIT 1);
+SET @base_al_colo_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'AL-COLO-NAU-M' LIMIT 1);
+SET @var_qs_kaki_m := (SELECT id FROM product_variant WHERE sku = 'QS-KAKI-REU-M' LIMIT 1);
+SET @base_qs_kaki_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'QS-KAKI-REU-M' LIMIT 1);
+SET @var_dam_hoanhi_m := (SELECT id FROM product_variant WHERE sku = 'DAM-HOANHI-HP-M' LIMIT 1);
+SET @base_dam_hoanhi_m := (SELECT stock_quantity FROM product_variant WHERE sku = 'DAM-HOANHI-HP-M' LIMIT 1);
+SET @var_sm_nam_ks_l := (SELECT id FROM product_variant WHERE sku = 'SM-NAM-KS-L' LIMIT 1);
+SET @base_sm_nam_ks_l := (SELECT stock_quantity FROM product_variant WHERE sku = 'SM-NAM-KS-L' LIMIT 1);
 
 -- ============================================================================
 -- MỤC 1: BỔ SUNG 208 BIẾN THỂ SẢN PHẨM (NHIỀU SIZE / MÀU CHO TOÀN BỘ 30 SẢN PHẨM)
@@ -2180,9 +2216,7 @@ SELECT
     (SELECT COUNT(*) FROM orders o
      WHERE o.subtotal <> (SELECT SUM(i.unit_price * i.quantity) FROM order_item i WHERE i.order_id = o.id)
         OR o.total_amount <> o.subtotal - o.discount_amount + o.shipping_fee) AS so_don_sai_tong_tien,
-    (SELECT COUNT(*) FROM product_variant v
-     JOIN stock_history h ON h.id = (SELECT MAX(id) FROM stock_history WHERE variant_id = v.id)
-     WHERE h.stock_after <> v.stock_quantity) AS so_bien_the_lech_kho,
+    (SELECT COUNT(*) FROM product_variant v WHERE v.stock_quantity <> (SELECT h.stock_after FROM stock_history h WHERE h.variant_id = v.id ORDER BY h.id DESC LIMIT 1)) AS so_bien_the_lech_kho,
     (SELECT COUNT(*) FROM coupon c
      WHERE c.code IN ('SALE2024', 'SALE2025', 'SALE2026')
        AND c.used_count <> (SELECT COUNT(*) FROM orders o WHERE o.coupon_id = c.id AND o.status <> 'CANCELLED')) AS so_coupon_lech_luot_dung,
