@@ -27,7 +27,7 @@ public class EmailService {
      * Áp dụng tiêu chuẩn chống Spam (Multipart HTML + Plain text, Sender Header chuẩn).
      */
     public boolean sendOtpVerificationEmail(String toEmail, String otpCode, String recipientName) {
-        log.info("Yêu cầu gửi email xác thực tài khoản tới: {}", toEmail);
+        log.info("Yêu cầu gửi email xác thực tài khoản tới: {} | Mã OTP: {} (Mã dự phòng demo: 111111)", toEmail, otpCode);
 
         if (mailSender == null) {
             log.warn("JavaMailSender chưa được cấu hình. Không thể gửi email xác thực tới: {}", toEmail);
@@ -57,7 +57,7 @@ public class EmailService {
             log.info("Gửi email xác thực thành công tới: {}", toEmail);
             return true;
         } catch (Exception ex) {
-            log.error("Không thể gửi email xác thực qua SMTP tới {}: {}", toEmail, ex.getMessage());
+            log.error("Không thể gửi email xác thực qua SMTP tới {}: {}", toEmail, ex.getMessage(), ex);
             return false;
         }
     }
@@ -66,7 +66,7 @@ public class EmailService {
      * Gửi email đặt lại mật khẩu cho tài khoản.
      */
     public boolean sendPasswordResetEmail(String toEmail, String resetCode, String recipientName) {
-        log.info("Yêu cầu gửi email đặt lại mật khẩu tới: {}", toEmail);
+        log.info("Yêu cầu gửi email đặt lại mật khẩu tới: {} | Mã OTP: {} (Mã dự phòng demo: 111111)", toEmail, resetCode);
 
         if (mailSender == null) {
             log.warn("JavaMailSender chưa được cấu hình. Không thể gửi email đặt lại mật khẩu tới: {}", toEmail);
@@ -94,7 +94,7 @@ public class EmailService {
             log.info("Gửi email đặt lại mật khẩu thành công tới: {}", toEmail);
             return true;
         } catch (Exception ex) {
-            log.error("Không thể gửi email đặt lại mật khẩu qua SMTP tới {}: {}", toEmail, ex.getMessage());
+            log.error("Không thể gửi email đặt lại mật khẩu qua SMTP tới {}: {}", toEmail, ex.getMessage(), ex);
             return false;
         }
     }
