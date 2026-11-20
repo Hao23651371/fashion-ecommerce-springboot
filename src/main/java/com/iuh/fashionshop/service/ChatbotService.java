@@ -1075,22 +1075,78 @@ public class ChatbotService {
     private List<ProductDetailDto> findProductsWithDetails(String question) {
         try {
             var searchResults = searchService.search(question, MAX_PRODUCTS);
-            if (searchResults.isEmpty()) {
-                return List.of();
+            if (searchResults != null && !searchResults.isEmpty()) {
+                List<Long> ids = searchResults.stream()
+                        .filter(r -> r.distance() <= MAX_DISTANCE)
+                        .map(r -> r.product().id())
+                        .toList();
+                if (ids.isEmpty()) {
+                    ids = searchResults.stream().limit(3).map(r -> r.product().id()).toList();
+                }
+                List<ProductDetailDto> details = productService.getDetailsByIds(ids);
+                if (details != null && !details.isEmpty()) {
+                    return details;
+                }
             }
-            List<Long> ids = searchResults.stream()
-                    .filter(r -> r.distance() <= MAX_DISTANCE)
-                    .map(r -> r.product().id())
-                    .toList();
-            if (ids.isEmpty()) {
-                // Nếu khoảng cách khắt khe quá thì lấy top 3 kết quả gần nhất
-                ids = searchResults.stream().limit(3).map(r -> r.product().id()).toList();
-            }
-            return productService.getDetailsByIds(ids);
         } catch (Exception e) {
             log.warn("Chatbot tìm sản phẩm cho LLM lỗi: {}", e.getMessage());
-            return List.of();
         }
+
+        // Dự phòng khi chạy trên Cloud không có Ollama vector: Lọc thông minh theo từ khóa hoặc sản phẩm nổi bật
+        return findProductsFallback(question);
+    }
+
+    private List<ProductDetailDto> findProductsFallback(String question) {
+        List<ProductDetailDto> all = productService.getAllActiveDetails();
+        if (all == null || all.isEmpty()) return List.of();
+
+        String norm = (question != null) ? stripAccents(question).toLowerCase() : "";
+
+        // Gợi ý trang phục đi biển, du lịch, mùa hè, dạo phố
+        if (norm.contains("bien") || norm.contains("du lich") || norm.contains("mua he") || norm.contains("dao pho")) {
+            List<ProductDetailDto> beachItems = all.stream()
+                    .filter(p -> {
+                        String name = stripAccents(p.name()).toLowerCase();
+                        String cat = stripAccents(p.categoryName()).toLowerCase();
+                        return name.contains("hoa nhi") || name.contains("linen") || name.contains("short")
+                                || name.contains("culottes") || name.contains("dam lua") || name.contains("cotton")
+                                || cat.contains("dam") || cat.contains("short") || name.contains("polo");
+                    })
+                    .limit(MAX_PRODUCTS)
+                    .toList();
+            if (!beachItems.isEmpty()) return beachItems;
+        }
+
+        // Khớp từ khóa trong tên, danh mục, mô tả sản phẩm
+        String[] words = norm.replaceAll("[^a-z0-9\\s]", " ").split("\\s+");
+        List<ProductDetailDto> matched = all.stream()
+                .filter(p -> {
+                    String text = stripAccents(p.name() + " " + p.categoryName() + " " + (p.description() != null ? p.description() : "")).toLowerCase();
+                    for (String w : words) {
+                        if (w.length() >= 2 && text.contains(w)) return true;
+                    }
+                    return false;
+                })
+                .sorted(Comparator.comparingInt((ProductDetailDto p) -> {
+                    String text = stripAccents(p.name() + " " + p.categoryName()).toLowerCase();
+                    int score = 0;
+                    for (String w : words) {
+                        if (w.length() >= 2 && text.contains(w)) score++;
+                    }
+                    return -score;
+                }))
+                .limit(MAX_PRODUCTS)
+                .toList();
+
+        if (!matched.isEmpty()) {
+            return matched;
+        }
+
+        // Nếu câu hỏi chung chung, lấy top sản phẩm đang bán có sẵn hàng
+        return all.stream()
+                .filter(p -> !p.soldOut() && p.totalStock() > 0)
+                .limit(MAX_PRODUCTS)
+                .toList();
     }
 
     private String formatProducts(List<ProductDetailDto> list) {
