@@ -13,20 +13,26 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 
 // =========================================================================
 // 2. KẾT NỐI DATABASE (MariaDB / MySQL Connection Pool dùng chung)
+// Tự động làm sạch khoảng trắng (.trim()) để tránh lỗi getaddrinfo ENOTFOUND
 // =========================================================================
+const dbHost = (process.env.DB_HOST || "localhost").trim();
+const dbPort = Number(String(process.env.DB_PORT || 3306).trim());
+const dbUser = (process.env.DB_USER || "fashionshop_mcp").trim();
+const dbPassword = (process.env.DB_PASSWORD || "").trim();
+const dbName = (process.env.DB_NAME || "fashionshop").trim();
+const isSSL = String(process.env.DB_SSL || "").trim().toLowerCase() === "true" || dbHost.includes("tidbcloud");
+
 export const pool = mysql.createPool({
-  host: process.env.DB_HOST || "localhost",
-  port: Number(process.env.DB_PORT) || 3306,
-  user: process.env.DB_USER || "fashionshop_mcp",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "fashionshop",
+  host: dbHost,
+  port: dbPort,
+  user: dbUser,
+  password: dbPassword,
+  database: dbName,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
   decimalNumbers: true,
-  ssl: (process.env.DB_SSL === "true" || (process.env.DB_HOST && process.env.DB_HOST.includes("tidbcloud")))
-    ? { rejectUnauthorized: false }
-    : undefined
+  ssl: isSSL ? { rejectUnauthorized: false } : undefined
 });
 
 // =========================================================================
