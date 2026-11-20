@@ -31,8 +31,8 @@ USER spring:spring
 # Copy file jar đã build
 COPY --from=builder --chown=spring:spring /app/app.jar app.jar
 
-# Biến môi trường mặc định (PORT được Railway/Render tự động inject)
-ENV PORT=8080
-EXPOSE 8080
+# Biến môi trường mặc định (Render sử dụng port 10000 mặc định)
+ENV PORT=10000
+EXPOSE 10000
 
-ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
