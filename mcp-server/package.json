@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
+    "start:sse": "node server.js",
     "inspect": "npx @modelcontextprotocol/inspector node index.js"
   },
   "dependencies": {

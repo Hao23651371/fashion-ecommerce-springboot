@@ -1,0 +1,16 @@
+.git
+.gradle
+.idea
+.vscode
+build
+bin
+out
+mcp-server/node_modules
+Tailieu
+database
+image
+*.docx
+*.log
+application-local.properties
+.env
+.env.*
