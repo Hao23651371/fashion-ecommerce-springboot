@@ -118,7 +118,7 @@ public class SecurityConfig {
 
                 Set<String> roles = AuthorityUtils.authorityListToSet(authentication.getAuthorities());
                 if (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_STAFF")) {
-                    response.sendRedirect("/admin/dashboard");
+                    response.sendRedirect("/admin/dashboard?loginSuccess=true");
                     return;
                 }
 
@@ -126,12 +126,13 @@ public class SecurityConfig {
                 if (savedRequest != null) {
                     String targetUrl = savedRequest.getRedirectUrl();
                     if (targetUrl != null && !targetUrl.isBlank()) {
-                        response.sendRedirect(targetUrl);
+                        String redirect = targetUrl.contains("?") ? targetUrl + "&loginSuccess=true" : targetUrl + "?loginSuccess=true";
+                        response.sendRedirect(redirect);
                         return;
                     }
                 }
 
-                response.sendRedirect("/");
+                response.sendRedirect("/?loginSuccess=true");
             }
         };
     }
