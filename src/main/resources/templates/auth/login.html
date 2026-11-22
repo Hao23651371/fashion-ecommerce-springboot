@@ -148,7 +148,7 @@
                     <form th:action="@{/login}" method="post"
                           th:with="err=${param.error != null ? param.error[0] : ''}">
                         <div class="mb-2">
-                            <label for="username" class="auth-label">EMAIL HOẶC SỐ ĐIỆN THOẠI</label>
+                            <label for="username" class="auth-label">Email</label>
                             <div class="luxury-input-group" th:classappend="${err == 'email'} ? 'is-invalid'">
                                 <span class="input-icon"><i class="bi bi-envelope"></i></span>
                                 <input type="text" id="username" name="username" placeholder="name@example.com" required autofocus
