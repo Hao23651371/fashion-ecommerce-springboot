@@ -99,12 +99,13 @@ Mở trình duyệt truy cập: `http://localhost:8080/`. Hệ thống sẽ tự
 
 | Vai trò (Role) | Tên đăng nhập (Email) | Mật khẩu | Quyền hạn và Điều hướng |
 |---|---|---|---|
-| **Quản trị viên (Admin)** | `admin1@fashionshop.vn` | `Admin@123` | Toàn quyền quản trị hệ thống, quản lý tài khoản & phân quyền ➔ `/admin/dashboard` |
-| **Quản trị viên (Admin)** | `admin2@fashionshop.vn` | `Admin@123` | Toàn quyền hệ thống dự phòng ➔ `/admin/dashboard` |
-| **Nhân viên (Staff)** | `staff1@fashionshop.vn` | `Admin@123` | Vận hành bán hàng: Sản phẩm, kho hàng, đơn hàng, mã giảm giá, thống kê (không có quyền quản lý tài khoản người dùng) ➔ `/admin/dashboard` |
+| **Khách vãng lai (Guest)** | *(Không yêu cầu)* | *(Không cần)* | Xem trang chủ lookbook, tra cứu danh mục, xem chi tiết sản phẩm, lọc & sắp xếp, tìm kiếm thông minh đa tầng, trò chuyện tư vấn phong cách cùng Trợ lý AI Chatbot, đăng ký tài khoản mới ➔ `/` |
+| **Khách hàng (Customer)** | `khach1@gmail.com` | `Khach@123` | Trải nghiệm mua sắm storefront đầy đủ: Thả tim yêu thích, giỏ hàng, áp dụng voucher, thanh toán đặt hàng COD / VietQR, xem lịch sử và tự hủy đơn hàng ➔ `/` |
+| **Khách hàng (Customer)** | `khach2@gmail.com` | `Khach@123` | Mua sắm, theo dõi trạng thái đơn hàng ➔ `/` |
+| **Nhân viên (Staff)** | `staff1@fashionshop.vn` | `Admin@123` | Vận hành bán hàng: Quản lý sản phẩm, danh mục, kho hàng (nhập/kiểm kho), xử lý đơn hàng, tạo mã giảm giá, xem thống kê doanh thu (không có quyền quản lý người dùng) ➔ `/admin/dashboard` |
 | **Nhân viên (Staff)** | `staff2@fashionshop.vn` | `Admin@123` | Tài khoản nhân viên phụ ➔ `/admin/dashboard` |
-| **Khách hàng (Customer)** | `khach1@gmail.com` | `Khach@123` | Trải nghiệm mua sắm storefront: Giỏ hàng, yêu thích, đặt hàng, thanh toán COD / VietQR ➔ `/` (Trang chủ) |
-| **Khách hàng (Customer)** | `khach2@gmail.com` | `Khach@123` | Mua sắm, theo dõi trạng thái đơn hàng ➔ `/` (Trang chủ) |
+| **Quản trị viên (Admin)** | `admin1@fashionshop.vn` | `Admin@123` | Toàn quyền tối cao: Quản trị toàn bộ cửa hàng, quản lý tài khoản người dùng và phân quyền (Role) ➔ `/admin/dashboard` |
+| **Quản trị viên (Admin)** | `admin2@fashionshop.vn` | `Admin@123` | Toàn quyền hệ thống dự phòng ➔ `/admin/dashboard` |
 
 > 🌟 **Điểm nổi bật khi xác thực:**
 > - Đăng nhập tài khoản nhanh chóng, chính xác bằng **Email**.
