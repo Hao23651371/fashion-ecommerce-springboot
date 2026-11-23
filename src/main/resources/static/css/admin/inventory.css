@@ -712,6 +712,146 @@
     box-shadow: 0 0 0 2px #e2e8f0;
 }
 
+/* Bulk action bar */
+.bulk-action-bar {
+    background: #f8faff !important;
+    border: 1px solid #c7d2fe !important;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    animation: fadeInSlide 0.2s ease-in-out;
+}
+
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.variant-row-checkbox {
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    accent-color: #4332d5;
+}
+
+#selectAllVariantsCheckbox {
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    accent-color: #4332d5;
+}
+
+.import-items-table select {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.import-items-table input {
+    font-size: 0.8rem;
+}
+
+.import-line-total {
+    color: #087f75;
+    font-weight: 700;
+}
+
+/* Wide Modal for Multi-row Import & Audit Tables */
+@media (min-width: 1200px) {
+    .modal-inventory-wide {
+        max-width: 1260px;
+    }
+}
+
+.modal-size-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #f0effe;
+    color: #4332d5;
+    border: 1px solid #ddd9fb;
+    font-weight: 800;
+    font-size: 0.74rem;
+    white-space: nowrap;
+}
+
+.modal-size-badge.is-empty {
+    background: #f4f5f8;
+    color: #8b91a0;
+    border-color: #e5e7eb;
+    font-weight: 600;
+}
+
+.modal-color-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    background: #f8f9fb;
+    border: 1px solid #e5e7eb;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #374151;
+    white-space: nowrap;
+}
+
+.modal-color-cell.is-empty {
+    color: #8b91a0;
+    font-weight: 500;
+}
+
+.audit-diff-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.audit-diff-plus {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.audit-diff-minus {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.audit-diff-zero {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.audit-diff-empty {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+#importItemsTable td,
+#auditItemsTable td {
+    padding: 9px 10px;
+    font-size: 0.8rem;
+}
+
+#importItemsTable th,
+#auditItemsTable th {
+    padding: 10px 10px;
+    white-space: nowrap;
+}
+
 /* Responsive */
 @media (max-width: 992px) {
     .inventory-heading {

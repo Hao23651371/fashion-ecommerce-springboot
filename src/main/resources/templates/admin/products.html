@@ -51,9 +51,7 @@
             </td>
             <td class="action-cell">
                 <!-- Ẩn / Hiện sản phẩm -->
-                <form th:if="${product.active}" th:action="@{'/admin/products/' + ${product.id} + '/toggle-status'}" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn ẩn sản phẩm này không? Trạng thái sẽ chuyển sang Tạm dừng.');">
-                    <button type="submit" title="Ẩn sản phẩm"><i class="bi bi-eye-slash text-warning"></i></button>
-                </form>
+                <button th:if="${product.active}" type="button" class="btn-action-hide" title="Ẩn sản phẩm" th:data-action="@{'/admin/products/' + ${product.id} + '/toggle-status'}" th:data-name="${product.name}" onclick="openHideProductModal(this)"><i class="bi bi-eye-slash text-warning"></i></button>
                 <form th:unless="${product.active}" th:action="@{'/admin/products/' + ${product.id} + '/toggle-status'}" method="post" style="display:inline;">
                     <button type="submit" title="Hiện sản phẩm"><i class="bi bi-eye text-success"></i></button>
                 </form>
@@ -86,6 +84,31 @@
         </div>
     </section>
 
+    <!-- MODAL: XÁC NHẬN ẨN SẢN PHẨM -->
+    <div class="modal fade" id="hideProductModal" tabindex="-1" aria-labelledby="hideProductModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form id="hideProductForm" method="post" action="">
+                    <div class="modal-header border-bottom pb-3">
+                        <h5 class="modal-title fw-bold text-warning" id="hideProductModalLabel">
+                            <i class="bi bi-eye-slash me-2"></i>Xác Nhận Ẩn Sản Phẩm
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                    </div>
+                    <div class="modal-body py-4">
+                        <p class="mb-0">Bạn có chắc muốn ẩn sản phẩm <strong id="hideProductNameText"></strong>? Trạng thái sản phẩm sẽ chuyển sang Tạm dừng.</p>
+                    </div>
+                    <div class="modal-footer border-top bg-light">
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-warning px-4 fw-semibold">
+                            <i class="bi bi-eye-slash me-1"></i>Ẩn sản phẩm
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: XÁC NHẬN XÓA SẢN PHẨM -->
     <div class="modal fade" id="deleteProductModal" tabindex="-1" aria-labelledby="deleteProductModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -115,8 +138,14 @@
         </div>
     </div>
 
-    <!-- Script mở modal xóa sản phẩm -->
+    <!-- Script mở modal ẩn / xóa sản phẩm -->
     <script>
+        function openHideProductModal(button) {
+            document.getElementById('hideProductNameText').textContent = '"' + button.dataset.name + '"';
+            document.getElementById('hideProductForm').action = button.dataset.action;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('hideProductModal')).show();
+        }
+
         function openDeleteProductModal(button) {
             const id = button.getAttribute('data-id');
             const name = button.getAttribute('data-name');

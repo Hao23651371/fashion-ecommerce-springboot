@@ -1,0 +1,276 @@
+### =============================================================================
+### FASHIONSHOP - KIỂM THỬ FORM SẢN PHẨM (MULTIPART UPLOAD CLOUDINARY & URL)
+### Tương thích: IntelliJ IDEA HTTP Client (Khuyên dùng) & VS Code REST Client
+###
+### HƯỚNG DẪN CHẠY NHANH:
+### 1. Chạy ứng dụng: .\gradlew.bat bootRun (mặc định http://localhost:8080)
+### 2. Chạy Request 0 để đăng nhập Admin (tự động lưu Cookie JSESSIONID).
+### 3. Thay đường dẫn file ảnh mẫu (ví dụ: ./sample.png hoặc C:/images/ao-so-mi.jpg)
+###    bằng đường dẫn tới file ảnh thật (.jpg, .jpeg, .png, .webp) trên máy bạn.
+### 4. Chạy Request 1 / 2 / 3 để kiểm tra upload Cloudinary & lưu URL vào CSDL.
+### =============================================================================
+
+@baseUrl = http://localhost:8080
+@adminEmail = admin1@fashionshop.vn
+@adminPass = Admin@123
+@categoryId = 1
+@productId = 1
+
+### 0. [POST] Đăng nhập tài khoản Admin (lấy Session Cookie JSESSIONID)
+# @no-redirect
+POST {{baseUrl}}/login
+Content-Type: application/x-www-form-urlencoded
+
+username={{adminEmail}}&password={{adminPass}}
+
+> {%
+    client.test("Đăng nhập Admin thành công (302)", function() {
+        client.assert(response.status === 302, "Expected 302, got " + response.status);
+    });
+%}
+
+
+### 1. [POST] Tạo sản phẩm mới bằng upload file ảnh từ máy tính (multipart/form-data -> Cloudinary)
+### Lưu ý: Thay ./path/to/image.png bằng đường dẫn file ảnh thật trên máy bạn
+### (Ví dụ Windows: D:/images/ao-so-mi.jpg hoặc ./test-image.png)
+POST {{baseUrl}}/admin/products/new
+Accept: application/json
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="name"
+
+Áo Sơ Mi Linen Upload Cloudinary {{$timestamp}}
+--WebAppBoundary
+Content-Disposition: form-data; name="categoryId"
+
+{{categoryId}}
+--WebAppBoundary
+Content-Disposition: form-data; name="gender"
+
+UNISEX
+--WebAppBoundary
+Content-Disposition: form-data; name="price"
+
+450000
+--WebAppBoundary
+Content-Disposition: form-data; name="salePrice"
+
+390000
+--WebAppBoundary
+Content-Disposition: form-data; name="description"
+
+Chất liệu linen thoáng mát, ảnh được upload tự động lên Cloudinary.
+--WebAppBoundary
+Content-Disposition: form-data; name="sizes"
+
+S
+--WebAppBoundary
+Content-Disposition: form-data; name="sizes"
+
+M
+--WebAppBoundary
+Content-Disposition: form-data; name="colors"
+
+Đen
+--WebAppBoundary
+Content-Disposition: form-data; name="colors"
+
+Trắng
+--WebAppBoundary
+Content-Disposition: form-data; name="selectedVariants"
+
+S___Đen
+--WebAppBoundary
+Content-Disposition: form-data; name="selectedVariants"
+
+M___Trắng
+--WebAppBoundary
+Content-Disposition: form-data; name="stockQuantity"
+
+15
+--WebAppBoundary
+Content-Disposition: form-data; name="image"; filename="product-sample.png"
+Content-Type: image/png
+
+< ./path/to/image.png
+--WebAppBoundary--
+
+> {%
+    client.test("Tạo sản phẩm upload Cloudinary trả về 200 JSON kèm imageUrl", function() {
+        client.assert(response.status === 200, "Expected 200, got " + response.status);
+        client.assert(response.body.success === true, "Expected success=true");
+        client.assert(response.body.imageUrl && response.body.imageUrl.indexOf("https://") === 0,
+            "Expected Cloudinary https URL, got: " + response.body.imageUrl);
+    });
+    if (response.body && response.body.id) {
+        client.global.set("createdProductId", response.body.id);
+    }
+%}
+
+
+### 2. [POST] Cập nhật sản phẩm với file ảnh mới từ máy tính (multipart/form-data -> Cloudinary)
+### Lưu ý: Thay ./path/to/new-image.jpg bằng đường dẫn file ảnh thật trên máy bạn
+POST {{baseUrl}}/admin/products/edit/{{productId}}
+Accept: application/json
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="name"
+
+Áo Sơ Mi Linen Đã Cập Nhật Ảnh
+--WebAppBoundary
+Content-Disposition: form-data; name="categoryId"
+
+{{categoryId}}
+--WebAppBoundary
+Content-Disposition: form-data; name="gender"
+
+UNISEX
+--WebAppBoundary
+Content-Disposition: form-data; name="price"
+
+450000
+--WebAppBoundary
+Content-Disposition: form-data; name="salePrice"
+
+350000
+--WebAppBoundary
+Content-Disposition: form-data; name="description"
+
+Cập nhật thông tin và upload ảnh mới lên Cloudinary.
+--WebAppBoundary
+Content-Disposition: form-data; name="sizes"
+
+M
+--WebAppBoundary
+Content-Disposition: form-data; name="colors"
+
+Trắng
+--WebAppBoundary
+Content-Disposition: form-data; name="selectedVariants"
+
+M___Trắng
+--WebAppBoundary
+Content-Disposition: form-data; name="image"; filename="new-product.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/new-image.jpg
+--WebAppBoundary--
+
+> {%
+    client.test("Cập nhật sản phẩm với ảnh mới thành công", function() {
+        client.assert(response.status === 200, "Expected 200, got " + response.status);
+        client.assert(response.body.success === true, "Expected success=true");
+        client.assert(response.body.imageUrl && response.body.imageUrl.indexOf("https://") === 0,
+            "Expected Cloudinary https URL");
+    });
+%}
+
+
+### 3. [POST] Cập nhật sản phẩm KHÔNG gửi ảnh mới (giữ nguyên URL ảnh cũ trong CSDL)
+POST {{baseUrl}}/admin/products/edit/{{productId}}
+Accept: application/json
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="name"
+
+Áo Sơ Mi Linen Giữ Nguyên Ảnh Cũ
+--WebAppBoundary
+Content-Disposition: form-data; name="categoryId"
+
+{{categoryId}}
+--WebAppBoundary
+Content-Disposition: form-data; name="gender"
+
+UNISEX
+--WebAppBoundary
+Content-Disposition: form-data; name="price"
+
+450000
+--WebAppBoundary
+Content-Disposition: form-data; name="salePrice"
+
+390000
+--WebAppBoundary
+Content-Disposition: form-data; name="description"
+
+Cập nhật mô tả nhưng không gửi file ảnh mới -> giữ nguyên imageUrl cũ.
+--WebAppBoundary
+Content-Disposition: form-data; name="sizes"
+
+M
+--WebAppBoundary
+Content-Disposition: form-data; name="colors"
+
+Trắng
+--WebAppBoundary
+Content-Disposition: form-data; name="selectedVariants"
+
+M___Trắng
+--WebAppBoundary--
+
+> {%
+    client.test("Cập nhật sản phẩm không đổi ảnh giữ nguyên imageUrl cũ", function() {
+        client.assert(response.status === 200, "Expected 200, got " + response.status);
+        client.assert(response.body.success === true, "Expected success=true");
+        client.assert(response.body.imageUrl !== undefined && response.body.imageUrl !== "",
+            "Expected existing imageUrl to be preserved");
+    });
+%}
+
+
+### 4. [POST] Tạo sản phẩm mới bằng link ảnh trực tiếp (vẫn hỗ trợ song song với upload file)
+POST {{baseUrl}}/admin/products/new
+Accept: application/json
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="name"
+
+Áo Thun Test Link Trực Tiếp {{$timestamp}}
+--WebAppBoundary
+Content-Disposition: form-data; name="categoryId"
+
+{{categoryId}}
+--WebAppBoundary
+Content-Disposition: form-data; name="gender"
+
+UNISEX
+--WebAppBoundary
+Content-Disposition: form-data; name="price"
+
+250000
+--WebAppBoundary
+Content-Disposition: form-data; name="description"
+
+Kiểm thử tạo sản phẩm vẫn hỗ trợ nhập link ảnh trực tiếp.
+--WebAppBoundary
+Content-Disposition: form-data; name="imageUrl"
+
+https://res.cloudinary.com/dxk6xlsre/image/upload/f_auto,q_auto,w_600/sp-so-mi-linen-trang
+--WebAppBoundary
+Content-Disposition: form-data; name="sizes"
+
+M
+--WebAppBoundary
+Content-Disposition: form-data; name="colors"
+
+Đen
+--WebAppBoundary
+Content-Disposition: form-data; name="selectedVariants"
+
+M___Đen
+--WebAppBoundary
+Content-Disposition: form-data; name="stockQuantity"
+
+10
+--WebAppBoundary--
+
+> {%
+    client.test("Tạo sản phẩm bằng link ảnh trực tiếp thành công", function() {
+        client.assert(response.status === 200, "Expected 200, got " + response.status);
+        client.assert(response.body.success === true, "Expected success=true");
+    });
+%}

@@ -40,6 +40,8 @@ dependencies {
 	// Spring AI dùng cho Google Gemini (qua OpenAI compatibility layer)
 	implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter'
 
+	implementation 'com.cloudinary:cloudinary-http44:1.38.0'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testCompileOnly 'org.projectlombok:lombok'
