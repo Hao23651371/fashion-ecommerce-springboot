@@ -9,10 +9,14 @@ import com.iuh.fashionshop.model.enums.ProductStatus;
 import com.iuh.fashionshop.model.enums.VariantStatus;
 import com.iuh.fashionshop.repository.CategoryRepository;
 import com.iuh.fashionshop.repository.ProductRepository;
+import com.iuh.fashionshop.service.CloudinaryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -23,9 +27,12 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -41,6 +48,9 @@ class AdminProductControllerTest {
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @MockBean
+    private CloudinaryService cloudinaryService;
 
     private MockMvc mockMvc;
 
@@ -337,5 +347,81 @@ class AdminProductControllerTest {
         Product updatedP2 = productRepository.findById(product2.getId()).orElseThrow();
         assertEquals(ProductStatus.INACTIVE, updatedP1.getStatus());
         assertEquals(ProductStatus.INACTIVE, updatedP2.getStatus());
+    }
+
+    @Test
+    @WithMockUser(username = "admin1@fashionshop.vn", roles = {"ADMIN"})
+    void testCreateProductWithMultipartImageUpload_SavesCloudinaryUrl() throws Exception {
+        Category category = new Category();
+        category.setName("Danh mục upload ảnh");
+        category.setStatus(CategoryStatus.VISIBLE);
+        category = categoryRepository.save(category);
+
+        String cloudinaryUrl = "https://res.cloudinary.com/jgeiayv9/image/upload/v1/fashionshop/products/test-shirt.png";
+        when(cloudinaryService.uploadImage(any()))
+                .thenReturn(new CloudinaryService.CloudinaryUploadResult(cloudinaryUrl, "fashionshop/products/test-shirt"));
+
+        MockMultipartFile imageFile = new MockMultipartFile(
+                "image", "test-shirt.png", "image/png", new byte[]{1, 2, 3, 4});
+
+        mockMvc.perform(multipart("/admin/products/new")
+                        .file(imageFile)
+                        .with(csrf())
+                        .header("Accept", MediaType.APPLICATION_JSON_VALUE)
+                        .param("name", "Áo Sơ Mi Upload Test")
+                        .param("categoryId", category.getId().toString())
+                        .param("gender", "UNISEX")
+                        .param("price", "350000")
+                        .param("description", "Mô tả sản phẩm upload file")
+                        .param("sizes", "M")
+                        .param("colors", "Đen")
+                        .param("selectedVariants", "M___Đen")
+                        .param("stockQuantity", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.imageUrl").value(cloudinaryUrl));
+
+        Product created = productRepository.findAll().stream()
+                .filter(p -> "Áo Sơ Mi Upload Test".equals(p.getName()))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(created);
+        assertEquals(cloudinaryUrl, created.getImageUrl());
+    }
+
+    @Test
+    @WithMockUser(username = "admin1@fashionshop.vn", roles = {"ADMIN"})
+    void testUpdateProductWithoutNewImage_PreservesExistingImageUrl() throws Exception {
+        Category category = new Category();
+        category.setName("Danh mục giữ ảnh cũ");
+        category.setStatus(CategoryStatus.VISIBLE);
+        category = categoryRepository.save(category);
+
+        Product product = new Product();
+        product.setName("Sản phẩm giữ ảnh");
+        product.setCategory(category);
+        product.setPrice(BigDecimal.valueOf(200000));
+        product.setDescription("Mô tả ban đầu");
+        product.setImageUrl("https://res.cloudinary.com/jgeiayv9/image/upload/v1/existing.jpg");
+        product.setStatus(ProductStatus.ACTIVE);
+        product = productRepository.save(product);
+
+        mockMvc.perform(multipart("/admin/products/edit/" + product.getId())
+                        .with(csrf())
+                        .header("Accept", MediaType.APPLICATION_JSON_VALUE)
+                        .param("name", "Sản phẩm giữ ảnh đã sửa")
+                        .param("categoryId", category.getId().toString())
+                        .param("gender", "FEMALE")
+                        .param("price", "220000")
+                        .param("description", "Mô tả đã sửa")
+                        .param("sizes", "M")
+                        .param("colors", "Đen")
+                        .param("selectedVariants", "M___Đen"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.imageUrl").value("https://res.cloudinary.com/jgeiayv9/image/upload/v1/existing.jpg"));
+
+        Product updated = productRepository.findById(product.getId()).orElseThrow();
+        assertEquals("https://res.cloudinary.com/jgeiayv9/image/upload/v1/existing.jpg", updated.getImageUrl());
     }
 }

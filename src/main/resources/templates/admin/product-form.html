@@ -26,7 +26,7 @@
         </button>
     </div>
 
-    <form method="post" th:action="${isEdit} ? @{'/admin/products/edit/' + ${product.id}} : @{/admin/products/new}" id="productForm" novalidate>
+    <form method="post" th:action="${isEdit} ? @{'/admin/products/edit/' + ${product.id}} : @{/admin/products/new}" id="productForm" enctype="multipart/form-data" novalidate>
         <div class="form-layout">
             <main>
                 <section class="form-card">
@@ -78,11 +78,25 @@
             </main>
             <aside>
                 <section class="form-card">
-                    <div class="form-card-title"><i class="bi bi-image"></i><div><h2>Ảnh đại diện sản phẩm <b>*</b></h2><p>Nhập URL ảnh trực tiếp</p></div></div>
-                    <label class="field-label" for="imageUrl">URL ảnh sản phẩm <b>*</b>
-                        <input name="imageUrl" id="imageUrl" type="url" placeholder="https://..." required th:value="${product != null ? product.imageUrl : ''}">
-                        <small id="imageUrlError" class="field-error" role="alert"></small>
-                    </label>
+                    <div class="form-card-title"><i class="bi bi-image"></i><div><h2>Ảnh đại diện sản phẩm <b>*</b></h2><p>Chọn 1 trong 2 phương thức: tải file từ máy tính hoặc nhập URL ảnh</p></div></div>
+                    <div class="field-label">Phương thức ảnh <b>*</b>
+                        <div class="gender-options" id="imageSourceOptions">
+                            <label><input type="radio" name="imageSourceMode" value="file" th:checked="${!isEdit or product == null or product.imageUrl == null or product.imageUrl.isBlank()}">Gửi file</label>
+                            <label><input type="radio" name="imageSourceMode" value="url" th:checked="${isEdit and product != null and product.imageUrl != null and !product.imageUrl.isBlank()}">Gửi URL</label>
+                        </div>
+                    </div>
+                    <div id="imageFileGroup">
+                        <label class="field-label" for="imageFile">Tải ảnh từ máy tính <b>*</b> <small class="field-hint">JPG, JPEG, PNG, WEBP (tối đa 10MB)</small>
+                            <input name="image" id="imageFile" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                            <small id="imageFileError" class="field-error" role="alert"></small>
+                        </label>
+                    </div>
+                    <div id="imageUrlGroup" style="display: none;">
+                        <label class="field-label" for="imageUrl">URL ảnh sản phẩm <b>*</b>
+                            <input name="imageUrl" id="imageUrl" type="url" placeholder="https://..." th:value="${product != null ? product.imageUrl : ''}">
+                            <small id="imageUrlError" class="field-error" role="alert"></small>
+                        </label>
+                    </div>
                     <div class="image-preview" id="imagePreview"><i class="bi bi-image"></i><span>Chưa có ảnh được chọn</span></div>
                 </section>
                 <section class="form-card">
@@ -184,6 +198,10 @@
         const descriptionInput = document.getElementById('productDescription');
         const priceInput = document.getElementById('price');
         const salePriceInput = document.getElementById('salePrice');
+        const imageFileGroup = document.getElementById('imageFileGroup');
+        const imageUrlGroup = document.getElementById('imageUrlGroup');
+        const imageSourceRadios = document.querySelectorAll('input[name="imageSourceMode"]');
+        const imageFileInput = document.getElementById('imageFile');
         const imageUrlInput = document.getElementById('imageUrl');
         const imagePreview = document.getElementById('imagePreview');
         const draftAlert = document.getElementById('draftAlert');
@@ -203,6 +221,7 @@
         const descriptionError = document.getElementById('descriptionError');
         const priceError = document.getElementById('priceError');
         const salePriceError = document.getElementById('salePriceError');
+        const imageFileError = document.getElementById('imageFileError');
         const imageUrlError = document.getElementById('imageUrlError');
         const sizeError = document.getElementById('sizeError');
         const colorError = document.getElementById('colorError');
@@ -340,7 +359,57 @@
             return !error;
         }
 
+        function getImageSourceMode() {
+            const checked = document.querySelector('input[name="imageSourceMode"]:checked');
+            return checked ? checked.value : 'file';
+        }
+
+        function syncImageSourceMode() {
+            const mode = getImageSourceMode();
+            const isFileMode = mode === 'file';
+            if (imageFileGroup) imageFileGroup.style.display = isFileMode ? 'block' : 'none';
+            if (imageUrlGroup) imageUrlGroup.style.display = isFileMode ? 'none' : 'block';
+            if (imageFileInput) imageFileInput.disabled = !isFileMode;
+            if (imageUrlInput) imageUrlInput.disabled = isFileMode;
+
+            if (isFileMode) {
+                if (imageUrlError) imageUrlError.textContent = '';
+                if (imageUrlInput) imageUrlInput.classList.remove('input-error');
+            } else {
+                if (imageFileError) imageFileError.textContent = '';
+                if (imageFileInput) imageFileInput.classList.remove('input-error');
+            }
+        }
+
+        function validateImageFile(showError = true) {
+            if (getImageSourceMode() !== 'file') {
+                if (imageFileError) imageFileError.textContent = '';
+                if (imageFileInput) imageFileInput.classList.remove('input-error');
+                return true;
+            }
+            const file = imageFileInput && imageFileInput.files ? imageFileInput.files[0] : null;
+            let error = '';
+            if (!file) {
+                error = 'Vui lòng chọn file ảnh từ máy tính.';
+            } else {
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+                    error = 'Định dạng file không hợp lệ. Chỉ hỗ trợ JPG, JPEG, PNG, WEBP.';
+                } else if (file.size > 10 * 1024 * 1024) {
+                    error = 'Kích thước ảnh vượt quá giới hạn 10MB.';
+                }
+            }
+            if ((showError || touched.imageUrl) && imageFileError) {
+                imageFileError.textContent = error;
+                imageFileInput.classList.toggle('input-error', !!error);
+            }
+            return !error;
+        }
+
         function validateImageUrl(showError = true) {
+            if (getImageSourceMode() === 'file') {
+                return validateImageFile(showError);
+            }
             const raw = imageUrlInput.value.trim();
             let error = '';
             if (!raw) {
@@ -572,6 +641,16 @@
         }
 
         function updateImagePreview() {
+            if (getImageSourceMode() === 'file') {
+                const file = imageFileInput && imageFileInput.files ? imageFileInput.files[0] : null;
+                if (file && validateImageFile(false)) {
+                    const objectUrl = URL.createObjectURL(file);
+                    imagePreview.innerHTML = '<img src="' + objectUrl + '" alt="Ảnh sản phẩm xem trước">';
+                } else {
+                    imagePreview.innerHTML = '<i class="bi bi-image"></i><span>Chưa có ảnh được chọn</span>';
+                }
+                return;
+            }
             const url = imageUrlInput.value.trim();
             if (!url) {
                 imagePreview.innerHTML = '<i class="bi bi-image"></i><span>Chưa có ảnh được chọn</span>';
@@ -595,6 +674,7 @@
                     description: descriptionInput.value,
                     price: priceInput.value,
                     salePrice: salePriceInput.value,
+                    imageSourceMode: getImageSourceMode(),
                     imageUrl: imageUrlInput.value,
                     sizes: sizes,
                     colors: colors,
@@ -631,6 +711,10 @@
                 if (data.description !== undefined) descriptionInput.value = data.description;
                 if (data.price !== undefined) priceInput.value = data.price;
                 if (data.salePrice !== undefined) salePriceInput.value = data.salePrice;
+                if (data.imageSourceMode) {
+                    const modeRadio = document.querySelector('input[name="imageSourceMode"][value="' + data.imageSourceMode + '"]');
+                    if (modeRadio) modeRadio.checked = true;
+                }
                 if (data.imageUrl !== undefined) imageUrlInput.value = data.imageUrl;
 
                 if (data.gender) {
@@ -748,7 +832,24 @@
             triggerDebouncedSave();
         });
 
-        // 7. URL ảnh sản phẩm: Tự bắt lỗi khi blur, preview ngay khi input
+        // 7. Ảnh sản phẩm: Chọn 1 trong 2 (gửi file từ máy tính hoặc gửi URL)
+        imageSourceRadios.forEach(radio => {
+            radio.addEventListener('change', function () {
+                syncImageSourceMode();
+                if (touched.imageUrl) validateImageUrl(true);
+                updateImagePreview();
+                updateSubmitState();
+                triggerDebouncedSave();
+            });
+        });
+        if (imageFileInput) {
+            imageFileInput.addEventListener('change', function () {
+                touched.imageUrl = true;
+                validateImageUrl(true);
+                updateImagePreview();
+                updateSubmitState();
+            });
+        }
         imageUrlInput.addEventListener('blur', function () {
             touched.imageUrl = true;
             validateImageUrl(true);
@@ -872,6 +973,7 @@
                     Object.keys(touched).forEach(k => touched[k] = false);
                     document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
                     document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+                    syncImageSourceMode();
                     updateImagePreview();
                     renderMatrix();
                     updateSubmitState();
@@ -935,6 +1037,7 @@
         if (!isEditMode) {
             restoreDraft();
         }
+        syncImageSourceMode();
         renderMatrix();
         updateImagePreview();
         updateSubmitState();

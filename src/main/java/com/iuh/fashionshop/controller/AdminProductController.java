@@ -10,13 +10,16 @@ import com.iuh.fashionshop.model.enums.ProductStatus;
 import com.iuh.fashionshop.model.enums.CategoryStatus;
 import com.iuh.fashionshop.repository.CategoryRepository;
 import com.iuh.fashionshop.repository.ProductRepository;
+import com.iuh.fashionshop.service.CloudinaryService;
 import com.iuh.fashionshop.service.ProductSearchService;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,6 +27,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
@@ -36,13 +41,16 @@ public class AdminProductController {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductSearchService searchService;
+    private final CloudinaryService cloudinaryService;
 
     public AdminProductController(ProductRepository productRepository,
                                   CategoryRepository categoryRepository,
-                                  ProductSearchService searchService) {
+                                  ProductSearchService searchService,
+                                  CloudinaryService cloudinaryService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.searchService = searchService;
+        this.cloudinaryService = cloudinaryService;
     }
 
     @GetMapping
@@ -121,18 +129,76 @@ public class AdminProductController {
                          @RequestParam(required = false) java.math.BigDecimal salePrice,
                          @RequestParam(required = false) String description,
                          @RequestParam(required = false) String imageUrl,
+                         @RequestParam(value = "image", required = false) MultipartFile image,
                          @RequestParam(name = "sizes") java.util.List<String> sizes,
                          @RequestParam(name = "colors") java.util.List<String> colors,
                          @RequestParam(name = "selectedVariants", required = false) java.util.List<String> selectedVariants,
                          @RequestParam(defaultValue = "0") int stockQuantity,
                          RedirectAttributes redirectAttributes) {
+        Product product = createProductInternal(
+                name, categoryId, gender, price, salePrice, description,
+                imageUrl, image, sizes, colors, selectedVariants, stockQuantity);
+        redirectAttributes.addFlashAttribute("savedImageUrl", product.getImageUrl());
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Đã thêm sản phẩm \"" + product.getName() + "\" với " + product.getVariants().size() + " biến thể thành công.");
+        return "redirect:/admin/products";
+    }
+
+    @PostMapping(value = "/new", headers = "Accept=application/json")
+    @ResponseBody
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<Map<String, Object>> createJson(@RequestParam String name,
+                                                          @RequestParam Long categoryId,
+                                                          @RequestParam Gender gender,
+                                                          @RequestParam java.math.BigDecimal price,
+                                                          @RequestParam(required = false) java.math.BigDecimal salePrice,
+                                                          @RequestParam(required = false) String description,
+                                                          @RequestParam(required = false) String imageUrl,
+                                                          @RequestParam(value = "image", required = false) MultipartFile image,
+                                                          @RequestParam(name = "sizes") java.util.List<String> sizes,
+                                                          @RequestParam(name = "colors") java.util.List<String> colors,
+                                                          @RequestParam(name = "selectedVariants", required = false) java.util.List<String> selectedVariants,
+                                                          @RequestParam(defaultValue = "0") int stockQuantity) {
+        try {
+            Product product = createProductInternal(
+                    name, categoryId, gender, price, salePrice, description,
+                    imageUrl, image, sizes, colors, selectedVariants, stockQuantity);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "id", product.getId(),
+                    "name", product.getName(),
+                    "imageUrl", product.getImageUrl(),
+                    "variantCount", product.getVariants().size(),
+                    "message", "Đã thêm sản phẩm \"" + product.getName() + "\" thành công."
+            ));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    private Product createProductInternal(String name,
+                                          Long categoryId,
+                                          Gender gender,
+                                          java.math.BigDecimal price,
+                                          java.math.BigDecimal salePrice,
+                                          String description,
+                                          String imageUrl,
+                                          MultipartFile image,
+                                          java.util.List<String> sizes,
+                                          java.util.List<String> colors,
+                                          java.util.List<String> selectedVariants,
+                                          int stockQuantity) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new IllegalArgumentException("Danh mục không tồn tại"));
+        String resolvedImageUrl = resolveProductImageUrl(image, imageUrl, null);
         if (category.getStatus() != CategoryStatus.VISIBLE || sizes.isEmpty() || colors.isEmpty()
                 || selectedVariants == null || selectedVariants.isEmpty()
                 || name == null || name.isBlank()
                 || description == null || description.isBlank()
-                || imageUrl == null || imageUrl.isBlank()
+                || resolvedImageUrl == null || resolvedImageUrl.isBlank()
                 || price == null || price.signum() <= 0
                 || price.remainder(java.math.BigDecimal.valueOf(1000)).signum() != 0
                 || (salePrice != null
@@ -153,7 +219,7 @@ public class AdminProductController {
         product.setPrice(price);
         product.setSalePrice(salePrice);
         product.setDescription(description.trim());
-        product.setImageUrl(imageUrl.trim());
+        product.setImageUrl(resolvedImageUrl);
         product.setStatus(ProductStatus.ACTIVE);
         productRepository.saveAndFlush(product);
 
@@ -186,9 +252,7 @@ public class AdminProductController {
         }
         productRepository.save(product);
         searchService.indexProductAsync(product.getId());
-        redirectAttributes.addFlashAttribute("successMessage",
-                "Đã thêm sản phẩm \"" + product.getName() + "\" với " + product.getVariants().size() + " biến thể thành công.");
-        return "redirect:/admin/products";
+        return product;
     }
 
     @GetMapping("/edit/{id}")
@@ -263,6 +327,7 @@ public class AdminProductController {
                          @RequestParam(required = false) java.math.BigDecimal salePrice,
                          @RequestParam(required = false) String description,
                          @RequestParam(required = false) String imageUrl,
+                         @RequestParam(value = "image", required = false) MultipartFile image,
                          @RequestParam(name = "sizes") java.util.List<String> sizes,
                          @RequestParam(name = "colors") java.util.List<String> colors,
                          @RequestParam(name = "selectedVariants", required = false) java.util.List<String> selectedVariants,
@@ -273,14 +338,79 @@ public class AdminProductController {
             return "redirect:/admin/products";
         }
 
+        updateProductInternal(
+                product, name, categoryId, gender, price, salePrice,
+                description, imageUrl, image, sizes, colors, selectedVariants);
+
+        redirectAttributes.addFlashAttribute("savedImageUrl", product.getImageUrl());
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Đã cập nhật sản phẩm \"" + product.getName() + "\" thành công.");
+        return "redirect:/admin/products";
+    }
+
+    @PostMapping(value = "/edit/{id}", headers = "Accept=application/json")
+    @ResponseBody
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<Map<String, Object>> updateJson(@PathVariable Long id,
+                                                          @RequestParam String name,
+                                                          @RequestParam Long categoryId,
+                                                          @RequestParam Gender gender,
+                                                          @RequestParam java.math.BigDecimal price,
+                                                          @RequestParam(required = false) java.math.BigDecimal salePrice,
+                                                          @RequestParam(required = false) String description,
+                                                          @RequestParam(required = false) String imageUrl,
+                                                          @RequestParam(value = "image", required = false) MultipartFile image,
+                                                          @RequestParam(name = "sizes") java.util.List<String> sizes,
+                                                          @RequestParam(name = "colors") java.util.List<String> colors,
+                                                          @RequestParam(name = "selectedVariants", required = false) java.util.List<String> selectedVariants) {
+        Product product = productRepository.findByIdWithDetails(id).orElse(null);
+        if (product == null) {
+            return ResponseEntity.status(404).body(Map.of(
+                    "success", false,
+                    "message", "Không tìm thấy sản phẩm có mã #" + id
+            ));
+        }
+
+        try {
+            updateProductInternal(
+                    product, name, categoryId, gender, price, salePrice,
+                    description, imageUrl, image, sizes, colors, selectedVariants);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "id", product.getId(),
+                    "name", product.getName(),
+                    "imageUrl", product.getImageUrl(),
+                    "message", "Đã cập nhật sản phẩm \"" + product.getName() + "\" thành công."
+            ));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    private void updateProductInternal(Product product,
+                                       String name,
+                                       Long categoryId,
+                                       Gender gender,
+                                       java.math.BigDecimal price,
+                                       java.math.BigDecimal salePrice,
+                                       String description,
+                                       String imageUrl,
+                                       MultipartFile image,
+                                       java.util.List<String> sizes,
+                                       java.util.List<String> colors,
+                                       java.util.List<String> selectedVariants) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new IllegalArgumentException("Danh mục không tồn tại"));
 
+        String resolvedImageUrl = resolveProductImageUrl(image, imageUrl, product.getImageUrl());
         if (sizes.isEmpty() || colors.isEmpty()
                 || selectedVariants == null || selectedVariants.isEmpty()
                 || name == null || name.isBlank()
                 || description == null || description.isBlank()
-                || imageUrl == null || imageUrl.isBlank()
+                || resolvedImageUrl == null || resolvedImageUrl.isBlank()
                 || price == null || price.signum() <= 0
                 || price.remainder(java.math.BigDecimal.valueOf(1000)).signum() != 0
                 || (salePrice != null
@@ -300,7 +430,7 @@ public class AdminProductController {
         product.setPrice(price);
         product.setSalePrice(salePrice);
         product.setDescription(description.trim());
-        product.setImageUrl(imageUrl.trim());
+        product.setImageUrl(resolvedImageUrl);
 
         // Cập nhật ảnh chính
         if (!product.getImages().isEmpty()) {
@@ -308,9 +438,9 @@ public class AdminProductController {
                     .filter(ProductImage::isThumbnail)
                     .findFirst()
                     .orElse(product.getImages().get(0));
-            primary.setImageUrl(imageUrl.trim());
+            primary.setImageUrl(resolvedImageUrl);
         } else {
-            product.getImages().add(new ProductImage(product, imageUrl.trim(), true, 0));
+            product.getImages().add(new ProductImage(product, resolvedImageUrl, true, 0));
         }
 
         // Cập nhật biến thể
@@ -366,9 +496,23 @@ public class AdminProductController {
 
         productRepository.save(product);
         searchService.indexProductAsync(product.getId());
-        redirectAttributes.addFlashAttribute("successMessage",
-                "Đã cập nhật sản phẩm \"" + product.getName() + "\" thành công.");
-        return "redirect:/admin/products";
+    }
+
+    /**
+     * Ưu tiên upload file ảnh lên Cloudinary nếu có file mới;
+     * nếu không có file thì dùng imageUrl nhập tay hoặc giữ nguyên URL cũ khi cập nhật.
+     */
+    private String resolveProductImageUrl(MultipartFile image, String imageUrl, String existingImageUrl) {
+        if (image != null && !image.isEmpty()) {
+            return cloudinaryService.uploadImage(image).secureUrl();
+        }
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            return imageUrl.trim();
+        }
+        if (existingImageUrl != null && !existingImageUrl.isBlank()) {
+            return existingImageUrl.trim();
+        }
+        return null;
     }
 
     @PostMapping("/{id}/toggle-status")
