@@ -53,11 +53,11 @@ class CloudinaryServiceTest {
 
     @Test
     void uploadImage_returnsSecureUrlAndPublicId() {
-        CloudinaryService service = new CloudinaryService("jgeiayv9", "972987957115115", "secret") {
+        CloudinaryService service = new CloudinaryService("demo-cloud", "test-api-key", "test-api-secret") {
             @Override
             protected Map<?, ?> uploadBytes(byte[] bytes) {
                 return Map.of(
-                        "secure_url", "https://res.cloudinary.com/jgeiayv9/image/upload/v1/fashionshop/products/abc.png",
+                        "secure_url", "https://res.cloudinary.com/demo-cloud/image/upload/v1/fashionshop/products/abc.png",
                         "public_id", "fashionshop/products/abc"
                 );
             }
@@ -68,7 +68,7 @@ class CloudinaryServiceTest {
 
         CloudinaryService.CloudinaryUploadResult result = service.uploadImage(validFile);
 
-        assertEquals("https://res.cloudinary.com/jgeiayv9/image/upload/v1/fashionshop/products/abc.png",
+        assertEquals("https://res.cloudinary.com/demo-cloud/image/upload/v1/fashionshop/products/abc.png",
                 result.secureUrl());
         assertEquals("fashionshop/products/abc", result.publicId());
     }
