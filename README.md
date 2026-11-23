@@ -99,10 +99,12 @@ Mở trình duyệt truy cập: `http://localhost:8080/`. Hệ thống sẽ tự
 
 | Vai trò (Role) | Tên đăng nhập (Email) | Mật khẩu | Quyền hạn và Điều hướng |
 |---|---|---|---|
-| **Quản trị viên (Admin)** | `admin1@fashionshop.vn` | `Admin@123` | Toàn quyền hệ thống, quản lý tài khoản ➔ `/admin/dashboard` |
-| **Quản trị viên (Admin)** | `admin2@fashionshop.vn` | `Admin@123` | Toàn quyền hệ thống ➔ `/admin/dashboard` |
-| **Khách hàng (Customer)** | `khach1@gmail.com` | `Khach@123` | Đặt hàng, giỏ hàng, yêu thích, lịch sử đơn ➔ `/` (Trang chủ) |
-| **Khách hàng (Customer)** | `khach2@gmail.com` | `Khach@123` | Mua sắm, đánh giá, theo dõi trạng thái đơn ➔ `/` (Trang chủ) |
+| **Quản trị viên (Admin)** | `admin1@fashionshop.vn` | `Admin@123` | Toàn quyền quản trị hệ thống, quản lý tài khoản & phân quyền ➔ `/admin/dashboard` |
+| **Quản trị viên (Admin)** | `admin2@fashionshop.vn` | `Admin@123` | Toàn quyền hệ thống dự phòng ➔ `/admin/dashboard` |
+| **Nhân viên (Staff)** | `staff1@fashionshop.vn` | `Admin@123` | Vận hành bán hàng: Sản phẩm, kho hàng, đơn hàng, mã giảm giá, thống kê (không có quyền quản lý tài khoản người dùng) ➔ `/admin/dashboard` |
+| **Nhân viên (Staff)** | `staff2@fashionshop.vn` | `Admin@123` | Tài khoản nhân viên phụ ➔ `/admin/dashboard` |
+| **Khách hàng (Customer)** | `khach1@gmail.com` | `Khach@123` | Trải nghiệm mua sắm storefront: Giỏ hàng, yêu thích, đặt hàng, thanh toán COD / VietQR ➔ `/` (Trang chủ) |
+| **Khách hàng (Customer)** | `khach2@gmail.com` | `Khach@123` | Mua sắm, theo dõi trạng thái đơn hàng ➔ `/` (Trang chủ) |
 
 > 🌟 **Điểm nổi bật khi xác thực:**
 > - Đăng nhập tài khoản nhanh chóng, chính xác bằng **Email**.
