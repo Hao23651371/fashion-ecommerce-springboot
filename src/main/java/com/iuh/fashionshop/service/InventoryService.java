@@ -1,5 +1,6 @@
 package com.iuh.fashionshop.service;
 
+import com.iuh.fashionshop.dto.AuditForm;
 import com.iuh.fashionshop.dto.ReceiptForm;
 import com.iuh.fashionshop.model.*;
 import com.iuh.fashionshop.model.enums.StockMovementType;
@@ -20,9 +21,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class InventoryService {
@@ -141,10 +144,23 @@ public class InventoryService {
         return variantRepository.findAllWithProductAndCategory();
     }
 
+    @Transactional(readOnly = true)
+    public List<InventoryItemView> getAllVariantViewsForSelection() {
+        return variantRepository.findAllWithProductAndCategory().stream()
+                .map(this::toItemView)
+                .toList();
+    }
+
     private synchronized String generateReceiptCode() {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         long nextNum = stockHistoryRepository.count() + 1;
         return String.format("PN-%s-%04d", datePrefix, nextNum);
+    }
+
+    private synchronized String generateAuditCode() {
+        String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        long nextNum = stockHistoryRepository.count() + 1;
+        return String.format("PKK-%s-%04d", datePrefix, nextNum);
     }
 
     /**
@@ -271,35 +287,103 @@ public class InventoryService {
         stockHistoryRepository.save(history);
     }
 
+    /**
+     * Kiểm kê kho hàng loạt thông qua DTO AuditForm.
+     * Cập nhật tồn kho thực tế cho nhiều biến thể và ghi nhận lịch sử chung mã phiếu kiểm kê (PKK-...).
+     */
     @Transactional
-    public void auditStock(Long variantId, int actualStock, String reason, String performedByEmail) {
-        if (actualStock < 0) {
-            throw new IllegalArgumentException("Số lượng tồn thực tế không được âm");
+    public AuditForm auditStockReceipt(AuditForm form, String performedByEmail) {
+        if (form == null) {
+            throw new IllegalArgumentException("Dữ liệu phiếu kiểm kê không hợp lệ.");
         }
-        ProductVariant variant = variantRepository.findById(variantId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy biến thể sản phẩm có ID: " + variantId));
+        List<AuditForm.AuditItem> items = form.toAuditItems();
+        if (items.isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng chọn ít nhất một biến thể để kiểm kê.");
+        }
 
-        int currentStock = variant.getStockQuantity();
-        int diff = actualStock - currentStock;
-
-        variant.setStockQuantity(actualStock);
-        variantRepository.save(variant);
+        Set<Long> seenVariantIds = new HashSet<>();
+        for (int i = 0; i < items.size(); i++) {
+            AuditForm.AuditItem item = items.get(i);
+            if (item.getVariantId() == null) {
+                throw new IllegalArgumentException("Dòng " + (i + 1) + ": Vui lòng chọn mã SKU / biến thể sản phẩm.");
+            }
+            if (!seenVariantIds.add(item.getVariantId())) {
+                throw new IllegalArgumentException("Dòng " + (i + 1) + ": Biến thể bị trùng lặp trong cùng phiếu kiểm kê.");
+            }
+            if (item.getActualStock() == null || item.getActualStock() < 0) {
+                throw new IllegalArgumentException("Dòng " + (i + 1) + ": Số lượng tồn thực tế phải là số nguyên không âm (>= 0).");
+            }
+        }
 
         UserProfile performedBy = null;
         if (performedByEmail != null && !performedByEmail.isBlank()) {
             performedBy = userProfileRepository.findByAccountEmail(performedByEmail).orElse(null);
         }
 
-        StockHistory history = new StockHistory();
-        history.setVariant(variant);
-        history.setType(StockMovementType.ADJUSTMENT);
-        history.setQuantityChange(diff);
-        history.setStockAfter(actualStock);
-        history.setReason(reason != null && !reason.isBlank() ? reason.trim() : "Kiểm kê định kỳ");
-        history.setPerformedBy(performedBy);
-        history.setCreatedAt(LocalDateTime.now());
+        String auditCode = generateAuditCode();
+        String commonReason = (form.getReason() != null && !form.getReason().isBlank())
+                ? form.getReason().trim() : "Kiểm kê định kỳ";
 
-        stockHistoryRepository.save(history);
+        int totalDiff = 0;
+        int changedCount = 0;
+
+        for (AuditForm.AuditItem item : items) {
+            ProductVariant variant = variantRepository.findById(item.getVariantId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy biến thể sản phẩm có ID: " + item.getVariantId()));
+
+            int currentStock = variant.getStockQuantity();
+            int actualStock = item.getActualStock();
+            int diff = actualStock - currentStock;
+            totalDiff += diff;
+            if (diff != 0) {
+                changedCount++;
+            }
+
+            variant.setStockQuantity(actualStock);
+            variantRepository.save(variant);
+
+            String rowReason = (item.getReason() != null && !item.getReason().isBlank())
+                    ? item.getReason().trim()
+                    : commonReason;
+            if (rowReason.length() > 255) {
+                rowReason = rowReason.substring(0, 255);
+            }
+
+            StockHistory history = new StockHistory();
+            history.setVariant(variant);
+            history.setType(StockMovementType.ADJUSTMENT);
+            history.setQuantityChange(diff);
+            history.setStockAfter(actualStock);
+            history.setReason(rowReason);
+            history.setReceiptCode(auditCode);
+            history.setPerformedBy(performedBy);
+            history.setCreatedAt(LocalDateTime.now());
+            stockHistoryRepository.save(history);
+        }
+
+        form.setAuditCode(auditCode);
+        form.setReason(commonReason);
+        form.setTotalDiff(totalDiff);
+        form.setChangedItemCount(changedCount);
+        form.setCreatedAt(LocalDateTime.now());
+        if (performedBy != null) {
+            form.setPerformedBy(performedBy.getFullName() != null ? performedBy.getFullName() : performedByEmail);
+        } else {
+            form.setPerformedBy(performedByEmail);
+        }
+        return form;
+    }
+
+    @Transactional
+    public void auditStock(Long variantId, int actualStock, String reason, String performedByEmail) {
+        if (actualStock < 0) {
+            throw new IllegalArgumentException("Số lượng tồn thực tế không được âm");
+        }
+        AuditForm form = new AuditForm();
+        form.setReason(reason);
+        form.getVariantId().add(variantId);
+        form.getActualStock().add(actualStock);
+        auditStockReceipt(form, performedByEmail);
     }
 
     @Transactional(readOnly = true)

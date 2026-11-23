@@ -147,6 +147,11 @@
                     <button class="btn btn-sm btn-outline-secondary" onclick="deselectAllVariants()" type="button">Bỏ
                         chọn
                     </button>
+                    <button class="btn btn-sm btn-success" onclick="openAuditModalFromCheckboxes()"
+                            style="background-color: #087f75; border-color: #087f75;"
+                            type="button">
+                        <i class="bi bi-clipboard-check me-1"></i> Kiểm kê các SKU đã chọn
+                    </button>
                     <button class="btn btn-sm btn-primary" onclick="openImportModalFromCheckboxes()"
                             style="background-color: #4332d5; border-color: #4332d5;"
                             type="button">
@@ -455,7 +460,7 @@
 
     <!-- ================= MODAL: NHẬP KHO MỚI (MULTI-ROW FORM) ================= -->
     <div aria-hidden="true" aria-labelledby="importModalLabel" class="modal fade" id="importModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-inventory-wide">
             <div class="modal-content border-0 shadow">
                 <form id="multiImportForm" method="post" novalidate
                       th:action="@{/admin/inventory/import}" th:object="${receiptForm}">
@@ -500,16 +505,18 @@
                         <div class="table-responsive border rounded" style="max-height: 380px; overflow-y: auto;">
                             <table class="table table-hover align-middle mb-0" id="importItemsTable">
                                 <thead class="table-light text-secondary sticky-top"
-                                       style="z-index: 2; font-size: 0.78rem;">
+                                       style="z-index: 2; font-size: 0.75rem;">
                                 <tr>
-                                    <th class="text-center" style="width: 45px;">#</th>
-                                    <th style="min-width: 320px;">MÃ SKU & BIẾN THỂ SẢN PHẨM <span
+                                    <th class="text-center" style="width: 40px;">#</th>
+                                    <th style="min-width: 260px;">MÃ SKU & SẢN PHẨM <span
                                             class="text-danger">*</span></th>
-                                    <th class="text-center" style="width: 130px;">TỒN HIỆN TẠI</th>
-                                    <th style="width: 150px;">SỐ LƯỢNG NHẬP <span class="text-danger">*</span></th>
-                                    <th style="width: 170px;">GIÁ NHẬP (VNĐ)</th>
-                                    <th class="text-end" style="width: 160px;">THÀNH TIỀN</th>
-                                    <th class="text-center" style="width: 50px;">XÓA</th>
+                                    <th class="text-center" style="width: 82px;">SIZE</th>
+                                    <th style="width: 130px;">MÀU SẮC</th>
+                                    <th class="text-center" style="width: 110px;">TỒN HIỆN TẠI</th>
+                                    <th style="width: 140px;">SỐ LƯỢNG NHẬP <span class="text-danger">*</span></th>
+                                    <th style="width: 160px;">GIÁ NHẬP (VNĐ)</th>
+                                    <th class="text-end" style="width: 135px;">THÀNH TIỀN</th>
+                                    <th class="text-center" style="width: 48px;">XÓA</th>
                                 </tr>
                                 </thead>
                                 <tbody id="importItemsTbody">
@@ -555,99 +562,115 @@
     <!-- Hidden Template Select chứa danh sách tất cả biến thể -->
     <select class="d-none" id="variantTemplateSelect">
         <option value="">-- Chọn mã SKU / Biến thể sản phẩm --</option>
-        <option th:data-name="${v.product != null ? v.product.name : ''}"
+        <option th:data-color="${v.color}"
+                th:data-color-hex="${v.colorHex}"
+                th:data-name="${v.productName}"
+                th:data-size="${v.size}"
                 th:data-sku="${v.sku}"
                 th:data-stock="${v.stockQuantity}"
                 th:data-variant="${v.size + ' - ' + v.color}"
-                th:each="v : ${allVariants}"
-                th:text="${'[' + v.sku + '] ' + (v.product != null ? v.product.name : '') + ' (Size ' + v.size + ' - ' + v.color + ') - Hiện tồn: ' + v.stockQuantity}"
+                th:each="v : ${allVariantViews}"
+                th:text="${'[' + v.sku + '] ' + v.productName + ' (Size ' + v.size + ' - ' + v.color + ')'}"
                 th:value="${v.id}">
         </option>
     </select>
 
-    <!-- ================= MODAL: KIỂM KÊ KHO (AUDIT / ADJUSTMENT) ================= -->
+    <!-- ================= MODAL: KIỂM KÊ KHO NHIỀU SẢN PHẨM (MULTI-ROW AUDIT) ================= -->
     <div aria-hidden="true" aria-labelledby="auditModalLabel" class="modal fade" id="auditModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-inventory-wide">
             <div class="modal-content border-0 shadow">
-                <form method="post" th:action="@{/admin/inventory/audit}">
+                <form id="multiAuditForm" method="post" novalidate
+                      th:action="@{/admin/inventory/audit}" th:object="${auditForm}">
                     <div class="modal-header border-bottom pb-3">
-                        <h5 class="modal-title fw-bold" id="auditModalLabel">
-                            <i class="bi bi-clipboard-check text-success me-2"></i>Kiểm Kê & Điều Chỉnh Kho
-                        </h5>
+                        <div>
+                            <h5 class="modal-title fw-bold" id="auditModalLabel">
+                                <i class="bi bi-clipboard-check text-success me-2"></i>Phiếu Kiểm Kê & Cân Bằng Kho
+                            </h5>
+                            <small class="text-muted">Kiểm đếm tồn thực tế và cân bằng tồn kho cho một hoặc nhiều mã SKU cùng lúc</small>
+                        </div>
                         <button aria-label="Đóng" class="btn-close" data-bs-dismiss="modal" type="button"></button>
                     </div>
                     <div class="modal-body py-4">
-                        <!-- Chọn biến thể (khi mở nhanh) -->
-                        <div class="mb-3" id="auditVariantSelectGroup">
-                            <label class="form-label fw-semibold text-dark">Chọn Sản phẩm & Biến thể <span
-                                    class="text-danger">*</span></label>
-                            <select class="form-select" id="auditVariantSelect" name="variantId"
-                                    onchange="onAuditVariantChange(this)" required>
-                                <option value="">-- Chọn biến thể cần kiểm kê --</option>
-                                <option th:data-stock="${v.stockQuantity}"
-                                        th:each="v : ${allVariants}"
-                                        th:text="${'[' + v.sku + '] ' + (v.product != null ? v.product.name : '') + ' (Size ' + v.size + ' - ' + v.color + ') - Hiện tồn: ' + v.stockQuantity}"
-                                        th:value="${v.id}">
-                                </option>
-                            </select>
-                        </div>
-
-                        <!-- Thông tin biến thể cố định (khi bấm từ dòng) -->
-                        <div class="mb-3 d-none" id="auditVariantInfoGroup">
-                            <label class="form-label fw-semibold text-dark">Sản phẩm & Biến thể kiểm kê</label>
-                            <div class="p-3 bg-light rounded border">
-                                <input disabled id="auditVariantIdHidden" name="variantId" type="hidden">
-                                <strong class="d-block text-dark" id="auditProductNameText"></strong>
-                                <span class="small text-muted" id="auditVariantDetailText"></span>
+                        <!-- Thông tin chung phiếu kiểm kê -->
+                        <div class="row g-3 mb-3 p-3 bg-light rounded border">
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold text-dark">Mẫu lý do kiểm kê nhanh</label>
+                                <select class="form-select" id="auditReasonPreset"
+                                        onchange="onAuditReasonPresetChange(this)">
+                                    <option value="Kiểm kê định kỳ">Kiểm kê định kỳ khớp số liệu</option>
+                                    <option value="Hàng lỗi / rách / hư hỏng phải loại bỏ">Hàng lỗi / rách / hư hỏng phải loại bỏ</option>
+                                    <option value="Thất thoát không rõ nguyên nhân">Thất thoát không rõ nguyên nhân</option>
+                                    <option value="Sai lệch do nhầm lẫn xuất nhập trước đó">Sai lệch do nhầm lẫn xuất nhập trước đó</option>
+                                    <option value="">Lý do khác (tự nhập bên phải)</option>
+                                </select>
                             </div>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold text-dark">Tồn kho trên hệ thống</label>
-                                <div class="input-group">
-                                    <input class="form-control bg-light" id="auditSystemStock" readonly type="number"
-                                           value="0">
-                                    <span class="input-group-text">Chiếc</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold text-dark">Tồn thực tế kiểm đếm <span
+                            <div class="col-md-7">
+                                <label class="form-label fw-semibold text-dark">Lý do / Ghi chú kiểm kê chung <span
                                         class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <input class="form-control" id="auditActualStock" min="0" name="actualStock"
-                                           oninput="calculateAuditDiff()" required type="number">
-                                    <span class="input-group-text">Chiếc</span>
-                                </div>
+                                <input class="form-control" id="auditCommonReason" name="reason"
+                                       placeholder="Ví dụ: Kiểm kê kho cuối tháng, rà soát hàng trưng bày..."
+                                       required type="text" value="Kiểm kê định kỳ">
                             </div>
                         </div>
 
-                        <!-- Khối chênh lệch Realtime -->
-                        <div class="audit-diff-box mb-3">
-                            <div>
-                                <span class="d-block small text-muted">Kết quả chênh lệch kiểm kê:</span>
-                                <strong class="text-secondary" id="auditDiffStatus">Chưa nhập số thực tế</strong>
-                            </div>
-                            <b class="text-secondary" id="auditDiffCount">0</b>
+                        <!-- Bảng các dòng SKU kiểm kê -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-dark" style="font-size: 0.88rem;">
+                                <i class="bi bi-clipboard2-data text-success me-1"></i> Danh sách mặt hàng kiểm kê <span
+                                    class="text-danger">*</span>
+                            </span>
+                            <button class="btn btn-sm btn-outline-success fw-semibold" onclick="addAuditRow()"
+                                    type="button">
+                                <i class="bi bi-plus-lg me-1"></i> Thêm dòng SKU
+                            </button>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-dark">Lý do điều chỉnh kho <span
-                                    class="text-danger">*</span></label>
-                            <select class="form-select mb-2" name="reasonSelect"
-                                    onchange="document.getElementById('auditReasonInput').value = this.value">
-                                <option value="Kiểm kê định kỳ">Kiểm kê định kỳ khớp số liệu</option>
-                                <option value="Hàng lỗi / rách / hư hỏng phải loại bỏ">Hàng lỗi / rách / hư hỏng phải
-                                    loại bỏ
-                                </option>
-                                <option value="Thất thoát không rõ nguyên nhân">Thất thoát không rõ nguyên nhân</option>
-                                <option value="Sai lệch do nhầm lẫn xuất nhập trước đó">Sai lệch do nhầm lẫn xuất nhập
-                                    trước đó
-                                </option>
-                                <option value="Lý do khác">Lý do khác (tự nhập bên dưới)</option>
-                            </select>
-                            <input class="form-control" id="auditReasonInput" name="reason" required
-                                   type="text" value="Kiểm kê định kỳ">
+                        <div class="table-responsive border rounded" style="max-height: 380px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0" id="auditItemsTable">
+                                <thead class="table-light text-secondary sticky-top"
+                                       style="z-index: 2; font-size: 0.75rem;">
+                                <tr>
+                                    <th class="text-center" style="width: 40px;">#</th>
+                                    <th style="min-width: 245px;">MÃ SKU & SẢN PHẨM <span
+                                            class="text-danger">*</span></th>
+                                    <th class="text-center" style="width: 82px;">SIZE</th>
+                                    <th style="width: 130px;">MÀU SẮC</th>
+                                    <th class="text-center" style="width: 108px;">TỒN HỆ THỐNG</th>
+                                    <th style="width: 140px;">TỒN THỰC TẾ <span class="text-danger">*</span></th>
+                                    <th class="text-center" style="width: 132px;">CHÊNH LỆCH</th>
+                                    <th style="width: 170px;">GHI CHÚ RIÊNG</th>
+                                    <th class="text-center" style="width: 48px;">XÓA</th>
+                                </tr>
+                                </thead>
+                                <tbody id="auditItemsTbody">
+                                <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Thanh tổng kết phía dưới bảng kiểm kê -->
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3">
+                            <button class="btn btn-outline-success btn-sm fw-semibold" onclick="addAuditRow()"
+                                    type="button">
+                                <i class="bi bi-plus-lg me-1"></i> Thêm dòng SKU
+                            </button>
+                            <div class="d-flex align-items-center flex-wrap gap-3">
+                                <span class="text-muted small">Số dòng: <b class="text-dark"
+                                                                           id="auditSummaryRowsCount">0</b></span>
+                                <span class="text-muted small">Khớp: <b class="text-primary"
+                                                                        id="auditSummaryMatchedCount">0</b></span>
+                                <span class="text-muted small">Thừa: <b class="text-success"
+                                                                        id="auditSummarySurplusQty">+0</b></span>
+                                <span class="text-muted small">Thiếu: <b class="text-danger"
+                                                                         id="auditSummaryShortageQty">0</b></span>
+                                <span class="text-muted small">Chênh lệch ròng: <b class="fs-6 text-dark"
+                                                                                   id="auditSummaryNetDiff">0 chiếc</b></span>
+                            </div>
+                        </div>
+
+                        <!-- Cảnh báo lỗi validate form kiểm kê -->
+                        <div class="alert alert-danger py-2 mt-3 mb-0 d-none" id="auditFormAlert" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> <span id="auditFormAlertText"></span>
                         </div>
                     </div>
                     <div class="modal-footer border-top bg-light">
@@ -655,7 +678,7 @@
                         <button class="btn btn-success px-4 fw-semibold"
                                 style="background-color: #087f75; border-color: #087f75;"
                                 type="submit">
-                            <i class="bi bi-check2-circle me-1"></i> Cập nhật tồn kho
+                            <i class="bi bi-check2-circle me-1"></i> Xác nhận & Lưu phiếu kiểm kê
                         </button>
                     </div>
                 </form>
@@ -821,22 +844,62 @@
             if (totalAmountEl) totalAmountEl.textContent = formatVND(totalAmount);
         }
 
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function updateVariantMetaCells(tr, select, sizeClass, colorClass, stockClass) {
+            const sizeCell = tr.querySelector('.' + sizeClass);
+            const colorCell = tr.querySelector('.' + colorClass);
+            const stockBadge = tr.querySelector('.' + stockClass);
+            const opt = select ? select.options[select.selectedIndex] : null;
+
+            if (opt && opt.value) {
+                const size = opt.getAttribute('data-size') || '-';
+                const color = opt.getAttribute('data-color') || '-';
+                const colorHex = opt.getAttribute('data-color-hex') || '#cfcfcf';
+                const stock = opt.getAttribute('data-stock') || '0';
+
+                if (sizeCell) {
+                    sizeCell.innerHTML = `<span class="modal-size-badge">${escapeHtml(size)}</span>`;
+                }
+                if (colorCell) {
+                    colorCell.innerHTML = `
+                        <span class="modal-color-cell">
+                            <span class="color-dot" style="background-color: ${escapeHtml(colorHex)};"></span>
+                            <span>${escapeHtml(color)}</span>
+                        </span>
+                    `;
+                }
+                if (stockBadge) {
+                    stockBadge.textContent = stock + ' chiếc';
+                    stockBadge.className = 'badge bg-light text-dark border ' + stockClass;
+                }
+                return { selected: true, stock: parseInt(stock, 10) || 0, size, color, colorHex };
+            } else {
+                if (sizeCell) {
+                    sizeCell.innerHTML = '<span class="modal-size-badge is-empty">-</span>';
+                }
+                if (colorCell) {
+                    colorCell.innerHTML = '<span class="modal-color-cell is-empty">-</span>';
+                }
+                if (stockBadge) {
+                    stockBadge.textContent = '-';
+                    stockBadge.className = 'badge bg-light text-muted border ' + stockClass;
+                }
+                return { selected: false, stock: 0 };
+            }
+        }
+
         function onImportSkuChange(select) {
             const tr = select.closest('tr');
             if (!tr) return;
-            const stockBadge = tr.querySelector('.import-row-stock');
-            const opt = select.options[select.selectedIndex];
-            if (opt && opt.value) {
-                const stock = opt.getAttribute('data-stock') || '0';
-                if (stockBadge) {
-                    stockBadge.textContent = stock + ' chiếc';
-                    stockBadge.className = 'badge bg-light text-dark border import-row-stock';
-                }
-            } else {
-                if (stockBadge) {
-                    stockBadge.textContent = '-';
-                }
-            }
+            updateVariantMetaCells(tr, select, 'import-row-size', 'import-row-color', 'import-row-stock');
             hideImportFormAlert();
             updateImportSummary();
         }
@@ -873,8 +936,14 @@
                         ${selectHtml}
                     </select>
                 </td>
+                <td class="text-center import-row-size">
+                    <span class="modal-size-badge is-empty">-</span>
+                </td>
+                <td class="import-row-color">
+                    <span class="modal-color-cell is-empty">-</span>
+                </td>
                 <td class="text-center">
-                    <span class="badge bg-light text-dark border import-row-stock">-</span>
+                    <span class="badge bg-light text-muted border import-row-stock">-</span>
                 </td>
                 <td>
                     <div class="input-group input-group-sm">
@@ -967,7 +1036,268 @@
             modal.show();
         }
 
-        // Bắt sự kiện submit của form multiImportForm để validate dữ liệu
+        // ================= XỬ LÝ FORM KIỂM KÊ KHO NHIỀU DÒNG (MULTI-ROW AUDIT) =================
+        function showAuditFormAlert(msg) {
+            const alertBox = document.getElementById('auditFormAlert');
+            const alertText = document.getElementById('auditFormAlertText');
+            if (alertBox && alertText) {
+                alertText.textContent = msg;
+                alertBox.classList.remove('d-none');
+            }
+        }
+
+        function hideAuditFormAlert() {
+            const alertBox = document.getElementById('auditFormAlert');
+            if (alertBox) alertBox.classList.add('d-none');
+        }
+
+        function onAuditReasonPresetChange(select) {
+            const reasonInput = document.getElementById('auditCommonReason');
+            if (!reasonInput) return;
+            if (select.value) {
+                reasonInput.value = select.value;
+            } else {
+                reasonInput.value = '';
+                reasonInput.focus();
+            }
+            hideAuditFormAlert();
+        }
+
+        function reindexAuditRows() {
+            const tbody = document.getElementById('auditItemsTbody');
+            if (!tbody) return;
+            const rows = tbody.querySelectorAll('tr.audit-item-row');
+            rows.forEach((tr, index) => {
+                const idxCell = tr.querySelector('.row-index-cell');
+                if (idxCell) idxCell.textContent = index + 1;
+
+                const select = tr.querySelector('.audit-sku-select');
+                const actualInput = tr.querySelector('.audit-actual-input');
+                const reasonInput = tr.querySelector('.audit-row-reason');
+                if (select) select.name = `items[${index}].variantId`;
+                if (actualInput) actualInput.name = `items[${index}].actualStock`;
+                if (reasonInput) reasonInput.name = `items[${index}].reason`;
+            });
+            updateAuditSummary();
+        }
+
+        function updateAuditRowDiff(tr) {
+            const select = tr.querySelector('.audit-sku-select');
+            const actualInput = tr.querySelector('.audit-actual-input');
+            const diffCell = tr.querySelector('.audit-row-diff');
+            const opt = select ? select.options[select.selectedIndex] : null;
+
+            if (!opt || !opt.value) {
+                if (diffCell) diffCell.innerHTML = '<span class="audit-diff-pill audit-diff-empty">Chưa chọn SKU</span>';
+                return null;
+            }
+
+            if (!actualInput || actualInput.value.trim() === '') {
+                if (diffCell) diffCell.innerHTML = '<span class="audit-diff-pill audit-diff-empty">Chưa nhập</span>';
+                return null;
+            }
+
+            const systemStock = parseInt(opt.getAttribute('data-stock') || '0', 10) || 0;
+            const actualStock = parseInt(actualInput.value, 10);
+            if (isNaN(actualStock)) {
+                if (diffCell) diffCell.innerHTML = '<span class="audit-diff-pill audit-diff-empty">Không hợp lệ</span>';
+                return null;
+            }
+
+            const diff = actualStock - systemStock;
+            if (diffCell) {
+                if (diff > 0) {
+                    diffCell.innerHTML = `<span class="audit-diff-pill audit-diff-plus">+${diff} (Thừa)</span>`;
+                } else if (diff < 0) {
+                    diffCell.innerHTML = `<span class="audit-diff-pill audit-diff-minus">${diff} (Thiếu)</span>`;
+                } else {
+                    diffCell.innerHTML = '<span class="audit-diff-pill audit-diff-zero">0 (Khớp)</span>';
+                }
+            }
+            return diff;
+        }
+
+        function updateAuditSummary() {
+            const tbody = document.getElementById('auditItemsTbody');
+            if (!tbody) return;
+            const rows = tbody.querySelectorAll('tr.audit-item-row');
+            let matchedCount = 0;
+            let surplusQty = 0;
+            let shortageQty = 0;
+            let netDiff = 0;
+
+            rows.forEach(tr => {
+                const diff = updateAuditRowDiff(tr);
+                if (diff !== null) {
+                    if (diff === 0) {
+                        matchedCount++;
+                    } else if (diff > 0) {
+                        surplusQty += diff;
+                    } else {
+                        shortageQty += diff;
+                    }
+                    netDiff += diff;
+                }
+            });
+
+            const rowsCountEl = document.getElementById('auditSummaryRowsCount');
+            const matchedEl = document.getElementById('auditSummaryMatchedCount');
+            const surplusEl = document.getElementById('auditSummarySurplusQty');
+            const shortageEl = document.getElementById('auditSummaryShortageQty');
+            const netDiffEl = document.getElementById('auditSummaryNetDiff');
+
+            if (rowsCountEl) rowsCountEl.textContent = rows.length;
+            if (matchedEl) matchedEl.textContent = matchedCount;
+            if (surplusEl) surplusEl.textContent = '+' + surplusQty;
+            if (shortageEl) shortageEl.textContent = String(shortageQty);
+            if (netDiffEl) {
+                const formattedNet = (netDiff > 0 ? '+' : '') + netDiff + ' chiếc';
+                netDiffEl.textContent = formattedNet;
+                netDiffEl.className = 'fs-6 ' + (netDiff > 0 ? 'text-success' : (netDiff < 0 ? 'text-danger' : 'text-primary'));
+            }
+        }
+
+        function onAuditSkuChange(select) {
+            const tr = select.closest('tr');
+            if (!tr) return;
+            const meta = updateVariantMetaCells(tr, select, 'audit-row-size', 'audit-row-color', 'audit-row-system-stock');
+            const actualInput = tr.querySelector('.audit-actual-input');
+            if (actualInput) {
+                if (meta.selected) {
+                    actualInput.value = meta.stock;
+                } else {
+                    actualInput.value = '';
+                }
+            }
+            hideAuditFormAlert();
+            updateAuditSummary();
+        }
+
+        function onAuditRowDataChange(input) {
+            hideAuditFormAlert();
+            updateAuditSummary();
+        }
+
+        function removeAuditRow(btn) {
+            const tr = btn.closest('tr');
+            if (tr) {
+                tr.remove();
+                reindexAuditRows();
+                hideAuditFormAlert();
+            }
+        }
+
+        function addAuditRow(preselectedVariantId, initialActualStock = null, initialReason = '') {
+            const tbody = document.getElementById('auditItemsTbody');
+            const template = document.getElementById('variantTemplateSelect');
+            if (!tbody || !template) return;
+
+            const tr = document.createElement('tr');
+            tr.className = 'audit-item-row';
+
+            const selectHtml = template.innerHTML;
+
+            tr.innerHTML = `
+                <td class="text-center fw-semibold text-muted row-index-cell" style="font-size: 0.8rem;"></td>
+                <td>
+                    <select class="form-select form-select-sm audit-sku-select" required onchange="onAuditSkuChange(this)">
+                        ${selectHtml}
+                    </select>
+                </td>
+                <td class="text-center audit-row-size">
+                    <span class="modal-size-badge is-empty">-</span>
+                </td>
+                <td class="audit-row-color">
+                    <span class="modal-color-cell is-empty">-</span>
+                </td>
+                <td class="text-center">
+                    <span class="badge bg-light text-muted border audit-row-system-stock">-</span>
+                </td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <input type="number" class="form-control form-control-sm audit-actual-input" min="0" placeholder="Nhập SL" required oninput="onAuditRowDataChange(this)">
+                        <span class="input-group-text">Chiếc</span>
+                    </div>
+                </td>
+                <td class="text-center audit-row-diff">
+                    <span class="audit-diff-pill audit-diff-empty">Chưa chọn SKU</span>
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm audit-row-reason" placeholder="Theo lý do chung" value="${escapeHtml(initialReason)}">
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger p-1 px-2" onclick="removeAuditRow(this)" title="Xóa dòng này">
+                        <i class="bi bi-trash3"></i>
+                    </button>
+                </td>
+            `;
+
+            tbody.appendChild(tr);
+
+            const select = tr.querySelector('.audit-sku-select');
+            if (preselectedVariantId && select) {
+                select.value = preselectedVariantId;
+                onAuditSkuChange(select);
+                if (initialActualStock !== null && initialActualStock !== undefined) {
+                    const actualInput = tr.querySelector('.audit-actual-input');
+                    if (actualInput) actualInput.value = initialActualStock;
+                }
+            }
+
+            reindexAuditRows();
+        }
+
+        function resetAuditModalHeaderAndBody() {
+            const preset = document.getElementById('auditReasonPreset');
+            const reasonInput = document.getElementById('auditCommonReason');
+            const tbody = document.getElementById('auditItemsTbody');
+            if (preset) preset.value = 'Kiểm kê định kỳ';
+            if (reasonInput) reasonInput.value = 'Kiểm kê định kỳ';
+            if (tbody) tbody.innerHTML = '';
+            hideAuditFormAlert();
+        }
+
+        // Mở modal Kiểm kê nhanh từ nút trên cùng ("Kiểm kê kho")
+        function openAuditQuickModal() {
+            resetAuditModalHeaderAndBody();
+            addAuditRow();
+
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('auditModal'));
+            modal.show();
+        }
+
+        // Mở modal Kiểm kê từ danh sách các SKU được tick chọn
+        function openAuditModalFromCheckboxes() {
+            const checkedBoxes = Array.from(document.querySelectorAll('.variant-row-checkbox:checked'));
+            if (checkedBoxes.length === 0) {
+                alert('Vui lòng chọn ít nhất một mã SKU trong danh sách để kiểm kê.');
+                return;
+            }
+
+            resetAuditModalHeaderAndBody();
+            checkedBoxes.forEach(cb => {
+                addAuditRow(cb.value);
+            });
+
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('auditModal'));
+            modal.show();
+        }
+
+        // Mở modal Kiểm kê từ 1 dòng biến thể đơn lẻ (có thể bấm "+ Thêm dòng SKU" để kiểm kê thêm)
+        function openAuditModal(btn) {
+            const id = btn.getAttribute('data-id');
+            resetAuditModalHeaderAndBody();
+            if (id) {
+                addAuditRow(id);
+            } else {
+                addAuditRow();
+            }
+
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('auditModal'));
+            modal.show();
+        }
+
+        // Bắt sự kiện submit của form multiImportForm và multiAuditForm để validate dữ liệu
         document.addEventListener('DOMContentLoaded', function () {
             const importForm = document.getElementById('multiImportForm');
             if (importForm) {
@@ -1025,95 +1355,63 @@
                     hideImportFormAlert();
                 });
             }
+
+            const auditForm = document.getElementById('multiAuditForm');
+            if (auditForm) {
+                auditForm.addEventListener('submit', function (e) {
+                    reindexAuditRows();
+                    const rows = auditForm.querySelectorAll('tr.audit-item-row');
+                    if (rows.length === 0) {
+                        e.preventDefault();
+                        showAuditFormAlert('Phiếu kiểm kê phải có ít nhất một dòng SKU. Bấm "+ Thêm dòng SKU" để thêm.');
+                        return;
+                    }
+
+                    const commonReasonInput = document.getElementById('auditCommonReason');
+                    if (commonReasonInput && commonReasonInput.value.trim() === '') {
+                        e.preventDefault();
+                        showAuditFormAlert('Vui lòng nhập lý do / ghi chú kiểm kê chung.');
+                        commonReasonInput.focus();
+                        return;
+                    }
+
+                    const selectedSkus = new Set();
+                    for (let i = 0; i < rows.length; i++) {
+                        const tr = rows[i];
+                        const select = tr.querySelector('.audit-sku-select');
+                        const actualInput = tr.querySelector('.audit-actual-input');
+
+                        const vId = select ? select.value : '';
+                        if (!vId) {
+                            e.preventDefault();
+                            showAuditFormAlert('Dòng số ' + (i + 1) + ': Vui lòng chọn mã SKU / Biến thể sản phẩm.');
+                            if (select) select.focus();
+                            return;
+                        }
+
+                        if (selectedSkus.has(vId)) {
+                            e.preventDefault();
+                            const skuName = select.options[select.selectedIndex]?.text || ('ID #' + vId);
+                            showAuditFormAlert('Dòng số ' + (i + 1) + ' bị trùng lặp biến thể (' + skuName + '). Vui lòng xóa dòng trùng.');
+                            if (select) select.focus();
+                            return;
+                        }
+                        selectedSkus.add(vId);
+
+                        const rawActual = actualInput ? actualInput.value.trim() : '';
+                        const actual = Number(rawActual);
+                        if (rawActual === '' || isNaN(actual) || !Number.isInteger(actual) || actual < 0) {
+                            e.preventDefault();
+                            showAuditFormAlert('Dòng số ' + (i + 1) + ': Tồn thực tế phải là số nguyên không âm (>= 0).');
+                            if (actualInput) actualInput.focus();
+                            return;
+                        }
+                    }
+
+                    hideAuditFormAlert();
+                });
+            }
         });
-
-        // Mở modal Kiểm kê nhanh từ nút trên cùng
-        function openAuditQuickModal() {
-            document.getElementById('auditVariantSelectGroup').classList.remove('d-none');
-            document.getElementById('auditVariantSelect').disabled = false;
-            document.getElementById('auditVariantSelect').value = '';
-            document.getElementById('auditVariantInfoGroup').classList.add('d-none');
-            document.getElementById('auditVariantIdHidden').disabled = true;
-
-            document.getElementById('auditSystemStock').value = '0';
-            document.getElementById('auditActualStock').value = '';
-            calculateAuditDiff();
-
-            const modal = new bootstrap.Modal(document.getElementById('auditModal'));
-            modal.show();
-        }
-
-        // Khi chọn biến thể trong dropdown kiểm kê nhanh
-        function onAuditVariantChange(select) {
-            const selectedOpt = select.options[select.selectedIndex];
-            const stock = selectedOpt ? (selectedOpt.getAttribute('data-stock') || '0') : '0';
-            document.getElementById('auditSystemStock').value = stock;
-            document.getElementById('auditActualStock').value = stock;
-            calculateAuditDiff();
-        }
-
-        // Mở modal Kiểm kê từ dòng sản phẩm
-        function openAuditModal(btn) {
-            const id = btn.getAttribute('data-id');
-            const sku = btn.getAttribute('data-sku');
-            const name = btn.getAttribute('data-name');
-            const variant = btn.getAttribute('data-variant');
-            const stock = parseInt(btn.getAttribute('data-stock') || '0', 10);
-
-            document.getElementById('auditVariantSelectGroup').classList.add('d-none');
-            document.getElementById('auditVariantSelect').disabled = true;
-
-            document.getElementById('auditVariantInfoGroup').classList.remove('d-none');
-            const hiddenId = document.getElementById('auditVariantIdHidden');
-            hiddenId.disabled = false;
-            hiddenId.value = id;
-
-            document.getElementById('auditProductNameText').textContent = name;
-            document.getElementById('auditVariantDetailText').textContent = 'Mã SKU: ' + sku + ' | Phân loại: ' + variant;
-
-            document.getElementById('auditSystemStock').value = stock;
-            document.getElementById('auditActualStock').value = stock;
-            calculateAuditDiff();
-
-            const modal = new bootstrap.Modal(document.getElementById('auditModal'));
-            modal.show();
-        }
-
-        // Tính toán chênh lệch kiểm kê Realtime
-        function calculateAuditDiff() {
-            const system = parseInt(document.getElementById('auditSystemStock').value || '0', 10);
-            const actualInput = document.getElementById('auditActualStock').value;
-            const diffStatus = document.getElementById('auditDiffStatus');
-            const diffCount = document.getElementById('auditDiffCount');
-
-            if (actualInput === '') {
-                diffStatus.textContent = 'Chưa nhập số thực tế';
-                diffStatus.className = 'text-secondary';
-                diffCount.textContent = '0';
-                diffCount.className = 'text-secondary';
-                return;
-            }
-
-            const actual = parseInt(actualInput, 10);
-            const diff = actual - system;
-
-            if (diff > 0) {
-                diffStatus.textContent = 'Thừa kho (Thực tế > Hệ thống)';
-                diffStatus.className = 'text-success fw-bold';
-                diffCount.textContent = '+' + diff + ' chiếc';
-                diffCount.className = 'text-success fw-bold';
-            } else if (diff < 0) {
-                diffStatus.textContent = 'Thiếu kho / Thất thoát (Thực tế < Hệ thống)';
-                diffStatus.className = 'text-danger fw-bold';
-                diffCount.textContent = diff + ' chiếc';
-                diffCount.className = 'text-danger fw-bold';
-            } else {
-                diffStatus.textContent = 'Khớp hoàn toàn với hệ thống';
-                diffStatus.className = 'text-primary fw-semibold';
-                diffCount.textContent = '0 chiếc';
-                diffCount.className = 'text-primary fw-bold';
-            }
-        }
 
         // Mở modal Lịch sử biến động qua AJAX
         function openHistoryModal(btn) {

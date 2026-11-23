@@ -197,4 +197,117 @@ class AdminInventoryControllerTest {
                 .andExpect(redirectedUrl("/admin/inventory"))
                 .andExpect(flash().attributeExists("errorMessage"));
     }
+
+    @Test
+    @WithMockUser(username = "admin1@fashionshop.vn", roles = {"ADMIN"})
+    void testMultiRowAudit_UpdatesStockAndRecordsHistoryWithCommonAuditCode() throws Exception {
+        ProductVariant var1 = createTestVariant("Áo Khoác Denim", "TEST-AUD-001", "M", "Xanh denim", 10);
+        ProductVariant var2 = createTestVariant("Quần Jeans Baggy", "TEST-AUD-002", "L", "Đen", 15);
+        ProductVariant var3 = createTestVariant("Áo Thun Cotton", "TEST-AUD-003", "S", "Trắng", 8);
+
+        mockMvc.perform(post("/admin/inventory/audit")
+                        .with(csrf())
+                        .param("reason", "Kiểm kê kho cuối tháng")
+                        .param("items[0].variantId", var1.getId().toString())
+                        .param("items[0].actualStock", "12")
+                        .param("items[0].reason", "Thừa 2 chiếc, phát hiện ở kệ trưng bày")
+                        .param("items[1].variantId", var2.getId().toString())
+                        .param("items[1].actualStock", "11")
+                        .param("items[1].reason", "")
+                        .param("items[2].variantId", var3.getId().toString())
+                        .param("items[2].actualStock", "8")
+                        .param("items[2].reason", ""))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/inventory"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        assertEquals(12, productVariantRepository.findById(var1.getId()).orElseThrow().getStockQuantity());
+        assertEquals(11, productVariantRepository.findById(var2.getId()).orElseThrow().getStockQuantity());
+        assertEquals(8, productVariantRepository.findById(var3.getId()).orElseThrow().getStockQuantity());
+
+        StockHistory h1 = stockHistoryRepository.findByVariantIdOrderByCreatedAtDesc(var1.getId()).get(0);
+        StockHistory h2 = stockHistoryRepository.findByVariantIdOrderByCreatedAtDesc(var2.getId()).get(0);
+        StockHistory h3 = stockHistoryRepository.findByVariantIdOrderByCreatedAtDesc(var3.getId()).get(0);
+
+        assertEquals(StockMovementType.ADJUSTMENT, h1.getType());
+        assertEquals(2, h1.getQuantityChange());
+        assertEquals(12, h1.getStockAfter());
+        assertEquals("Thừa 2 chiếc, phát hiện ở kệ trưng bày", h1.getReason());
+        assertNotNull(h1.getReceiptCode());
+        assertTrue(h1.getReceiptCode().startsWith("PKK-"));
+
+        assertEquals(StockMovementType.ADJUSTMENT, h2.getType());
+        assertEquals(-4, h2.getQuantityChange());
+        assertEquals(11, h2.getStockAfter());
+        assertEquals("Kiểm kê kho cuối tháng", h2.getReason());
+        assertEquals(h1.getReceiptCode(), h2.getReceiptCode());
+
+        assertEquals(StockMovementType.ADJUSTMENT, h3.getType());
+        assertEquals(0, h3.getQuantityChange());
+        assertEquals(8, h3.getStockAfter());
+        assertEquals("Kiểm kê kho cuối tháng", h3.getReason());
+        assertEquals(h1.getReceiptCode(), h3.getReceiptCode());
+    }
+
+    @Test
+    @WithMockUser(username = "admin1@fashionshop.vn", roles = {"ADMIN"})
+    void testSingleRowAudit_BackwardCompatibleParamsWork() throws Exception {
+        ProductVariant var = createTestVariant("Áo Len Cổ Lọ", "TEST-AUD-SINGLE", "M", "Be", 10);
+
+        mockMvc.perform(post("/admin/inventory/audit")
+                        .with(csrf())
+                        .param("variantId", var.getId().toString())
+                        .param("actualStock", "7")
+                        .param("reason", "Hàng lỗi / rách"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/inventory"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        assertEquals(7, productVariantRepository.findById(var.getId()).orElseThrow().getStockQuantity());
+        StockHistory h = stockHistoryRepository.findByVariantIdOrderByCreatedAtDesc(var.getId()).get(0);
+        assertEquals(StockMovementType.ADJUSTMENT, h.getType());
+        assertEquals(-3, h.getQuantityChange());
+        assertEquals(7, h.getStockAfter());
+        assertEquals("Hàng lỗi / rách", h.getReason());
+        assertNotNull(h.getReceiptCode());
+        assertTrue(h.getReceiptCode().startsWith("PKK-"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin1@fashionshop.vn", roles = {"ADMIN"})
+    void testAuditStock_ValidationErrors() throws Exception {
+        ProductVariant var = createTestVariant("Áo Blazer", "TEST-AUD-VAL", "L", "Đen", 10);
+
+        // Trường hợp 1: Không có dòng SKU nào
+        mockMvc.perform(post("/admin/inventory/audit")
+                        .with(csrf())
+                        .param("reason", "Kiểm kê định kỳ"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/inventory"))
+                .andExpect(flash().attributeExists("errorMessage"));
+
+        // Trường hợp 2: Tồn thực tế âm
+        mockMvc.perform(post("/admin/inventory/audit")
+                        .with(csrf())
+                        .param("items[0].variantId", var.getId().toString())
+                        .param("items[0].actualStock", "-1")
+                        .param("reason", "Kiểm kê định kỳ"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/inventory"))
+                .andExpect(flash().attributeExists("errorMessage"));
+
+        // Trường hợp 3: Trùng biến thể trong cùng phiếu kiểm kê
+        mockMvc.perform(post("/admin/inventory/audit")
+                        .with(csrf())
+                        .param("items[0].variantId", var.getId().toString())
+                        .param("items[0].actualStock", "9")
+                        .param("items[1].variantId", var.getId().toString())
+                        .param("items[1].actualStock", "8")
+                        .param("reason", "Kiểm kê định kỳ"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/inventory"))
+                .andExpect(flash().attributeExists("errorMessage"));
+
+        assertEquals(10, productVariantRepository.findById(var.getId()).orElseThrow().getStockQuantity());
+    }
 }
