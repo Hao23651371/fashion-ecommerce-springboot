@@ -1,6 +1,6 @@
 # FashionShop - Studio & Atelier
 
-Website thương mại điện tử thời trang xây dựng trên nền tảng **Spring Boot MVC (Java 21)**. Ứng dụng cung cấp trọn vẹn storefront cao cấp dành cho khách hàng, phân hệ quản trị chuyên nghiệp cho Ban quản lý (Admin & Staff), hệ thống xác thực bảo mật đa phương thức (Email / Số điện thoại) kèm OTP qua Email thật, quản lý sản phẩm và biến thể chi tiết (SKU, màu sắc, kích cỡ, tồn kho, thư viện ảnh), giỏ hàng, danh sách yêu thích, đơn hàng, mã giảm giá, quản lý kho hàng và lịch sử biến động kho, xuất báo cáo Excel, tìm kiếm thông minh đa tầng (kết hợp MariaDB Vector) và Trợ lý AI Chatbot tư vấn phong cách thời trang (RAG + Ollama / Google Gemini).
+Website thương mại điện tử thời trang xây dựng trên nền tảng **Spring Boot MVC (Java 21)**. Ứng dụng cung cấp trọn vẹn storefront cao cấp dành cho khách hàng, phân hệ quản trị chuyên nghiệp cho Ban quản lý (Admin & Staff), hệ thống xác thực tài khoản bảo mật bằng Email kèm OTP qua Email thật, quản lý sản phẩm và biến thể chi tiết (SKU, màu sắc, kích cỡ, tồn kho, thư viện ảnh), giỏ hàng, danh sách yêu thích, đơn hàng, mã giảm giá, quản lý kho hàng và lịch sử biến động kho, xuất báo cáo Excel, tìm kiếm thông minh đa tầng (kết hợp MariaDB Vector) và Trợ lý AI Chatbot tư vấn phong cách thời trang (RAG + Ollama / Google Gemini).
 
 ---
 
@@ -97,18 +97,18 @@ Mở trình duyệt truy cập: `http://localhost:8080/`. Hệ thống sẽ tự
 
 ## 3. Danh sách Tài khoản Kiểm thử (Demo Accounts)
 
-| Vai trò (Role) | Tên đăng nhập (Email hoặc SĐT) | Mật khẩu | Quyền hạn và Điều hướng |
+| Vai trò (Role) | Tên đăng nhập (Email) | Mật khẩu | Quyền hạn và Điều hướng |
 |---|---|---|---|
 | **Quản trị viên (Admin)** | `admin1@fashionshop.vn` | `Admin@123` | Toàn quyền hệ thống, quản lý tài khoản ➔ `/admin/dashboard` |
 | **Quản trị viên (Admin)** | `admin2@fashionshop.vn` | `Admin@123` | Toàn quyền hệ thống ➔ `/admin/dashboard` |
-| **Khách hàng (Customer)** | `khach1@gmail.com` *(hoặc `0912000001`)* | `Khach@123` | Đặt hàng, giỏ hàng, yêu thích, lịch sử đơn ➔ `/` (Trang chủ) |
-| **Khách hàng (Customer)** | `khach2@gmail.com` *(hoặc `0912000002`)* | `Khach@123` | Mua sắm, đánh giá, theo dõi trạng thái đơn ➔ `/` (Trang chủ) |
+| **Khách hàng (Customer)** | `khach1@gmail.com` | `Khach@123` | Đặt hàng, giỏ hàng, yêu thích, lịch sử đơn ➔ `/` (Trang chủ) |
+| **Khách hàng (Customer)** | `khach2@gmail.com` | `Khach@123` | Mua sắm, đánh giá, theo dõi trạng thái đơn ➔ `/` (Trang chủ) |
 
 > 🌟 **Điểm nổi bật khi xác thực:**
-> - Cho phép đăng nhập linh hoạt bằng cả **Email** hoặc **Số điện thoại**.
+> - Đăng nhập tài khoản nhanh chóng, chính xác bằng **Email**.
 > - Tích hợp **hiệu ứng thông báo đăng nhập thành công 3 giây** hiển thị góc màn hình cho mọi tài khoản và tự động dọn URL.
 > - Đăng ký tài khoản mới kèm cơ chế xác thực OTP 6 số gửi qua Email thật (hạn 5 phút).
-> - Tính năng quên mật khẩu / đặt lại mật khẩu với mã OTP qua Email hoặc Số điện thoại.
+> - Tính năng quên mật khẩu / đặt lại mật khẩu với mã OTP gửi qua Email.
 > - Tự động phát hiện và cảnh báo mất kết nối CSDL ngay trên form đăng nhập kèm hướng dẫn sửa lỗi trực quan.
 
 ---
