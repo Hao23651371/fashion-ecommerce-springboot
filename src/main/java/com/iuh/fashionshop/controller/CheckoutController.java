@@ -21,6 +21,7 @@ import com.iuh.fashionshop.repository.ProductVariantRepository;
 import com.iuh.fashionshop.repository.ShippingAddressRepository;
 import com.iuh.fashionshop.service.CartService;
 import com.iuh.fashionshop.service.InventoryService;
+import com.iuh.fashionshop.service.N8nWebhookService;
 import com.iuh.fashionshop.service.OrderService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -65,6 +66,7 @@ public class CheckoutController {
     private final ShippingAddressRepository shippingAddressRepository;
     private final OrderService orderService;
     private final InventoryService inventoryService;
+    private final N8nWebhookService n8nWebhookService;
 
     // Thông tin tài khoản nhận tiền (đổi trong application.properties, xem hướng dẫn)
     @Value("${shop.bank.id:MB}")
@@ -84,7 +86,8 @@ public class CheckoutController {
                               CouponRepository couponRepository,
                               ShippingAddressRepository shippingAddressRepository,
                               OrderService orderService,
-                              InventoryService inventoryService) {
+                              InventoryService inventoryService,
+                              N8nWebhookService n8nWebhookService) {
         this.cartService = cartService;
         this.productVariantRepository = productVariantRepository;
         this.orderRepository = orderRepository;
@@ -92,6 +95,7 @@ public class CheckoutController {
         this.shippingAddressRepository = shippingAddressRepository;
         this.orderService = orderService;
         this.inventoryService = inventoryService;
+        this.n8nWebhookService = n8nWebhookService;
     }
 
     @GetMapping
@@ -366,6 +370,9 @@ public class CheckoutController {
 
         Order saved = orderRepository.save(order);
 
+        // Bắn Webhook sang n8n tự động hóa
+        n8nWebhookService.sendOrderNotification(saved);
+
         // Ghi lịch sử kho (SALE) cho từng sản phẩm trong đơn -> trang Kho sẽ có dữ liệu
         for (OrderItem oi : saved.getItems()) {
             inventoryService.recordOrderMovement(oi.getVariant(), StockMovementType.SALE,
@@ -440,7 +447,8 @@ public class CheckoutController {
     @PostMapping("/payment/{id}/success")
     public String paymentSuccess(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
         try {
-            orderService.confirmOnlinePayment(id, auth);
+            Order order = orderService.confirmOnlinePayment(id, auth);
+            n8nWebhookService.sendOrderStatusUpdate(order, "Bạn đã thanh toán trực tuyến thành công cho đơn hàng này!");
             ra.addFlashAttribute("successMessage", "Thanh toán thành công (giả lập)!");
         } catch (Exception e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
