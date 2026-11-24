@@ -4,6 +4,7 @@ import com.iuh.fashionshop.model.Order;
 import com.iuh.fashionshop.model.enums.OrderStatus;
 import com.iuh.fashionshop.model.enums.PaymentMethod;
 import com.iuh.fashionshop.model.enums.PaymentStatus;
+import com.iuh.fashionshop.service.N8nWebhookService;
 import com.iuh.fashionshop.service.OrderService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,9 +21,11 @@ import java.util.List;
 public class AdminOrderController {
 
     private final OrderService orderService;
+    private final N8nWebhookService n8nWebhookService;
 
-    public AdminOrderController(OrderService orderService) {
+    public AdminOrderController(OrderService orderService, N8nWebhookService n8nWebhookService) {
         this.orderService = orderService;
+        this.n8nWebhookService = n8nWebhookService;
     }
 
     @GetMapping
@@ -87,6 +90,17 @@ public class AdminOrderController {
         try {
             OrderStatus target = OrderStatus.valueOf(status.trim().toUpperCase());
             Order order = orderService.updateStatus(id, target, cancelReason);
+
+            // Bắn Webhook sang n8n để tự động gửi Email cập nhật tiến độ cho Khách hàng
+            String actionMsg = switch (target) {
+                case CONFIRMED -> "Đơn hàng của bạn đã được FashionShop xác nhận thành công và đang được chuẩn bị đóng gói!";
+                case SHIPPING -> "Đơn hàng của bạn đang trên đường vận chuyển đến địa chỉ nhận hàng. Vui lòng để ý điện thoại nhé!";
+                case COMPLETED -> "Đơn hàng đã được giao thành công. Cảm ơn bạn đã tin tưởng mua sắm tại FashionShop!";
+                case CANCELLED -> "Đơn hàng của bạn đã bị hủy." + (cancelReason != null && !cancelReason.isBlank() ? " Lý do: " + cancelReason.trim() : "");
+                default -> "Đơn hàng của bạn đã được cập nhật trạng thái mới: " + target;
+            };
+            n8nWebhookService.sendOrderStatusUpdate(order, actionMsg);
+
             ra.addFlashAttribute("successMessage",
                     "Đã cập nhật đơn " + order.getOrderCode() + " → " + order.getStatus()
                             + (order.getPaymentInfo() != null
@@ -102,6 +116,7 @@ public class AdminOrderController {
     public String markBankPaid(@PathVariable Long id, RedirectAttributes ra) {
         try {
             Order order = orderService.confirmBankTransferPaid(id);
+            n8nWebhookService.sendOrderStatusUpdate(order, "FashionShop đã nhận được tiền chuyển khoản thành công cho đơn hàng này!");
             ra.addFlashAttribute("successMessage",
                     "Đã xác nhận chuyển khoản cho đơn " + order.getOrderCode());
         } catch (Exception e) {
@@ -114,6 +129,7 @@ public class AdminOrderController {
     public String markCodPaid(@PathVariable Long id, RedirectAttributes ra) {
         try {
             Order order = orderService.confirmCodCollected(id);
+            n8nWebhookService.sendOrderStatusUpdate(order, "Đã ghi nhận thu tiền COD thành công!");
             ra.addFlashAttribute("successMessage",
                     "Đã ghi nhận thu COD cho đơn " + order.getOrderCode());
         } catch (Exception e) {
