@@ -15,10 +15,11 @@ public class RegisterForm {
 
     @NotBlank(message = "Email không được để trống")
     @Size(max = 150, message = "Email không được vượt quá 150 ký tự")
-    @Pattern(regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}$", message = "Email không đúng định dạng (ví dụ: name@example.com)")
+    @Pattern(regexp = "^(?!.*\\.\\.)[A-Za-z0-9](?:[A-Za-z0-9._%+-]*[A-Za-z0-9])?@[Gg][Mm][Aa][Ii][Ll]\\.[Cc][Oo][Mm]$", message = "Email phải đúng định dạng @gmail.com (ví dụ: example@gmail.com)")
     private String email;
 
-    @Pattern(regexp = "^$|^(\\+84|0)[35789]([\\s.-]?[0-9]){8}$", message = "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng các đầu số Việt Nam (03, 05, 07, 08 hoặc 09)")
+    @NotBlank(message = "Số điện thoại không được để trống")
+    @Pattern(regexp = "^(\\+84|0)[35789]([\\s.-]?[0-9]){8}$", message = "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng các đầu số Việt Nam (03, 05, 07, 08 hoặc 09)")
     private String phoneNumber;
 
     @NotBlank(message = "Mật khẩu không được để trống")

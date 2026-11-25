@@ -90,10 +90,10 @@
 
                             <div class="row g-2 mb-2">
                                 <div class="col-sm-6">
-                                    <label for="email" class="auth-label">EMAIL LIÊN HỆ</label>
+                                    <label for="email" class="auth-label">EMAIL LIÊN HỆ <span class="text-danger">*</span></label>
                                     <div class="luxury-input-group" th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'">
                                         <span class="input-icon"><i class="bi bi-envelope"></i></span>
-                                        <input type="email" id="email" name="email" th:value="*{email}" placeholder="atelier@domain.vn" required autocomplete="email">
+                                        <input type="email" id="email" name="email" th:value="*{email}" placeholder="example@gmail.com" required autocomplete="email">
                                     </div>
                                     <div class="auth-field-error" id="emailError" th:if="${#fields.hasErrors('email')}">
                                         <i class="bi bi-exclamation-circle-fill"></i>
@@ -101,10 +101,10 @@
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
-                                    <label for="phone" class="auth-label">SỐ ĐIỆN THOẠI</label>
+                                    <label for="phone" class="auth-label">SỐ ĐIỆN THOẠI <span class="text-danger">*</span></label>
                                     <div class="luxury-input-group" th:classappend="${#fields.hasErrors('phoneNumber')} ? 'is-invalid'">
                                         <span class="input-icon"><i class="bi bi-telephone"></i></span>
-                                        <input type="tel" id="phone" name="phoneNumber" th:value="*{phoneNumber}" placeholder="0901 234 567" autocomplete="tel">
+                                        <input type="tel" id="phone" name="phoneNumber" th:value="*{phoneNumber}" placeholder="0901234567" required autocomplete="tel">
                                     </div>
                                     <div class="auth-field-error" id="phoneError" th:if="${#fields.hasErrors('phoneNumber')}">
                                         <i class="bi bi-exclamation-circle-fill"></i>
@@ -406,10 +406,40 @@
             });
         }
 
-        // Phone validation helper with clear, specific error messages
+        const COMMON_GMAIL_TYPOS = new Set([
+            'gmai.com', 'gmial.com', 'gmal.com', 'gamil.com', 'gnail.com',
+            'gmail.con', 'gmail.co', 'gmail.cm', 'gmail.om', 'gmail.vn', 'gmaill.com'
+        ]);
+
+        function validateEmailValue(value) {
+            const raw = (value || '').trim();
+            if (!raw) {
+                return 'Email không được để trống (ví dụ: example@gmail.com)';
+            }
+            if (/\s/.test(raw)) {
+                return 'Email không được chứa khoảng trắng';
+            }
+            const parts = raw.split('@');
+            if (parts.length !== 2 || !parts[0] || !parts[1]) {
+                return 'Email phải đúng định dạng @gmail.com (ví dụ: example@gmail.com)';
+            }
+            const domain = parts[1].toLowerCase();
+            if (COMMON_GMAIL_TYPOS.has(domain)) {
+                return 'Có vẻ bạn gõ nhầm tên miền (@' + domain + '). Vui lòng nhập đúng @gmail.com (ví dụ: example@gmail.com)';
+            }
+            const gmailRegex = /^(?!.*\.\.)[A-Za-z0-9](?:[A-Za-z0-9._%+-]*[A-Za-z0-9])?@gmail\.com$/i;
+            if (!gmailRegex.test(raw)) {
+                return 'Email phải đúng định dạng @gmail.com (ví dụ: example@gmail.com)';
+            }
+            return null;
+        }
+
+        // Phone validation helper with clear, specific error messages (bắt buộc nhập)
         function validatePhoneValue(value) {
             const raw = (value || '').trim();
-            if (!raw) return null; // Không bắt buộc nhập khi đăng ký
+            if (!raw) {
+                return 'Số điện thoại không được để trống (ví dụ: 0901234567)';
+            }
 
             const cleaned = raw.replace(/[\s.-]/g, '');
 
@@ -444,9 +474,51 @@
             return 'Số điện thoại Việt Nam phải bắt đầu bằng số 0 (hoặc +84), ví dụ: 0901234567';
         }
 
-        // Clear error on input
-        if (fullnameInput) fullnameInput.addEventListener('input', () => clearFieldError(fullnameInput, 'fullNameError'));
-        if (emailInput) emailInput.addEventListener('input', () => clearFieldError(emailInput, 'emailError'));
+        // Real-time & on-blur validation
+        if (fullnameInput) {
+            fullnameInput.addEventListener('input', () => clearFieldError(fullnameInput, 'fullNameError'));
+            fullnameInput.addEventListener('blur', function () {
+                const val = (this.value || '').trim();
+                if (!val) {
+                    setFieldError(fullnameInput, 'fullNameError', 'Họ và tên không được để trống');
+                } else if (val.length < 2 || val.length > 100) {
+                    setFieldError(fullnameInput, 'fullNameError', 'Họ và tên phải từ 2 đến 100 ký tự');
+                } else if (!/^[\p{L}\s.'-]+$/u.test(val)) {
+                    setFieldError(fullnameInput, 'fullNameError', 'Họ và tên chỉ được chứa chữ cái và khoảng trắng');
+                } else {
+                    clearFieldError(fullnameInput, 'fullNameError');
+                }
+            });
+        }
+        if (emailInput) {
+            emailInput.addEventListener('input', function () {
+                const raw = (this.value || '').trim();
+                if (!raw) {
+                    clearFieldError(emailInput, 'emailError');
+                    return;
+                }
+                if (/\s/.test(raw)) {
+                    setFieldError(emailInput, 'emailError', 'Email không được chứa khoảng trắng');
+                    return;
+                }
+                if (raw.includes('@') && raw.split('@')[1].includes('.')) {
+                    const err = validateEmailValue(raw);
+                    if (err) {
+                        setFieldError(emailInput, 'emailError', err);
+                        return;
+                    }
+                }
+                clearFieldError(emailInput, 'emailError');
+            });
+            emailInput.addEventListener('blur', function () {
+                const err = validateEmailValue(this.value);
+                if (err) {
+                    setFieldError(emailInput, 'emailError', err);
+                } else {
+                    clearFieldError(emailInput, 'emailError');
+                }
+            });
+        }
         if (phoneInput) {
             phoneInput.addEventListener('input', function () {
                 const raw = (this.value || '').trim();
@@ -555,20 +627,15 @@
                 hasError = true;
             }
 
-            // 2. Email
-            const emailVal = (emailInput.value || '').trim();
-            const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,64}$/;
-            if (!emailVal) {
-                setFieldError(emailInput, 'emailError', 'Email không được để trống');
-                if (!firstInvalid) firstInvalid = emailInput;
-                hasError = true;
-            } else if (!emailRegex.test(emailVal)) {
-                setFieldError(emailInput, 'emailError', 'Email không đúng định dạng (ví dụ: name@example.com)');
+            // 2. Email (bắt buộc đúng định dạng @gmail.com)
+            const emailErr = validateEmailValue(emailInput.value);
+            if (emailErr) {
+                setFieldError(emailInput, 'emailError', emailErr);
                 if (!firstInvalid) firstInvalid = emailInput;
                 hasError = true;
             }
 
-            // 3. Số điện thoại (nếu có nhập)
+            // 3. Số điện thoại (bắt buộc nhập đúng định dạng Việt Nam)
             const phoneErr = validatePhoneValue(phoneInput ? phoneInput.value : '');
             if (phoneErr) {
                 setFieldError(phoneInput, 'phoneError', phoneErr);
