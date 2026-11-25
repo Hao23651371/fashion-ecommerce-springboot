@@ -356,18 +356,82 @@ server.tool(
 );
 
 // =========================================================================
+// HELPER CHUNG CHO TRUY VẤN SẢN PHẨM (search_products & get_latest_products)
+// =========================================================================
+async function queryProducts({ keyword = "", days = null, status = "ALL", limit = 10 }) {
+  const conditions = [];
+  const params = [];
+
+  if (keyword && keyword.trim().length > 0) {
+    const searchPattern = `%${keyword.trim()}%`;
+    conditions.push("(p.name LIKE ? OR c.name LIKE ?)");
+    params.push(searchPattern, searchPattern);
+  }
+
+  if (days !== null && days !== undefined) {
+    conditions.push("p.created_at >= NOW() - INTERVAL ? DAY");
+    params.push(days);
+  }
+
+  if (status && status !== "ALL") {
+    conditions.push("p.status = ?");
+    params.push(status);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  const query = `
+    SELECT 
+      p.id,
+      p.name,
+      c.name AS category_name,
+      p.price,
+      p.sale_price,
+      p.gender,
+      p.status,
+      p.created_at,
+      COALESCE(SUM(pv.stock_quantity), 0) AS total_stock_quantity,
+      COUNT(pv.id) AS variant_count
+    FROM product p
+    JOIN category c ON p.category_id = c.id
+    LEFT JOIN product_variant pv ON p.id = pv.product_id
+    ${whereClause}
+    GROUP BY p.id, p.name, c.name, p.price, p.sale_price, p.gender, p.status, p.created_at
+    ORDER BY p.created_at DESC, p.id DESC
+    LIMIT ?
+  `;
+  const [rows] = await pool.query(query, [...params, limit]);
+
+  const formatter = new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND"
+  });
+
+  return rows.map((row) => ({
+    ...row,
+    price_formatted: formatter.format(row.price),
+    sale_price_formatted: row.sale_price != null ? formatter.format(row.sale_price) : null
+  }));
+}
+
+// =========================================================================
 // TOOL 4: search_products
-// Tìm kiếm sản phẩm theo tên hoặc danh mục kèm thông tin giá và tổng tồn kho
+// Tìm kiếm sản phẩm theo tên hoặc danh mục kèm ngày tạo, giá và tổng tồn kho
 // =========================================================================
 server.tool(
   "search_products",
-  "Tìm kiếm sản phẩm theo tên sản phẩm hoặc tên danh mục kèm thông tin giá, sale và tổng tồn kho biến thể.",
+  "Tìm kiếm sản phẩm theo tên sản phẩm hoặc tên danh mục (để trống từ khóa sẽ liệt kê sản phẩm mới nhất) kèm ngày tạo created_at, giá, giá sale, trạng thái và tổng tồn kho biến thể.",
   {
     keyword: z
       .string()
       .trim()
-      .min(1)
-      .describe("Từ khóa tên sản phẩm hoặc tên danh mục thời trang (ví dụ: áo sơ mi, đầm, quần tây)"),
+      .optional()
+      .default("")
+      .describe("Từ khóa tên sản phẩm hoặc tên danh mục thời trang (ví dụ: áo sơ mi, đầm, quần tây). Để trống nếu muốn lấy sản phẩm mới nhất."),
+    status: z
+      .enum(["ALL", "ACTIVE", "INACTIVE"])
+      .default("ALL")
+      .describe("Lọc trạng thái sản phẩm: ALL (tất cả - mặc định), ACTIVE (đang bán), INACTIVE (đang ẩn)"),
     limit: z
       .number()
       .int()
@@ -376,30 +440,9 @@ server.tool(
       .default(10)
       .describe("Số lượng sản phẩm tối đa trả về (mặc định 10)")
   },
-  async ({ keyword, limit }) => {
+  async ({ keyword, status, limit }) => {
     try {
-      const query = `
-        SELECT 
-          p.id,
-          p.name,
-          c.name AS category_name,
-          p.price,
-          p.sale_price,
-          p.gender,
-          p.status,
-          COALESCE(SUM(pv.stock_quantity), 0) AS total_stock_quantity,
-          COUNT(pv.id) AS variant_count
-        FROM product p
-        JOIN category c ON p.category_id = c.id
-        LEFT JOIN product_variant pv ON p.id = pv.product_id
-        WHERE (p.name LIKE ? OR c.name LIKE ?)
-          AND p.status = 'ACTIVE'
-        GROUP BY p.id, p.name, c.name, p.price, p.sale_price, p.gender, p.status
-        ORDER BY p.id DESC
-        LIMIT ?
-      `;
-      const searchPattern = `%${keyword}%`;
-      const [rows] = await pool.query(query, [searchPattern, searchPattern, limit]);
+      const products = await queryProducts({ keyword, status, limit });
 
       return {
         content: [
@@ -408,8 +451,9 @@ server.tool(
             text: JSON.stringify(
               {
                 keyword,
-                count: rows.length,
-                products: rows
+                filter_status: status,
+                count: products.length,
+                products
               },
               null,
               2
@@ -428,12 +472,90 @@ server.tool(
 );
 
 // =========================================================================
+// TOOL 6: get_latest_products
+// Lấy danh sách sản phẩm được thêm mới nhất (theo created_at giảm dần)
+// =========================================================================
+server.tool(
+  "get_latest_products",
+  "Lấy danh sách các sản phẩm được thêm mới nhất vào hệ thống (sắp xếp theo ngày tạo created_at mới nhất trước), có thể lọc trong N ngày gần đây, kèm danh mục, giá, giá sale, trạng thái và tổng tồn kho.",
+  {
+    days: z
+      .number()
+      .int()
+      .min(1)
+      .max(365)
+      .optional()
+      .describe("Tùy chọn: chỉ lấy các sản phẩm được tạo trong N ngày gần đây (bỏ trống để lấy mới nhất từ trước đến nay)"),
+    status: z
+      .enum(["ALL", "ACTIVE", "INACTIVE"])
+      .default("ALL")
+      .describe("Lọc trạng thái sản phẩm: ALL (tất cả - mặc định), ACTIVE, INACTIVE"),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(50)
+      .default(10)
+      .describe("Số lượng sản phẩm mới nhất cần lấy (mặc định 10)")
+  },
+  async ({ days, status, limit }) => {
+    try {
+      const products = await queryProducts({ days: days ?? null, status, limit });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                filter_days: days ?? "all_time",
+                filter_status: status,
+                count: products.length,
+                latest_products: products
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    } catch (error) {
+      console.error("Lỗi khi gọi tool get_latest_products:", error);
+      return {
+        content: [{ type: "text", text: `Lỗi truy vấn sản phẩm mới nhất: ${error.message}` }],
+        isError: true
+      };
+    }
+  }
+);
+
+// =========================================================================
 // TOOL 5: get_recent_sales
 // Liệt kê chi tiết các sản phẩm vừa bán gần đây và top sản phẩm bán chạy
 // =========================================================================
+const ORDER_STATUS_LABELS = {
+  PENDING: "Chờ xác nhận",
+  CONFIRMED: "Đã xác nhận",
+  SHIPPING: "Đang giao hàng",
+  COMPLETED: "Giao hàng thành công",
+  CANCELLED: "Đã hủy"
+};
+
+const PAYMENT_STATUS_LABELS = {
+  UNPAID: "Chưa thanh toán",
+  PAID: "Đã thanh toán thành công",
+  FAILED: "Thanh toán thất bại"
+};
+
+const PAYMENT_METHOD_LABELS = {
+  COD: "Thanh toán khi nhận hàng (COD)",
+  BANK_TRANSFER: "Chuyển khoản ngân hàng",
+  E_WALLET: "Ví điện tử"
+};
+
 server.tool(
   "get_recent_sales",
-  "Liệt kê chi tiết các mặt hàng/sản phẩm đã được khách hàng đặt mua gần đây (kèm size, màu, số lượng, đơn giá, mã đơn) và tổng hợp top sản phẩm bán chạy nhất trong N ngày.",
+  "Liệt kê chi tiết các đơn/món hàng vừa được đặt gần đây (mã đơn, thời gian tạo, tên người đặt, sản phẩm, trạng thái đơn hàng như Chờ xác nhận/Đang giao/Thành công, trạng thái thanh toán, phương thức thanh toán, giảm giá và tổng thanh toán order_total_amount; không trả phí ship) và top sản phẩm bán chạy nhất trong N ngày.",
   {
     days: z
       .number()
@@ -450,9 +572,9 @@ server.tool(
       .default(20)
       .describe("Số lượng dòng giao dịch tối đa cần trả về (mặc định 20)"),
     status: z
-      .enum(["ALL", "EXCLUDE_CANCELLED", "COMPLETED", "SHIPPING", "PENDING"])
+      .enum(["ALL", "EXCLUDE_CANCELLED", "PENDING", "CONFIRMED", "SHIPPING", "COMPLETED", "CANCELLED"])
       .default("EXCLUDE_CANCELLED")
-      .describe("Bộ lọc trạng thái đơn: EXCLUDE_CANCELLED (bỏ qua đơn hủy - mặc định), ALL (tất cả), COMPLETED (hoàn thành), SHIPPING, PENDING")
+      .describe("Bộ lọc trạng thái đơn: EXCLUDE_CANCELLED (bỏ qua đơn hủy - mặc định), ALL, PENDING, CONFIRMED, SHIPPING, COMPLETED, CANCELLED")
   },
   async ({ days, limit, status }) => {
     try {
@@ -466,20 +588,28 @@ server.tool(
         params.push(status);
       }
 
-      // 1. Chi tiết các món hàng vừa bán gần nhất
+      // 1. Chi tiết các món hàng vừa bán gần nhất (kèm người đặt, trạng thái đơn, trạng thái thanh toán, tổng thanh toán)
       const detailQuery = `
         SELECT 
           o.order_code,
+          COALESCE(up.full_name, o.recipient_name) AS customer_name,
+          o.recipient_name,
           o.status AS order_status,
+          o.payment_method,
+          o.payment_status,
           o.created_at,
           oi.product_name,
           oi.size,
           oi.color,
           oi.quantity,
           oi.unit_price,
-          (oi.unit_price * oi.quantity) AS subtotal
+          (oi.unit_price * oi.quantity) AS subtotal,
+          o.subtotal AS order_subtotal,
+          o.discount_amount,
+          o.total_amount AS order_total_amount
         FROM order_item oi
         JOIN orders o ON oi.order_id = o.id
+        LEFT JOIN user_profile up ON o.user_profile_id = up.id
         WHERE o.created_at >= NOW() - INTERVAL ? DAY
           ${statusCondition}
         ORDER BY o.created_at DESC
@@ -521,8 +651,14 @@ server.tool(
                 recent_sales_count: recentItems.length,
                 recent_sales: recentItems.map((item) => ({
                   ...item,
+                  order_status_text: ORDER_STATUS_LABELS[item.order_status] || item.order_status,
+                  payment_status_text: PAYMENT_STATUS_LABELS[item.payment_status] || item.payment_status,
+                  payment_method_text: PAYMENT_METHOD_LABELS[item.payment_method] || item.payment_method,
                   unit_price_formatted: formatter.format(item.unit_price),
-                  subtotal_formatted: formatter.format(item.subtotal)
+                  subtotal_formatted: formatter.format(item.subtotal),
+                  order_subtotal_formatted: formatter.format(item.order_subtotal ?? 0),
+                  discount_amount_formatted: formatter.format(item.discount_amount ?? 0),
+                  order_total_amount_formatted: formatter.format(item.order_total_amount ?? 0)
                 })),
                 top_selling_products: topSelling.map((item) => ({
                   ...item,
@@ -539,6 +675,134 @@ server.tool(
       console.error("Lỗi khi gọi tool get_recent_sales:", error);
       return {
         content: [{ type: "text", text: `Lỗi truy vấn CSDL lịch sử bán hàng: ${error.message}` }],
+        isError: true
+      };
+    }
+  }
+);
+
+// =========================================================================
+// TOOL 7: get_stock_history
+// Xem lịch sử nhập kho, kiểm kê / điều chỉnh kho và ai là người thực hiện
+// =========================================================================
+const STOCK_MOVEMENT_LABELS = {
+  IMPORT: "Nhập kho",
+  ADJUSTMENT: "Kiểm kê / Điều chỉnh kho",
+  SALE: "Xuất bán đơn hàng",
+  CANCELLED_ORDER: "Hoàn kho do hủy đơn"
+};
+
+server.tool(
+  "get_stock_history",
+  "Tra cứu lịch sử nhập kho, kiểm kê/điều chỉnh kho (hoặc xuất bán/hoàn kho) kèm thông tin người thực hiện (họ tên, email, vai trò), mã phiếu (receipt_code), số lượng thay đổi, tồn kho sau thay đổi, nhà cung cấp, giá nhập, lý do và thời gian.",
+  {
+    type: z
+      .enum(["IMPORT_AND_AUDIT", "IMPORT", "ADJUSTMENT", "SALE", "CANCELLED_ORDER", "ALL"])
+      .default("IMPORT_AND_AUDIT")
+      .describe("Loại biến động kho: IMPORT_AND_AUDIT (nhập kho & kiểm kê - mặc định), IMPORT (chỉ nhập kho), ADJUSTMENT (chỉ kiểm kê/điều chỉnh), SALE (xuất bán), CANCELLED_ORDER (hoàn kho), ALL (tất cả)"),
+    days: z
+      .number()
+      .int()
+      .min(1)
+      .max(365)
+      .default(30)
+      .describe("Số ngày cần xem tính ngược từ hiện tại (mặc định 30 ngày)"),
+    keyword: z
+      .string()
+      .trim()
+      .optional()
+      .default("")
+      .describe("Từ khóa lọc theo tên sản phẩm, SKU, mã phiếu, tên/email người thực hiện hoặc nhà cung cấp (tùy chọn)"),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .default(20)
+      .describe("Số lượng dòng lịch sử tối đa trả về (mặc định 20)")
+  },
+  async ({ type, days, keyword, limit }) => {
+    try {
+      const conditions = ["sh.created_at >= NOW() - INTERVAL ? DAY"];
+      const params = [days];
+
+      if (type === "IMPORT_AND_AUDIT") {
+        conditions.push("sh.type IN ('IMPORT', 'ADJUSTMENT')");
+      } else if (type !== "ALL") {
+        conditions.push("sh.type = ?");
+        params.push(type);
+      }
+
+      if (keyword && keyword.length > 0) {
+        const kw = `%${keyword}%`;
+        conditions.push(
+          "(p.name LIKE ? OR pv.sku LIKE ? OR sh.receipt_code LIKE ? OR up.full_name LIKE ? OR acc.email LIKE ? OR sh.supplier LIKE ?)"
+        );
+        params.push(kw, kw, kw, kw, kw, kw);
+      }
+
+      const query = `
+        SELECT
+          sh.id,
+          sh.receipt_code,
+          sh.type,
+          sh.quantity_change,
+          sh.stock_after,
+          sh.supplier,
+          sh.import_price,
+          sh.reason,
+          sh.created_at,
+          p.name AS product_name,
+          pv.size,
+          pv.color,
+          pv.sku,
+          up.full_name AS performed_by_name,
+          acc.email AS performed_by_email,
+          acc.role AS performed_by_role,
+          o.order_code
+        FROM stock_history sh
+        JOIN product_variant pv ON sh.variant_id = pv.id
+        JOIN product p ON pv.product_id = p.id
+        LEFT JOIN user_profile up ON sh.performed_by_id = up.id
+        LEFT JOIN account acc ON up.account_id = acc.id
+        LEFT JOIN orders o ON sh.order_id = o.id
+        WHERE ${conditions.join(" AND ")}
+        ORDER BY sh.created_at DESC, sh.id DESC
+        LIMIT ?
+      `;
+      const [rows] = await pool.query(query, [...params, limit]);
+
+      const formatter = new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND"
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                period_days: days,
+                filter_type: type,
+                keyword,
+                count: rows.length,
+                stock_history: rows.map((item) => ({
+                  ...item,
+                  type_text: STOCK_MOVEMENT_LABELS[item.type] || item.type,
+                  import_price_formatted: item.import_price != null ? formatter.format(item.import_price) : null
+                }))
+              },
+              null,
+              2
+            )
+          }
+        ]
+      };
+    } catch (error) {
+      console.error("Lỗi khi gọi tool get_stock_history:", error);
+      return {
+        content: [{ type: "text", text: `Lỗi truy vấn lịch sử kho: ${error.message}` }],
         isError: true
       };
     }
