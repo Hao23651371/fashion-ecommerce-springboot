@@ -56,7 +56,7 @@ const httpServer = http.createServer(async (req, res) => {
             sse: "/sse",
             messages: "/messages?sessionId=<SESSION_ID>"
           },
-          tools_count: 5,
+          tools_count: 7,
           timestamp: new Date().toISOString()
         },
         null,

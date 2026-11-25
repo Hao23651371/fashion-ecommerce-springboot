@@ -148,14 +148,14 @@
                     <form th:action="@{/login}" method="post"
                           th:with="err=${param.error != null ? param.error[0] : ''}">
                         <div class="mb-2">
-                            <label for="username" class="auth-label">EMAIL HOẶC SỐ ĐIỆN THOẠI</label>
+                            <label for="username" class="auth-label">Email</label>
                             <div class="luxury-input-group" th:classappend="${err == 'email'} ? 'is-invalid'">
                                 <span class="input-icon"><i class="bi bi-envelope"></i></span>
-                                <input type="text" id="username" name="username" placeholder="name@example.com" required autofocus
+                                <input type="email" id="username" name="username" placeholder="name@example.com" required autofocus autocomplete="email"
                                        th:value="${param.username != null} ? ${param.username[0]} : ''">
                             </div>
                             <div class="auth-field-error" th:if="${err == 'email'}">
-                                <i class="bi bi-exclamation-circle-fill"></i> Email hoặc số điện thoại này chưa được đăng ký.
+                                <i class="bi bi-exclamation-circle-fill"></i> Email này chưa được đăng ký.
                             </div>
                         </div>
 
@@ -256,6 +256,15 @@
         show(0);
         start();
     })();
+
+    // Sai email -> đưa con trỏ vào ô email
+    if (new URLSearchParams(window.location.search).get('error') === 'email') {
+        const un = document.getElementById('username');
+        if (un) {
+            un.focus();
+            un.select();
+        }
+    }
 
     // Sai mật khẩu -> đưa con trỏ vào ô mật khẩu cho tiện nhập lại
     if (new URLSearchParams(window.location.search).get('error') === 'password') {

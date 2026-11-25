@@ -1,5 +1,7 @@
 package com.iuh.fashionshop.controller;
 
+import com.iuh.fashionshop.dto.AuditForm;
+import com.iuh.fashionshop.dto.ReceiptForm;
 import com.iuh.fashionshop.repository.CategoryRepository;
 import com.iuh.fashionshop.service.InventoryService;
 import org.springframework.data.domain.Page;
@@ -14,7 +16,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -66,8 +67,11 @@ public class AdminInventoryController {
         model.addAttribute("summary", summary);
         model.addAttribute("categories", categoryRepository.findAll());
         model.addAttribute("allVariants", inventoryService.getAllVariantsForSelection());
+        model.addAttribute("allVariantViews", inventoryService.getAllVariantViewsForSelection());
         model.addAttribute("performers", inventoryService.getDistinctPerformers());
         model.addAttribute("totalHistoryCount", inventoryService.getTotalHistoryCount());
+        model.addAttribute("receiptForm", new ReceiptForm());
+        model.addAttribute("auditForm", new AuditForm());
 
         // Params cho tab Tồn kho
         model.addAttribute("keyword", keyword != null ? keyword : "");
@@ -86,19 +90,16 @@ public class AdminInventoryController {
     }
 
     @PostMapping("/import")
-    public String importStock(@RequestParam Long variantId,
-                              @RequestParam int quantity,
-                              @RequestParam(required = false) String supplier,
-                              @RequestParam(required = false) BigDecimal importPrice,
-                              @RequestParam(required = false) String reason,
+    public String importStock(@ModelAttribute ReceiptForm receiptForm,
                               RedirectAttributes redirectAttributes) {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String userEmail = (auth != null) ? auth.getName() : null;
 
-            inventoryService.importStock(variantId, quantity, supplier, importPrice, reason, userEmail);
+            ReceiptForm receipt = inventoryService.importStockReceipt(receiptForm, userEmail);
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Đã nhập kho thành công +" + quantity + " sản phẩm.");
+                    "Đã tạo phiếu nhập " + receipt.getReceiptCode() + " thành công cho "
+                            + receipt.getTotalQuantity() + " sản phẩm (" + receipt.toReceiptItems().size() + " mã SKU).");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Lỗi khi nhập kho: " + e.getMessage());
@@ -107,17 +108,20 @@ public class AdminInventoryController {
     }
 
     @PostMapping("/audit")
-    public String auditStock(@RequestParam Long variantId,
-                             @RequestParam int actualStock,
-                             @RequestParam(required = false) String reason,
+    public String auditStock(@ModelAttribute AuditForm auditForm,
                              RedirectAttributes redirectAttributes) {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String userEmail = (auth != null) ? auth.getName() : null;
 
-            inventoryService.auditStock(variantId, actualStock, reason, userEmail);
+            AuditForm result = inventoryService.auditStockReceipt(auditForm, userEmail);
+            int skuCount = result.toAuditItems().size();
+            String diffText = result.getTotalDiff() > 0
+                    ? "+" + result.getTotalDiff()
+                    : String.valueOf(result.getTotalDiff());
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Cập nhật kết quả kiểm kê thành công. Tồn kho mới: " + actualStock + " chiếc.");
+                    "Đã lưu phiếu kiểm kê " + result.getAuditCode() + " thành công cho "
+                            + skuCount + " mã SKU (Chênh lệch ròng: " + diffText + " chiếc).");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Lỗi khi kiểm kê kho: " + e.getMessage());

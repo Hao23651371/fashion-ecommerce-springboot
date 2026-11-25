@@ -185,6 +185,7 @@ CREATE TABLE stock_history (
                                supplier           VARCHAR(150)  NULL,
                                import_price       DECIMAL(15,2) NULL,
                                reason             VARCHAR(255)  NULL,
+                               receipt_code       VARCHAR(50)   NULL,
                                order_id           BIGINT        NULL,
                                performed_by_id    BIGINT        NULL,
                                created_at         DATETIME(6)   NOT NULL,

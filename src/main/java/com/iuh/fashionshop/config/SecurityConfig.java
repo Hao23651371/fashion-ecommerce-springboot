@@ -57,8 +57,8 @@ public class SecurityConfig {
                                          "/forgot-password/**",
                                          "/terms", "/policy", "/support", "/auth/terms").permitAll()
 
-                        // 3. Public - Các REST API công khai (tìm kiếm & chatbot)
-                        .requestMatchers("/api/products/search", "/api/chatbot/**").permitAll()
+                        // 3. Public - Các REST API công khai (tìm kiếm & chatbot & reports cho n8n)
+                        .requestMatchers("/api/products/search", "/api/chatbot/**", "/api/reports/**").permitAll()
 
                         // 4. Customer - Khu vực khách hàng cá nhân (yêu cầu đăng nhập)
                         .requestMatchers("/cart/**", "/checkout/**", "/wishlist/**", "/orders/**", "/account/**").authenticated()
@@ -118,7 +118,7 @@ public class SecurityConfig {
 
                 Set<String> roles = AuthorityUtils.authorityListToSet(authentication.getAuthorities());
                 if (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_STAFF")) {
-                    response.sendRedirect("/admin/dashboard");
+                    response.sendRedirect("/admin/dashboard?loginSuccess=true");
                     return;
                 }
 
@@ -126,12 +126,13 @@ public class SecurityConfig {
                 if (savedRequest != null) {
                     String targetUrl = savedRequest.getRedirectUrl();
                     if (targetUrl != null && !targetUrl.isBlank()) {
-                        response.sendRedirect(targetUrl);
+                        String redirect = targetUrl.contains("?") ? targetUrl + "&loginSuccess=true" : targetUrl + "?loginSuccess=true";
+                        response.sendRedirect(redirect);
                         return;
                     }
                 }
 
-                response.sendRedirect("/");
+                response.sendRedirect("/?loginSuccess=true");
             }
         };
     }
