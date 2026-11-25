@@ -6,6 +6,33 @@ let verifiedOtpCode = '';
 let expiryTimerInterval = null;
 let resendTimerInterval = null;
 
+const COMMON_GMAIL_TYPOS = new Set([
+    'gmai.com', 'gmial.com', 'gmal.com', 'gamil.com', 'gnail.com',
+    'gmail.con', 'gmail.co', 'gmail.cm', 'gmail.om', 'gmail.vn', 'gmaill.com'
+]);
+
+function validateForgotEmail(emailVal) {
+    if (!emailVal) {
+        return 'Vui lòng nhập địa chỉ email đã đăng ký.';
+    }
+    if (/\s/.test(emailVal)) {
+        return 'Email không được chứa khoảng trắng.';
+    }
+    const parts = emailVal.split('@');
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
+        return 'Email không đúng định dạng (ví dụ: example@gmail.com).';
+    }
+    const domain = parts[1].toLowerCase();
+    if (COMMON_GMAIL_TYPOS.has(domain)) {
+        return 'Có vẻ bạn gõ nhầm tên miền (@' + domain + '). Vui lòng nhập đúng @gmail.com (ví dụ: example@gmail.com).';
+    }
+    const emailRegex = /^(?!.*\.\.)[A-Za-z0-9](?:[A-Za-z0-9._%+-]*[A-Za-z0-9])?@[A-Za-z0-9.-]+\.[A-Za-z]{2,64}$/;
+    if (!emailRegex.test(emailVal)) {
+        return 'Email không đúng định dạng (ví dụ: example@gmail.com).';
+    }
+    return null;
+}
+
 // 1. GỬI MÃ OTP (BƯỚC 1 -> MỞ POPUP / ALERT MODAL OTP)
 async function handleSendOtp(e) {
     e.preventDefault();
@@ -16,7 +43,11 @@ async function handleSendOtp(e) {
     const submitBtn = document.getElementById('btnStep1Submit');
     const submitText = document.getElementById('btnStep1Text');
 
-    if (!emailVal) {
+    const emailErr = validateForgotEmail(emailVal);
+    if (emailErr) {
+        errorText.textContent = emailErr;
+        errorBox.classList.remove('d-none');
+        errorBox.classList.add('d-flex');
         emailInput.focus();
         return;
     }
@@ -475,4 +506,25 @@ async function handleResetPassword(e) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', initPasswordStrengthMeter);
+document.addEventListener('DOMContentLoaded', function () {
+    initPasswordStrengthMeter();
+    const forgotEmailInput = document.getElementById('email') || document.getElementById('credential');
+    const errorBox = document.getElementById('step1ErrorMsg');
+    const errorText = document.getElementById('step1ErrorText');
+    if (forgotEmailInput && errorBox && errorText) {
+        forgotEmailInput.addEventListener('input', () => {
+            errorBox.classList.add('d-none');
+            errorBox.classList.remove('d-flex');
+        });
+        forgotEmailInput.addEventListener('blur', () => {
+            const val = forgotEmailInput.value.trim();
+            if (!val) return;
+            const err = validateForgotEmail(val);
+            if (err) {
+                errorText.textContent = err;
+                errorBox.classList.remove('d-none');
+                errorBox.classList.add('d-flex');
+            }
+        });
+    }
+});
