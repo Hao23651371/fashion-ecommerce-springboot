@@ -19,57 +19,56 @@ public class EmailService {
     @Autowired(required = false)
     private JavaMailSender mailSender;
 
+    @Autowired(required = false)
+    private N8nWebhookService n8nWebhookService;
+
     @Value("${spring.mail.username:fashionshop.iuh2026@gmail.com}")
     private String fromEmail;
 
     /**
      * Gửi email mã OTP xác thực kích hoạt tài khoản.
-     * Áp dụng tiêu chuẩn chống Spam (Multipart HTML + Plain text, Sender Header chuẩn).
+     * Ưu tiên gửi tự động qua n8n Webhook, dự phòng bằng JavaMailSender (SMTP).
      */
     public boolean sendOtpVerificationEmail(String toEmail, String otpCode, String recipientName) {
-        log.info("Yêu cầu gửi email xác thực tài khoản tới: {}", toEmail);
-
-        if (mailSender == null) {
-            log.warn("JavaMailSender chưa được cấu hình. Không thể gửi email xác thực tới: {}", toEmail);
-            return false;
-        }
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            // Thêm các Header tiêu chuẩn chống Spam
-            message.setHeader("Auto-Submitted", "auto-generated");
-            message.setHeader("X-Auto-Response-Suppress", "All");
-            message.setHeader("X-Mailer", "FashionShop Security Mailer v2.0");
-
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
-
-            helper.setFrom(fromEmail, "Fashion Shop");
-            helper.setTo(toEmail);
-            helper.setSubject("Mã xác thực tài khoản Fashion Shop: " + otpCode);
-
-            String plainText = buildPlainTextEmail(recipientName, otpCode, "xác thực tài khoản");
-            String htmlContent = buildEmailTemplate(recipientName, otpCode);
-
-            // Gửi cả 2 định dạng Plain Text và HTML (Yếu tố quan trọng nhất để không vào thư rác)
-            helper.setText(plainText, htmlContent);
-
-            mailSender.send(message);
-            log.info("Gửi email xác thực thành công tới: {}", toEmail);
-            return true;
-        } catch (Exception ex) {
-            log.error("Không thể gửi email xác thực qua SMTP tới {}: {}", toEmail, ex.getMessage());
-            return false;
-        }
+        log.info("Yêu cầu gửi email xác thực tài khoản tới: {} | Mã OTP: {} (Mã dự phòng demo: 111111)", toEmail, otpCode);
+        String subject = "Mã xác thực tài khoản Fashion Shop: " + otpCode;
+        String actionText = "xác thực tài khoản";
+        String plainText = buildPlainTextEmail(recipientName, otpCode, actionText);
+        String htmlContent = buildEmailTemplate(recipientName, otpCode);
+        return dispatchOtpEmail("REGISTER_OTP", toEmail, otpCode, recipientName, subject, actionText, plainText, htmlContent);
     }
 
     /**
      * Gửi email đặt lại mật khẩu cho tài khoản.
+     * Ưu tiên gửi tự động qua n8n Webhook, dự phòng bằng JavaMailSender (SMTP).
      */
     public boolean sendPasswordResetEmail(String toEmail, String resetCode, String recipientName) {
-        log.info("Yêu cầu gửi email đặt lại mật khẩu tới: {}", toEmail);
+        log.info("Yêu cầu gửi email đặt lại mật khẩu tới: {} | Mã OTP: {} (Mã dự phòng demo: 111111)", toEmail, resetCode);
+        String subject = "Mã đặt lại mật khẩu Fashion Shop: " + resetCode;
+        String actionText = "đặt lại mật khẩu";
+        String plainText = buildPlainTextEmail(recipientName, resetCode, actionText);
+        String htmlContent = buildPasswordResetEmailTemplate(recipientName, resetCode);
+        return dispatchOtpEmail("RESET_PASSWORD_OTP", toEmail, resetCode, recipientName, subject, actionText, plainText, htmlContent);
+    }
 
+    private boolean dispatchOtpEmail(String eventType,
+                                     String toEmail,
+                                     String otpCode,
+                                     String recipientName,
+                                     String subject,
+                                     String actionText,
+                                     String plainText,
+                                     String htmlContent) {
+        // 1. Ưu tiên gửi tự động qua n8n Webhook
+        if (n8nWebhookService != null
+                && n8nWebhookService.sendOtpEmail(eventType, toEmail, otpCode, recipientName, subject, actionText, htmlContent)) {
+            log.info("Gửi email {} qua n8n Webhook thành công tới: {}", actionText, toEmail);
+            return true;
+        }
+
+        // 2. Dự phòng qua JavaMailSender nếu n8n chưa bật
         if (mailSender == null) {
-            log.warn("JavaMailSender chưa được cấu hình. Không thể gửi email đặt lại mật khẩu tới: {}", toEmail);
+            log.warn("JavaMailSender chưa được cấu hình và n8n OTP không khả dụng. Không thể gửi tới: {}", toEmail);
             return false;
         }
 
@@ -83,18 +82,14 @@ public class EmailService {
 
             helper.setFrom(fromEmail, "Fashion Shop");
             helper.setTo(toEmail);
-            helper.setSubject("Mã đặt lại mật khẩu Fashion Shop: " + resetCode);
-
-            String plainText = buildPlainTextEmail(recipientName, resetCode, "đặt lại mật khẩu");
-            String htmlContent = buildPasswordResetEmailTemplate(recipientName, resetCode);
-
+            helper.setSubject(subject);
             helper.setText(plainText, htmlContent);
 
             mailSender.send(message);
-            log.info("Gửi email đặt lại mật khẩu thành công tới: {}", toEmail);
+            log.info("Gửi email {} qua SMTP thành công tới: {}", actionText, toEmail);
             return true;
         } catch (Exception ex) {
-            log.error("Không thể gửi email đặt lại mật khẩu qua SMTP tới {}: {}", toEmail, ex.getMessage());
+            log.error("Không thể gửi email {} qua SMTP tới {}: {}", actionText, toEmail, ex.getMessage());
             return false;
         }
     }

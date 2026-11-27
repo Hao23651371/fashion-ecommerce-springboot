@@ -46,6 +46,7 @@ public class ChatbotService {
 
     /** Số sản phẩm tối đa đưa vào prompt LLM. */
     private static final int MAX_PRODUCTS = 5;
+// cái này là kịch bản gửi mọi lần gọi AI
 
     private static final String SYSTEM_PROMPT = """
         Bạn là chuyên viên tư vấn thời trang thông minh, tận tình của cửa hàng FashionShop.
@@ -118,7 +119,8 @@ public class ChatbotService {
     }
 
     // ======================= LÀM NÓNG KHI KHỞI ĐỘNG =======================
-
+    // springboot khởi chạy các bean @Service, @Repository, @Controller
+    //sau đó nó khởi chạy cổng này nọ rồi mới chạy cái này
     @EventListener(ApplicationReadyEvent.class)
     public void warmUp() {
         Thread.startVirtualThread(() -> {
@@ -136,13 +138,15 @@ public class ChatbotService {
     // ============================== API CHÍNH ==============================
 
     /** Endpoint không streaming. */
+    //Đợi AI trả lời xong toàn bộ mới trả về một chuỗi String hoàn chỉnh
     public String reply(String userMessage) {
         StringBuilder sb = new StringBuilder();
         streamReply(userMessage, sb::append);
         return sb.toString().trim();
     }
 
-    /** Bản streaming tương thích ngược khi không truyền productId. */
+    /** chattongquat khi không ở 1 sản phẩm chi tiết nào */
+    //consumer = như void không trả về gì
     public void streamReply(String userMessage, Consumer<String> out) {
         streamReply(userMessage, null, out);
     }
@@ -161,7 +165,7 @@ public class ChatbotService {
             }
         }
 
-        // 1. NẾU ĐANG XEM SẢN PHẨM CỤ THỂ, KIỂM TRA TRẢ LỜI CHÍNH XÁC (SIZE, MÀU, TỒN KHO, GIÁ, CHẤT LIỆU)
+        // 1. NẾU ĐANG XEM SẢN PHẨM CỤ THỂ, KIỂM TRA để TRẢ LỜI CHÍNH XÁC (SIZE, MÀU, TỒN KHO, GIÁ, CHẤT LIỆU)
         if (currentProduct != null) {
             String quickProductAnswer = tryAnswerForCurrentProduct(userMessage, currentProduct);
             if (quickProductAnswer != null) {
@@ -171,7 +175,7 @@ public class ChatbotService {
             }
         }
 
-        // 2. NHÓM 1: CÁC INTENT TOÀN SHOP (CHÀO HỎI, MÃ GIẢM GIÁ, LỌC GIÁ, CHÍNH SÁCH...)
+        // 2. NHÓM 1: Câu hỏi  TOÀN SHOP (CHÀO HỎI, MÃ GIẢM GIÁ, LỌC GIÁ, CHÍNH SÁCH...)
         String exactAnswer = handleGroupOneExact(userMessage);
         if (exactAnswer != null) {
             out.accept(exactAnswer);
@@ -1078,6 +1082,8 @@ public class ChatbotService {
             if (searchResults.isEmpty()) {
                 return List.of();
             }
+            //thành một dòng chảy dữ liệu (Stream) nhằm xử lý các phần tử
+            // theo kiểu dây chuyền (lọc, trích xuất, gom lại) cực kỳ ngắn gọn thay vì phải viết vòng lặp for
             List<Long> ids = searchResults.stream()
                     .filter(r -> r.distance() <= MAX_DISTANCE)
                     .map(r -> r.product().id())

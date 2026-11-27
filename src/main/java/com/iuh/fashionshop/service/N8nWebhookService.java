@@ -33,15 +33,71 @@ public class N8nWebhookService {
     @Value("${n8n.webhook.order-url:http://127.0.0.1:5678/webhook/new-order}")
     private String orderWebhookUrl;
 
+    @Value("${n8n.webhook.otp-url:}")
+    private String otpWebhookUrl;
+
+    /**
+     * Gửi email OTP (đăng ký hoặc quên mật khẩu) qua webhook n8n để quản lý tự động hoàn toàn
+     */
+    public boolean sendOtpEmail(String eventType,
+                                String toEmail,
+                                String otpCode,
+                                String recipientName,
+                                String subject,
+                                String actionText,
+                                String htmlContent) {
+        if (!enabled) {
+            return false;
+        }
+        String targetUrl = resolveOtpWebhookUrl();
+        if (targetUrl == null || targetUrl.isBlank()) {
+            return false;
+        }
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("eventType", eventType);
+            payload.put("toEmail", toEmail);
+            payload.put("otpCode", otpCode);
+            payload.put("recipientName", recipientName != null && !recipientName.isBlank() ? recipientName : "Quý khách");
+            payload.put("subject", subject);
+            payload.put("actionText", actionText);
+            payload.put("htmlContent", htmlContent);
+
+            String jsonBody = objectMapper.writeValueAsString(payload);
+            return postJson(targetUrl, jsonBody, "OTP " + eventType + " -> " + toEmail);
+        } catch (Exception e) {
+            log.warn("Lỗi khi gửi OTP webhook sang n8n ({}): {}", toEmail, e.getMessage());
+            return false;
+        }
+    }
+
+    private String resolveOtpWebhookUrl() {
+        if (otpWebhookUrl != null && !otpWebhookUrl.isBlank()) {
+            return otpWebhookUrl.trim().replace("localhost", "127.0.0.1");
+        }
+        if (orderWebhookUrl != null && !orderWebhookUrl.isBlank()) {
+            if (orderWebhookUrl.contains("/webhook/new-order")) {
+                return orderWebhookUrl.trim().replace("localhost", "127.0.0.1").replace("/webhook/new-order", "/webhook/send-otp");
+            }
+            if (orderWebhookUrl.contains("/webhook-test/new-order")) {
+                return orderWebhookUrl.trim().replace("localhost", "127.0.0.1").replace("/webhook-test/new-order", "/webhook-test/send-otp");
+            }
+        }
+        return "http://127.0.0.1:5678/webhook/send-otp";
+    }
+
     public void sendOrderNotification(Order order) {
         String defaultMsg = "Cảm ơn bạn đã đặt hàng tại FashionShop! Đơn hàng của bạn đã được ghi nhận và đang ở trạng thái CHỜ XÁC NHẬN.";
         sendOrderEvent(order, "ORDER_CREATED", defaultMsg, true);
     }
 
+    //Gọi khi Admin đổi trạng thái đơn hàng (xác nhận, đang giao, hoàn tất, hủy)
+    //gửi sự kiên qua ORDER_STATUS_UPDATED này
     public void sendOrderStatusUpdate(Order order, String actionMessage) {
         sendOrderEvent(order, "ORDER_STATUS_UPDATED", actionMessage, false);
     }
 
+    // hàm chính gửi từng sự kiện
     private void sendOrderEvent(Order order, String eventType, String actionMessage, boolean notifyAdmin) {
         log.info("[N8N] sendOrderEvent() - Event: {} cho đơn: {}", eventType, (order != null ? order.getOrderCode() : "null"));
         if (!enabled || orderWebhookUrl == null || orderWebhookUrl.isBlank()) {
@@ -159,49 +215,54 @@ public class N8nWebhookService {
 
     private void sendPost(String urlStr, String jsonBody, String orderCode, boolean isTest) {
         CompletableFuture.runAsync(() -> {
-            HttpURLConnection conn = null;
-            try {
-                log.debug("[N8N] Đang gửi POST tới: {}", urlStr);
-                URL url = URI.create(urlStr).toURL();
-                conn = (HttpURLConnection) url.openConnection(Proxy.NO_PROXY);
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-                conn.setRequestProperty("Accept", "application/json");
-                conn.setRequestProperty("User-Agent", "FashionShop-Webhook/1.0");
-                conn.setConnectTimeout(4000);
-                conn.setReadTimeout(5000);
-                conn.setDoOutput(true);
+            String label = (isTest ? "TEST " : "PROD ") + "đơn hàng " + orderCode;
+            postJson(urlStr, jsonBody, label);
+        });
+    }
 
-                byte[] bytes = jsonBody.getBytes(StandardCharsets.UTF_8);
-                conn.setFixedLengthStreamingMode(bytes.length);
-                try (OutputStream os = conn.getOutputStream()) {
-                    os.write(bytes);
-                    os.flush();
-                }
+    private boolean postJson(String urlStr, String jsonBody, String contextLabel) {
+        HttpURLConnection conn = null;
+        try {
+            log.debug("[N8N] Đang gửi POST tới: {}", urlStr);
+            URL url = URI.create(urlStr).toURL();
+            conn = (HttpURLConnection) url.openConnection(Proxy.NO_PROXY);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setRequestProperty("User-Agent", "FashionShop-Webhook/1.0");
+            conn.setConnectTimeout(8000);
+            conn.setReadTimeout(10000);
+            conn.setDoOutput(true);
 
-                int statusCode = conn.getResponseCode();
-                String responseBody = "";
-                try (InputStream is = (statusCode >= 200 && statusCode < 400) ? conn.getInputStream() : conn.getErrorStream()) {
-                    if (is != null) {
-                        responseBody = new String(is.readAllBytes(), StandardCharsets.UTF_8);
-                    }
-                }
+            byte[] bytes = jsonBody.getBytes(StandardCharsets.UTF_8);
+            conn.setFixedLengthStreamingMode(bytes.length);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(bytes);
+                os.flush();
+            }
 
-                log.debug("[N8N] Kết quả từ {} -> HTTP {} | Body: {}", urlStr, statusCode, responseBody);
-                if (statusCode >= 200 && statusCode < 300) {
-                    log.info(" Đã gửi Webhook ({}) đơn hàng {} sang n8n thành công!", isTest ? "TEST" : "PROD", orderCode);
-                } else {
-                    log.warn("⚠️ n8n ({}) phản hồi status {}: {}", isTest ? "TEST" : "PROD", statusCode, responseBody);
-                }
-            } catch (Exception ex) {
-                if (!isTest) {
-                    log.warn("⚠️ Không thể kết nối tới n8n ({}): {}", urlStr, ex.getMessage());
-                }
-            } finally {
-                if (conn != null) {
-                    conn.disconnect();
+            int statusCode = conn.getResponseCode();
+            String responseBody = "";
+            try (InputStream is = (statusCode >= 200 && statusCode < 400) ? conn.getInputStream() : conn.getErrorStream()) {
+                if (is != null) {
+                    responseBody = new String(is.readAllBytes(), StandardCharsets.UTF_8);
                 }
             }
-        });
+
+            log.debug("[N8N] Kết quả từ {} -> HTTP {} | Body: {}", urlStr, statusCode, responseBody);
+            if (statusCode >= 200 && statusCode < 300) {
+                log.info("Đã gửi Webhook ({}) sang n8n thành công!", contextLabel);
+                return true;
+            }
+            log.warn("n8n ({}) phản hồi status {}: {}", contextLabel, statusCode, responseBody);
+            return false;
+        } catch (Exception ex) {
+            log.warn("Không thể kết nối tới n8n ({}): {}", urlStr, ex.getMessage());
+            return false;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
     }
 }

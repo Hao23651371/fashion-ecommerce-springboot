@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
  * CLASS NÀY DÙNG ĐỂ LÀM GÌ:
  * - Đây là lớp kết nối trực tiếp đến Google Gemini thông qua framework Spring AI.
  * - Giúp dự án FashionShop gửi câu hỏi của khách hàng lên Gemini và nhận câu trả lời về.
+ * --->Tự động đọc API Key và tên model trong application.properties, sau đó cung cấp hàm .stream(...)
+ * gọn nhẹ để ChatbotService chỉ cần ném systemPrompt + userPrompt vào là chữ tự động chảy về.
  * ============================================================================
  */
 @Component

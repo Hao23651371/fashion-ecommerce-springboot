@@ -4,6 +4,9 @@ import java.util.function.Consumer;
 
 /**
  * Giao diện trừu tượng cho các mô hình AI Chatbot (Ollama, Gemini, ...).
+ * bất kỳ con AI nào muốn gắn vào shop thì bắt buộc phải có 2 hàm là
+ * generate() (trả lời 1 cục) và stream() (trả lời từng chữ).
+ * để sau này có dùng chatgpt hay claude gì đó để (kiểu như spring AI á)
  */
 public interface ChatModelClient {
 

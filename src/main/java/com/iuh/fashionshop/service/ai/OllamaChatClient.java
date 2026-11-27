@@ -17,6 +17,7 @@ import org.springframework.web.client.RestClient;
 
 /**
  * Triển khai ChatModelClient gọi mô hình Ollama cục bộ qua REST API.
+ * Cầu nối tới AI chạy Offline trên máy
  */
 @Component
 public class OllamaChatClient implements ChatModelClient {
@@ -32,7 +33,7 @@ public class OllamaChatClient implements ChatModelClient {
 
     private final RestClient ollama;
     private final String chatModel;
-
+//// nối chổ này nè gọi được cả qwen về chạy
     public OllamaChatClient(@Value("${ollama.base-url:http://localhost:11434}") String baseUrl,
                             @Value("${ollama.chat.model:qwen2.5:3b}") String chatModel,
                             @Value("${ollama.chat.timeout-seconds:120}") int timeoutSeconds) {
