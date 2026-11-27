@@ -67,18 +67,23 @@ public class OllamaEmbeddingClient {
             throw new IllegalStateException("Chưa cấu hình ollama.base-url trong application-local.properties");
         }
 
+        // 3 dòng này Đóng gói dữ liệu gửi đi (Request Body)
+        //Tạo một đối tượng Map để Spring tự động chuyển thành chuỗi JSON gửi cho Ollama
+        //ví dụ model: bge
+        // input: áo thun màu đen đẹp
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", model);
         body.put("input", text);
 
         Map<String, Object> response;
         try {
+            //Gửi HTTP POST tới endpoint /api/embed
             response = restClient.post()
                     .uri("/api/embed")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+                    .contentType(MediaType.APPLICATION_JSON)//áo cho server Ollama biết dữ liệu gửi lên là định dạng JSOn
+                    .body(body)// đưa map chưa model và input thì spring tự chuyển map thành chuỗi JSON
+                    .retrieve()//gửi HTTP request thực sự sang Ollama và chờ nhận phản hồi
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});//Đọc chuỗi JSON kết quả mà Ollama trả về và chuyển ngược lại thành đối tượng
         } catch (RestClientException e) {
             throw new IllegalStateException("Không gọi được Ollama tại " + baseUrl
                     + " (đã bật Ollama và chạy 'ollama pull " + model + "' chưa?): " + e.getMessage(), e);

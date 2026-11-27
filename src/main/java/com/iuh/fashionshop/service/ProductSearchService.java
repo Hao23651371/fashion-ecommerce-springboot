@@ -25,14 +25,22 @@ public class ProductSearchService {
     public record SearchResult(ProductCardDto product, double distance) {
     }
 
+    //đóng vai trò là lớp giao tiếp trực tiếp với các bảng dưới MariaDB
+    // (products, categories, product_variants, product_embedding chớ ko phải tạo vector
     private final ProductEmbeddingRepository embeddingRepository;
-    private final OllamaEmbeddingClient embeddingClient;
+
+    private final OllamaEmbeddingClient embeddingClient;// cái này mới tạo vector
     private final ProductService productService;
     private final double maxDistance;
 
     public ProductSearchService(ProductEmbeddingRepository embeddingRepository,
                                 OllamaEmbeddingClient embeddingClient,
                                 ProductService productService,
+                                //chổ này ngưỡng maxDistint
+                                //0.0-2.0 thì 0.0 sát nghĩa nhất 100
+                                //0.3-0.55 sát nghĩa
+                                //0.6-0.8 thì nối lỏng ra
+                                //còn 1.0 trở lên thì không liên quan
                                 @Value("${vector.search.max-distance:0.6}") double maxDistance) {
         this.embeddingRepository = embeddingRepository;
         this.embeddingClient = embeddingClient;
@@ -41,6 +49,7 @@ public class ProductSearchService {
     }
 
     /** true khi đã cấu hình và Ollama đang chạy. */
+    //kiểu giúp để biết trước Ollama có đang chạy hay không
     public boolean isAvailable() {
         return embeddingClient.isConfigured() && embeddingClient.isReachable();
     }
@@ -49,13 +58,19 @@ public class ProductSearchService {
      * Tạo vector cho sản phẩm.
      * @param force true = tạo lại cho TẤT CẢ sản phẩm; false = chỉ sản phẩm chưa có vector
      * @return số sản phẩm đã được tạo vector
+     * Task_document là chuyển dữ liệu sản phẩm thành vector còn task_quẻry  thì là câu
+     * truy vấn ngươì dùng thành vector
      */
     public int reindex(boolean force) {
+        //dùng để lấy danh sách thông tin thô của các sản phẩm từ database để chuẩn bị tạo vector
         List<ProductSource> sources = embeddingRepository.findSources(!force);
         int done = 0;
         for (ProductSource s : sources) {
             try {
+                //embeddingClient.embed(...)Gửi đoạn văn đó sang Ollama (bge-m3) để chuyển đổi thành mảng số vector
+                //đoạn văn bản đang gửi vào là thông tin mô tả của một tài liệu/sản phẩm trong kho
                 List<Double> vector = embeddingClient.embed(buildText(s), OllamaEmbeddingClient.TASK_DOCUMENT);
+                //sau đó lưu xuống cơ sở dl
                 embeddingRepository.save(s.id(), toVectorText(vector));
                 done++;
             } catch (Exception e) {
@@ -71,11 +86,14 @@ public class ProductSearchService {
      * @param productId id sản phẩm
      * @return true nếu xử lý thành công
      */
+    //hi Admin thêm mới hoặc chỉnh sửa thông tin của 1 sản phẩm (đổi tên
+    // , đổi mô tả, thêm màu/size mới, đổi danh mục, hoặc bật/tắt trạng thái hiển thị)
     public boolean indexProduct(Long productId) {
         if (productId == null || !isAvailable()) {
             return false;
         }
         try {
+            // lấy thống tin kiểm tra sản phẩm có tồn tại không
             var optSource = embeddingRepository.findSourceById(productId);
             if (optSource.isPresent()) {
                 ProductSource s = optSource.get();
@@ -98,6 +116,7 @@ public class ProductSearchService {
     /**
      * Tạo hoặc cập nhật vector ngầm (Async qua Virtual Thread) cho MỘT sản phẩm.
      * Không chặn luồng xử lý chính của Admin, giúp UI phản hồi tức thì.
+     * tức là -->này chạy ngay tại thời điểm Admin bấm nút Lưu (thêm mới hoặc sửa) 1 sản phẩm trên trang quản trị
      */
     public void indexProductAsync(Long productId) {
         if (productId == null) return;
@@ -160,6 +179,7 @@ public class ProductSearchService {
         });
     }
 
+    // hàm này quan trong để tìm kiếm sản phẩm đây
     /** Tìm tối đa `limit` sản phẩm gần nghĩa nhất với câu khách nhập, đã sắp xếp theo độ giống. */
     public List<SearchResult> search(String query, int limit) {
         if (query == null || query.isBlank()) {
@@ -168,20 +188,29 @@ public class ProductSearchService {
 
         List<Double> queryVector;
         try {
+            // biến câu hỏi người dùng thành vector
             queryVector = embeddingClient.embed(query.trim(), OllamaEmbeddingClient.TASK_QUERY);
         } catch (Exception e) {
             log.warn("Vector search lỗi, bỏ qua: {}", e.getMessage());
             return List.of();
         }
 
+        //truy vấn trong MariaDB để tìm ra các sản phẩm có ý nghĩa giống nhất với câu hỏi
+        //tovectorText là chuyển mảng số quẻyVector thành chuỗi "[0.12...]"
+        //Gọi xuống MariaDB chạy hàm VEC_DISTANCE_COSINE để lấy về tối đa limit
+        // sản phẩm gần nghĩa nhất, kèm theo chỉ số khoảng cách distance
+        // (mỗi kết quả là một Hit gồm productId và distance
         List<Hit> hits = embeddingRepository.searchNearest(toVectorText(queryVector), limit).stream()
-                .filter(h -> h.distance() <= maxDistance)
+
+                .filter(h -> h.distance() <= maxDistance)//Lọc bỏ những sản phẩm có khoảng cách quá xa
                 .toList();
         if (hits.isEmpty()) {
             return List.of();
         }
-
-        List<Long> ids = hits.stream().map(Hit::productId).toList();
+        //Hit chỉ mới có mỗi cái productId và distance (chưa có tên áo, giá tiền,
+        // ảnh đại diện để hiện lên web), nên 2 dòng code của bạn làm nhiệm vụ
+        // "tra cứu ngược lại thông tin đầy đủ của sản phẩm từ danh sách ID"
+        List<Long> ids = hits.stream().map(Hit::productId).toList();//Rút riêng cột productId từ các Hit ra thành một danh sách ID
         Map<Long, ProductCardDto> cards = productService.getCardsByIds(ids).stream()
                 .collect(Collectors.toMap(ProductCardDto::id, Function.identity()));
 
@@ -215,7 +244,7 @@ public class ProductSearchService {
         }
         return sb.toString();
     }
-
+//dùng để dịch mã giới tính kỹ thuật trong database sang chữ tiếng Việt tự nhiên
     private String genderLabel(String gender) {
         if (gender == null) {
             return "mọi người";
@@ -227,6 +256,7 @@ public class ProductSearchService {
         };
     }
 
+    //này chuyển đoạn số vector thành chuỗi
     private String toVectorText(List<Double> vector) {
         return vector.stream().map(String::valueOf).collect(Collectors.joining(",", "[", "]"));
     }

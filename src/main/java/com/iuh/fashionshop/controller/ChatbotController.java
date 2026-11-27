@@ -45,6 +45,8 @@ public class ChatbotController {
      * - Trả chữ về màn hình theo thời gian thực, tức là trả lời cố gắng nhanh ko bắt người dùng đợi
      * - Cơ chế: Mở luồng StreamingResponseBody để đẩy từng từ (chunk) về trình duyệt ngay lập tức.
      * - Tối ưu: Tự động dừng gọi AI ngay nếu người dùng tắt trình duyệt hoặc đóng khung chat.
+     * Mở luồng StreamingResponseBody đẩy từng từ (chunk text) về trình duyệt theo thời gian thực
+     * (giúp người dùng không phải chờ đợi lâu). Tự động ngắt gọi AI khi người dùng đóng khung chat.
      */
     @PostMapping("/stream")
     public ResponseEntity<StreamingResponseBody> stream(@RequestBody ChatRequest req) {
