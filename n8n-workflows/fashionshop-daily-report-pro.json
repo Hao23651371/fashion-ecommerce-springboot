@@ -1,0 +1,157 @@
+{
+  "name": "FashionShop - Báo Cáo Doanh Thu & Vận Hành Pro (AI + PDF)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 22 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-22h",
+      "name": "Schedule Trigger (22h mỗi tối)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:8080/api/reports/daily-sales",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "fetch-daily-sales",
+      "name": "Lấy số liệu FashionShop",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=DAN_GEMINI_API_KEY_CUA_BAN_VAO_DAY",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: 'Bạn là Giám đốc vận hành (COO) của thương hiệu thời trang FashionShop. Dựa vào dữ liệu bán hàng thực tế sau đây, hãy viết phân tích chuyên sâu bằng tiếng Việt theo đúng 3 mục Markdown (###):\\n### 1. Đánh giá tổng quan hôm nay\\n(2-3 câu ngắn gọn, chỉ rõ điểm mạnh/điểm yếu dựa trên số liệu thật).\\n### 2. Cảnh báo quan trọng cần xử lý ngay\\n(Gạch đầu dòng - nêu rõ tồn kho sắp hết, đơn chờ duyệt hoặc tỷ lệ hủy).\\n### 3. Đề xuất hành động cụ thể cho ngày mai\\n(3 gạch đầu dòng - đề xuất nhập hàng, đẩy sản phẩm hot, xử lý hàng tồn chậm hoặc tối ưu doanh thu).\\nKhông bịa số liệu ngoài dữ liệu cung cấp.\\n\\n' + $json.aiContext }] }] }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "gemini-ai-analysis",
+      "name": "Phân tích AI Gemini",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/api/reports/daily-pdf",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ date: $('Lấy số liệu FashionShop').item.json.reportDateIso, aiAnalysis: $json.candidates?.[0]?.content?.parts?.[0]?.text || '' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "generate-pdf-report",
+      "name": "Tạo File Báo Cáo PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "fashionshop.iuh2026@gmail.com",
+        "toEmail": "fashionshop.iuh2026@gmail.com",
+        "subject": "=[BÁO CÁO NGÀY {{ $('Lấy số liệu FashionShop').item.json.reportDate }}] 📊 Doanh thu & Vận hành FashionShop",
+        "emailFormat": "html",
+        "html": "=<div style=\"font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;\">\n  <div style=\"background: #0f172a; color: #ffffff; padding: 20px 24px;\">\n    <div style=\"font-size: 11px; letter-spacing: 2px; color: #93c5fd; font-weight: bold;\">FASHIONSHOP MANAGEMENT</div>\n    <h2 style=\"margin: 6px 0 0 0; font-size: 20px;\">📊 Báo Cáo Doanh Thu &amp; Vận Hành Hằng Ngày</h2>\n    <div style=\"font-size: 13px; color: #cbd5e1; margin-top: 4px;\">{{ $('Lấy số liệu FashionShop').item.json.weekday }}, ngày {{ $('Lấy số liệu FashionShop').item.json.reportDate }}</div>\n  </div>\n  <div style=\"padding: 20px 24px; color: #1e293b;\">\n    <p style=\"margin-top: 0;\">Xin chào <b>Admin</b>, hệ thống đã hoàn tất tổng hợp dữ liệu kinh doanh, biểu đồ phân tích và nhận xét từ AI Gemini cho ngày <b>{{ $('Lấy số liệu FashionShop').item.json.reportDate }}</b>.</p>\n    <table style=\"width: 100%; border-collapse: collapse; margin: 16px 0; background: #f8fafc; border-radius: 8px;\">\n      <tr>\n        <td style=\"padding: 12px; border: 1px solid #e2e8f0;\"><b>💰 Doanh thu thực nhận hôm nay:</b></td>\n        <td style=\"padding: 12px; border: 1px solid #e2e8f0; text-align: right; color: #dc2626; font-size: 16px; font-weight: bold;\">{{ $('Lấy số liệu FashionShop').item.json.formattedRevenue }}</td>\n      </tr>\n      <tr>\n        <td style=\"padding: 12px; border: 1px solid #e2e8f0;\"><b>📦 Đơn hàng hợp lệ / Tổng đơn:</b></td>\n        <td style=\"padding: 12px; border: 1px solid #e2e8f0; text-align: right;\"><b>{{ $('Lấy số liệu FashionShop').item.json.orderCount }}</b> / {{ $('Lấy số liệu FashionShop').item.json.totalOrders }} đơn ({{ $('Lấy số liệu FashionShop').item.json.soldProducts }} sản phẩm)</td>\n      </tr>\n      <tr>\n        <td style=\"padding: 12px; border: 1px solid #e2e8f0;\"><b>⚠️ Đơn chờ duyệt / Đã hủy:</b></td>\n        <td style=\"padding: 12px; border: 1px solid #e2e8f0; text-align: right;\">{{ $('Lấy số liệu FashionShop').item.json.pendingOrders }} chờ duyệt | {{ $('Lấy số liệu FashionShop').item.json.cancelledOrders }} hủy ({{ $('Lấy số liệu FashionShop').item.json.cancelRate }}%)</td>\n      </tr>\n      <tr>\n        <td style=\"padding: 12px; border: 1px solid #e2e8f0;\"><b>🚨 Cảnh báo kho hàng:</b></td>\n        <td style=\"padding: 12px; border: 1px solid #e2e8f0; text-align: right;\">{{ $('Lấy số liệu FashionShop').item.json.outOfStockVariants }} hết hàng | {{ $('Lấy số liệu FashionShop').item.json.lowStockVariants }} sắp hết (&le; 5)</td>\n      </tr>\n    </table>\n    <div style=\"background: #eff6ff; border-left: 4px solid #2563eb; padding: 12px 14px; border-radius: 4px; font-size: 13px;\">\n      📎 <b>Chi tiết đầy đủ nằm trong file PDF đính kèm bên dưới</b>, bao gồm: Bảng KPI 4 nhóm chỉ số, Biểu đồ doanh thu 7 ngày &amp; Top sản phẩm có chú thích, Lời nhận xét &amp; Đề xuất hành động từ AI Gemini, Bảng cảnh báo tồn kho và Phụ lục danh sách đơn hàng.\n    </div>\n    <p style=\"font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;\">Báo cáo được tạo tự động lúc {{ $('Lấy số liệu FashionShop').item.json.generatedAt }} bởi FashionShop &amp; n8n</p>\n  </div>\n</div>",
+        "options": {
+          "attachments": "data"
+        }
+      },
+      "id": "send-email-admin",
+      "name": "Gửi Email Cho Admin",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1160,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (22h mỗi tối)": {
+      "main": [
+        [
+          {
+            "node": "Lấy số liệu FashionShop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lấy số liệu FashionShop": {
+      "main": [
+        [
+          {
+            "node": "Phân tích AI Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phân tích AI Gemini": {
+      "main": [
+        [
+          {
+            "node": "Tạo File Báo Cáo PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tạo File Báo Cáo PDF": {
+      "main": [
+        [
+          {
+            "node": "Gửi Email Cho Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -362,6 +362,114 @@ public class AdminStatisticsRepository {
         ), limit);
     }
 
+    // ===================== DỮ LIỆU CHO BÁO CÁO VẬN HÀNH HẰNG NGÀY (n8n) =====================
+
+    public record StatusCountAggregate(String status, long orderCount, BigDecimal amount) {}
+
+    /** Đếm số đơn + tổng tiền theo từng trạng thái (tính cả đơn hủy). */
+    public List<StatusCountAggregate> countOrdersByStatus(LocalDateTime startInclusive, LocalDateTime endExclusive) {
+        return jdbc.query("""
+                SELECT o.status AS status, COUNT(*) AS orderCount, COALESCE(SUM(o.total_amount), 0) AS amount
+                FROM orders o
+                WHERE o.created_at >= ?
+                  AND o.created_at < ?
+                GROUP BY o.status
+                """, (rs, i) -> new StatusCountAggregate(
+                rs.getString("status"),
+                rs.getLong("orderCount"),
+                rs.getBigDecimal("amount")
+        ), startInclusive, endExclusive);
+    }
+
+    public record OrderDetailAggregate(
+            String orderCode,
+            LocalDateTime createdAt,
+            String recipientName,
+            String recipientPhone,
+            String items,
+            long totalQuantity,
+            BigDecimal discountAmount,
+            BigDecimal totalAmount,
+            String paymentMethod,
+            String paymentStatus,
+            String status,
+            String cancelReason
+    ) {}
+
+    /** Danh sách chi tiết đơn hàng trong khoảng thời gian (dùng cho phụ lục báo cáo). */
+    public List<OrderDetailAggregate> findOrderDetails(LocalDateTime startInclusive, LocalDateTime endExclusive, int limit) {
+        return jdbc.query("""
+                SELECT o.order_code AS orderCode,
+                       o.created_at AS createdAt,
+                       o.recipient_name AS recipientName,
+                       o.recipient_phone AS recipientPhone,
+                       o.discount_amount AS discountAmount,
+                       o.total_amount AS totalAmount,
+                       o.payment_method AS paymentMethod,
+                       o.payment_status AS paymentStatus,
+                       o.status AS status,
+                       o.cancel_reason AS cancelReason,
+                       (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_item oi WHERE oi.order_id = o.id) AS totalQuantity,
+                       (SELECT GROUP_CONCAT(CONCAT(oi.product_name, ' (',
+                                    COALESCE(NULLIF(TRIM(oi.color), ''), '-'), '/',
+                                    COALESCE(NULLIF(TRIM(oi.size), ''), '-'), ') x', oi.quantity)
+                                ORDER BY oi.id SEPARATOR '; ')
+                        FROM order_item oi WHERE oi.order_id = o.id) AS items
+                FROM orders o
+                WHERE o.created_at >= ?
+                  AND o.created_at < ?
+                ORDER BY o.created_at ASC
+                LIMIT ?
+                """, (rs, i) -> new OrderDetailAggregate(
+                rs.getString("orderCode"),
+                rs.getTimestamp("createdAt").toLocalDateTime(),
+                rs.getString("recipientName"),
+                rs.getString("recipientPhone"),
+                rs.getString("items"),
+                rs.getLong("totalQuantity"),
+                rs.getBigDecimal("discountAmount"),
+                rs.getBigDecimal("totalAmount"),
+                rs.getString("paymentMethod"),
+                rs.getString("paymentStatus"),
+                rs.getString("status"),
+                rs.getString("cancelReason")
+        ), startInclusive, endExclusive, limit);
+    }
+
+    /** Sản phẩm tồn kho nhiều nhưng không bán được đơn nào trong khoảng thời gian (hàng chậm luân chuyển). */
+    public List<LowStockProductAggregate> findSlowMovingProducts(LocalDateTime startInclusive, LocalDateTime endExclusive,
+                                                                 long minStock, int limit) {
+        return jdbc.query("""
+                SELECT p.id AS productId,
+                       p.name AS productName,
+                       COALESCE(MAX(c.name), 'Thời trang') AS categoryName,
+                       COALESCE(SUM(pv.stock_quantity), 0) AS currentStock
+                FROM product p
+                JOIN product_variant pv ON pv.product_id = p.id
+                LEFT JOIN category c ON c.id = p.category_id
+                WHERE p.status = 'ACTIVE'
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM order_item oi
+                      JOIN orders o ON o.id = oi.order_id
+                      JOIN product_variant pv2 ON pv2.id = oi.variant_id
+                      WHERE pv2.product_id = p.id
+                        AND o.status <> 'CANCELLED'
+                        AND o.created_at >= ?
+                        AND o.created_at < ?
+                  )
+                GROUP BY p.id, p.name
+                HAVING COALESCE(SUM(pv.stock_quantity), 0) >= ?
+                ORDER BY currentStock DESC
+                LIMIT ?
+                """, (rs, i) -> new LowStockProductAggregate(
+                rs.getLong("productId"),
+                rs.getString("productName"),
+                rs.getString("categoryName"),
+                rs.getLong("currentStock")
+        ), startInclusive, endExclusive, minStock, limit);
+    }
+
     private String inClause(List<String> statuses) {
         return statuses.stream().map(s -> "'" + s + "'").reduce((a, b) -> a + "," + b).orElse("'COMPLETED'");
     }

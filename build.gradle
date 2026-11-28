@@ -42,6 +42,10 @@ dependencies {
 
 	implementation 'com.cloudinary:cloudinary-http44:1.38.0'
 
+	// Báo cáo PDF tự động (n8n): HTML -> PDF và vẽ biểu đồ
+	implementation 'com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10'
+	implementation 'org.jfree:jfreechart:1.5.5'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testCompileOnly 'org.projectlombok:lombok'
